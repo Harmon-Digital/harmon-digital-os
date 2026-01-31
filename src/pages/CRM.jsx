@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { Lead, TeamMember } from "@/api/entities";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -15,12 +17,9 @@ import {
 import {
   Plus,
   Building2,
-  Mail,
-  Phone,
   DollarSign,
   Calendar,
   User,
-  Trash2,
   Search,
   Filter,
   LayoutGrid,
@@ -33,15 +32,16 @@ import {
   Thermometer,
   Snowflake,
   Users,
-  MessageSquare,
+  Mail,
   PhoneCall,
   CalendarPlus,
+  MessageSquare,
   X,
+  Trash2,
 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -76,19 +76,40 @@ const PRIORITY_OPTIONS = [
   { value: "cold", label: "Cold", icon: Snowflake, color: "text-blue-500", bg: "bg-blue-100" },
 ];
 
+const ACTIVITY_TYPES = [
+  { value: "call", label: "Call", icon: PhoneCall, color: "text-green-600", bg: "bg-green-100" },
+  { value: "email", label: "Email", icon: Mail, color: "text-blue-600", bg: "bg-blue-100" },
+  { value: "meeting", label: "Meeting", icon: CalendarPlus, color: "text-purple-600", bg: "bg-purple-100" },
+  { value: "note", label: "Note", icon: MessageSquare, color: "text-gray-600", bg: "bg-gray-100" },
+];
+
 export default function CRM() {
+  const { user } = useAuth();
   const [leads, setLeads] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
-  const [showDrawer, setShowDrawer] = useState(false);
-  const [editingLead, setEditingLead] = useState(null);
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, leadId: null });
-  const [viewMode, setViewMode] = useState("kanban"); // kanban or list
+  const [viewMode, setViewMode] = useState("kanban");
   const [collapsedColumns, setCollapsedColumns] = useState({ won: false, lost: false });
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({ source: "", assignedTo: "", priority: "" });
   const [showFilters, setShowFilters] = useState(false);
-  const [activityDialog, setActivityDialog] = useState({ open: false, lead: null, type: null });
-  const [activityNote, setActivityNote] = useState("");
+
+  // Lead detail sheet
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [showLeadDetail, setShowLeadDetail] = useState(false);
+  const [activities, setActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
+
+  // Activity form
+  const [activityType, setActivityType] = useState("note");
+  const [activityDescription, setActivityDescription] = useState("");
+  const [savingActivity, setSavingActivity] = useState(false);
+
+  // Lead form
+  const [showLeadForm, setShowLeadForm] = useState(false);
+  const [editingLead, setEditingLead] = useState(null);
+
+  // Delete dialog
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, leadId: null });
 
   useEffect(() => {
     loadData();
@@ -103,25 +124,38 @@ export default function CRM() {
     setTeamMembers(teamMembersData);
   };
 
-  const handleSubmit = async (leadData) => {
+  const loadActivities = async (leadId) => {
+    setLoadingActivities(true);
+    const { data } = await supabase
+      .from("lead_activities")
+      .select("*, user_profiles(full_name)")
+      .eq("lead_id", leadId)
+      .order("created_at", { ascending: false });
+    setActivities(data || []);
+    setLoadingActivities(false);
+  };
+
+  const handleOpenLeadDetail = async (lead) => {
+    setSelectedLead(lead);
+    setShowLeadDetail(true);
+    await loadActivities(lead.id);
+  };
+
+  const handleSubmitLead = async (leadData) => {
     if (editingLead) {
       await Lead.update(editingLead.id, leadData);
     } else {
       await Lead.create(leadData);
     }
-    setShowDrawer(false);
+    setShowLeadForm(false);
     setEditingLead(null);
     loadData();
   };
 
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
-
     const { source, destination, draggableId } = result;
-
-    if (source.droppableId === destination.droppableId && source.index === destination.index) {
-      return;
-    }
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
     const lead = leads.find(l => l.id === draggableId);
     if (lead && source.droppableId !== destination.droppableId) {
@@ -129,10 +163,7 @@ export default function CRM() {
 
       // Auto-approve referral when lead is marked as won
       if (destination.droppableId === "won" && lead.referral_id) {
-        await supabase
-          .from("referrals")
-          .update({ status: "active" })
-          .eq("id", lead.referral_id);
+        await supabase.from("referrals").update({ status: "active" }).eq("id", lead.referral_id);
       }
 
       loadData();
@@ -143,40 +174,69 @@ export default function CRM() {
     if (deleteDialog.leadId) {
       await Lead.delete(deleteDialog.leadId);
       setDeleteDialog({ open: false, leadId: null });
+      setShowLeadDetail(false);
+      setSelectedLead(null);
       loadData();
     }
   };
 
-  const handleEditLead = (lead) => {
-    setEditingLead(lead);
-    setShowDrawer(true);
-  };
+  const handleLogActivity = async () => {
+    if (!selectedLead || !activityDescription.trim()) return;
 
-  const handleQuickAction = async (type) => {
-    if (!activityDialog.lead) return;
+    setSavingActivity(true);
+    try {
+      // Save activity
+      await supabase.from("lead_activities").insert({
+        lead_id: selectedLead.id,
+        type: activityType,
+        description: activityDescription,
+        created_by: user?.id,
+      });
 
-    const lead = activityDialog.lead;
-    const now = new Date().toISOString();
+      // Update lead's last contact if it's a call or email
+      if (activityType === "call" || activityType === "email") {
+        await Lead.update(selectedLead.id, {
+          ...selectedLead,
+          last_contact: new Date().toISOString().split("T")[0],
+        });
+      }
 
-    // Update lead with activity note and last contact date
-    const updateData = {
-      notes: lead.notes
-        ? `${lead.notes}\n\n[${type.toUpperCase()} - ${new Date().toLocaleDateString()}] ${activityNote}`
-        : `[${type.toUpperCase()} - ${new Date().toLocaleDateString()}] ${activityNote}`,
-    };
+      // Create notification for team
+      const { data: admins } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("role", "admin");
 
-    if (type === "call" || type === "email") {
-      updateData.last_contact = now.split("T")[0];
+      if (admins?.length) {
+        const activityLabel = ACTIVITY_TYPES.find(a => a.value === activityType)?.label || activityType;
+        await supabase.from("notifications").insert(
+          admins.filter(a => a.id !== user?.id).map((admin) => ({
+            user_id: admin.id,
+            type: "crm_activity",
+            title: `${activityLabel} logged`,
+            message: `${activityLabel} logged for ${selectedLead.company_name}: ${activityDescription.substring(0, 50)}${activityDescription.length > 50 ? "..." : ""}`,
+            link: "/CRM",
+            read: false,
+          }))
+        );
+      }
+
+      setActivityDescription("");
+      setActivityType("note");
+      await loadActivities(selectedLead.id);
+      loadData();
+    } catch (error) {
+      console.error("Error logging activity:", error);
+    } finally {
+      setSavingActivity(false);
     }
-
-    await Lead.update(lead.id, { ...lead, ...updateData });
-    setActivityDialog({ open: false, lead: null, type: null });
-    setActivityNote("");
-    loadData();
   };
 
   const handleUpdatePriority = async (lead, priority) => {
     await Lead.update(lead.id, { ...lead, priority });
+    if (selectedLead?.id === lead.id) {
+      setSelectedLead({ ...lead, priority });
+    }
     loadData();
   };
 
@@ -190,16 +250,13 @@ export default function CRM() {
     { id: "lost", label: "Lost", color: "bg-red-500", textColor: "text-red-500", bgLight: "bg-red-50" },
   ];
 
-  // Filter leads
   const filteredLeads = useMemo(() => {
     return leads.filter(lead => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        if (
-          !lead.company_name?.toLowerCase().includes(query) &&
-          !lead.contact_name?.toLowerCase().includes(query) &&
-          !lead.email?.toLowerCase().includes(query)
-        ) {
+        if (!lead.company_name?.toLowerCase().includes(query) &&
+            !lead.contact_name?.toLowerCase().includes(query) &&
+            !lead.email?.toLowerCase().includes(query)) {
           return false;
         }
       }
@@ -210,51 +267,25 @@ export default function CRM() {
     });
   }, [leads, searchQuery, filters]);
 
-  const getLeadsByStatus = (status) => {
-    return filteredLeads.filter(lead => lead.status === status);
-  };
+  const getLeadsByStatus = (status) => filteredLeads.filter(lead => lead.status === status);
 
-  // Calculate stats
   const stats = useMemo(() => {
     const activeLeads = leads.filter(l => l.status !== "lost" && l.status !== "won");
     const pipelineValue = activeLeads.reduce((sum, lead) => sum + (lead.estimated_value || 0), 0);
     const wonValue = leads.filter(l => l.status === "won").reduce((sum, lead) => sum + (lead.estimated_value || 0), 0);
-    const conversionRate = leads.length > 0
-      ? ((leads.filter(l => l.status === "won").length / leads.filter(l => l.status === "won" || l.status === "lost").length) * 100) || 0
-      : 0;
+    const closedDeals = leads.filter(l => l.status === "won" || l.status === "lost").length;
+    const conversionRate = closedDeals > 0 ? ((leads.filter(l => l.status === "won").length / closedDeals) * 100) : 0;
 
-    // Stale leads (not updated in 7+ days)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const staleLeads = activeLeads.filter(l => {
-      const lastUpdate = new Date(l.updated_at || l.created_at);
-      return lastUpdate < sevenDaysAgo;
-    }).length;
+    const staleLeads = activeLeads.filter(l => new Date(l.updated_at || l.created_at) < sevenDaysAgo).length;
 
     return { pipelineValue, wonValue, activeLeads: activeLeads.length, conversionRate, staleLeads };
   }, [leads]);
 
-  const sourceColors = {
-    referral: "bg-purple-100 text-purple-700",
-    website: "bg-blue-100 text-blue-700",
-    linkedin: "bg-indigo-100 text-indigo-700",
-    cold_outreach: "bg-gray-100 text-gray-700",
-    event: "bg-green-100 text-green-700",
-    other: "bg-gray-100 text-gray-700"
-  };
-
-  const getLeadAge = (lead) => {
-    const created = new Date(lead.created_at);
-    const now = new Date();
-    const days = Math.floor((now - created) / (1000 * 60 * 60 * 24));
-    return days;
-  };
-
   const getStageAge = (lead) => {
     const updated = new Date(lead.updated_at || lead.created_at);
-    const now = new Date();
-    const days = Math.floor((now - updated) / (1000 * 60 * 60 * 24));
-    return days;
+    return Math.floor((new Date() - updated) / (1000 * 60 * 60 * 24));
   };
 
   const isStale = (lead) => {
@@ -262,16 +293,12 @@ export default function CRM() {
     return getStageAge(lead) >= 7;
   };
 
-  const isPartnerReferral = (lead) => {
-    return lead.referral_id || lead.source?.toLowerCase().includes("partner");
-  };
+  const isPartnerReferral = (lead) => lead.referral_id || lead.source?.toLowerCase().includes("partner");
 
-  const toggleColumn = (columnId) => {
-    setCollapsedColumns(prev => ({ ...prev, [columnId]: !prev[columnId] }));
-  };
+  const toggleColumn = (columnId) => setCollapsedColumns(prev => ({ ...prev, [columnId]: !prev[columnId] }));
 
-  // LeadCard component
-  const LeadCard = ({ lead, onEdit, isDragging }) => {
+  // Simplified Lead Card
+  const LeadCard = ({ lead, isDragging }) => {
     const stale = isStale(lead);
     const partnerReferral = isPartnerReferral(lead);
     const priority = PRIORITY_OPTIONS.find(p => p.value === lead.priority);
@@ -279,161 +306,54 @@ export default function CRM() {
 
     return (
       <Card
-        className={`hover:shadow-lg transition-all cursor-pointer
-          ${lead.status === 'won' ? 'bg-green-50 border-green-200' :
-            lead.status === 'lost' ? 'bg-red-50 border-red-200' :
-            stale ? 'bg-amber-50 border-amber-300 ring-1 ring-amber-300' :
-            'bg-white'}
-          ${isDragging ? 'shadow-2xl ring-2 ring-indigo-400 rotate-2' : ''}
+        onClick={() => handleOpenLeadDetail(lead)}
+        className={`cursor-pointer hover:shadow-md transition-all
+          ${stale ? 'border-amber-300 bg-amber-50/50' : ''}
+          ${lead.status === 'won' ? 'bg-green-50 border-green-200' : ''}
+          ${lead.status === 'lost' ? 'bg-red-50 border-red-200' : ''}
+          ${isDragging ? 'shadow-xl ring-2 ring-indigo-400 rotate-1' : ''}
         `}
       >
-        <CardContent className="p-4">
-          <div className="space-y-3">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1" onClick={() => onEdit(lead)}>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-semibold text-gray-900 line-clamp-1">
-                    {lead.company_name}
-                  </h4>
-                  {partnerReferral && (
-                    <Badge className="bg-purple-100 text-purple-700 text-xs px-1.5">
-                      <Users className="w-3 h-3 mr-0.5" />
-                      Partner
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-gray-600 mt-1 flex items-center gap-1">
-                  <User className="w-3 h-3" />
-                  {lead.contact_name}
-                </p>
-              </div>
-              <div className="flex items-center gap-1">
-                {/* Priority Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                      {PriorityIcon ? (
-                        <PriorityIcon className={`w-4 h-4 ${priority.color}`} />
-                      ) : (
-                        <Thermometer className="w-4 h-4 text-gray-300" />
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {PRIORITY_OPTIONS.map(p => (
-                      <DropdownMenuItem
-                        key={p.value}
-                        onClick={() => handleUpdatePriority(lead, p.value)}
-                      >
-                        <p.icon className={`w-4 h-4 mr-2 ${p.color}`} />
-                        {p.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {lead.estimated_value && (
-                  <Badge className="bg-green-50 text-green-700 border-green-200 flex-shrink-0">
-                    <DollarSign className="w-3 h-3 mr-0.5" />
-                    {(lead.estimated_value / 1000).toFixed(0)}k
-                  </Badge>
-                )}
-              </div>
+        <CardContent className="p-3">
+          {/* Row 1: Company + Value */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              {PriorityIcon && <PriorityIcon className={`w-4 h-4 flex-shrink-0 ${priority.color}`} />}
+              <span className="font-medium text-gray-900 truncate">{lead.company_name}</span>
             </div>
-
-            {/* Stale Warning */}
-            {stale && (
-              <div className="flex items-center gap-1 text-amber-600 text-xs bg-amber-100 px-2 py-1 rounded">
-                <AlertCircle className="w-3 h-3" />
-                Stale ({getStageAge(lead)} days in stage)
-              </div>
+            {lead.estimated_value > 0 && (
+              <Badge className="bg-green-100 text-green-700 flex-shrink-0">
+                ${(lead.estimated_value / 1000).toFixed(0)}k
+              </Badge>
             )}
+          </div>
 
-            {/* Quick Actions */}
-            <div className="flex items-center gap-1 pt-1 border-t border-gray-100">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-gray-500 hover:text-blue-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActivityDialog({ open: true, lead, type: "email" });
-                }}
-              >
-                <Mail className="w-3 h-3 mr-1" />
-                Email
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-gray-500 hover:text-green-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActivityDialog({ open: true, lead, type: "call" });
-                }}
-              >
-                <PhoneCall className="w-3 h-3 mr-1" />
-                Call
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-gray-500 hover:text-purple-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActivityDialog({ open: true, lead, type: "meeting" });
-                }}
-              >
-                <CalendarPlus className="w-3 h-3 mr-1" />
-                Meet
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteDialog({ open: true, leadId: lead.id });
-                }}
-                className="h-7 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 ml-auto"
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            </div>
+          {/* Row 2: Contact */}
+          <div className="flex items-center gap-1 mt-1.5 text-sm text-gray-500">
+            <User className="w-3 h-3" />
+            <span className="truncate">{lead.contact_name}</span>
+          </div>
 
-            {/* Info Section */}
-            <div className="space-y-2 pt-1" onClick={() => onEdit(lead)}>
-              {/* Source & Age */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {lead.source && (
-                  <Badge
-                    variant="outline"
-                    className={`${sourceColors[lead.source] || sourceColors.other} text-xs`}
-                  >
-                    {lead.source.replace('_', ' ')}
-                  </Badge>
-                )}
-                <span className="text-xs text-gray-400 flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {getLeadAge(lead)}d old
-                </span>
-              </div>
-
-              {/* Next Action */}
-              {lead.next_action && (
-                <div className="pt-2 border-t border-gray-100">
-                  <p className="text-xs font-medium text-gray-700 line-clamp-2">
-                    {lead.next_action}
-                  </p>
-                  {lead.next_action_date && (
-                    <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(lead.next_action_date).toLocaleDateString()}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+          {/* Row 3: Badges */}
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            {partnerReferral && (
+              <Badge className="bg-purple-100 text-purple-700 text-xs">
+                <Users className="w-3 h-3 mr-0.5" />
+                Partner
+              </Badge>
+            )}
+            {stale && (
+              <Badge className="bg-amber-100 text-amber-700 text-xs">
+                <AlertCircle className="w-3 h-3 mr-0.5" />
+                {getStageAge(lead)}d
+              </Badge>
+            )}
+            {lead.next_action_date && (
+              <span className="text-xs text-gray-400 flex items-center gap-0.5">
+                <Calendar className="w-3 h-3" />
+                {new Date(lead.next_action_date).toLocaleDateString()}
+              </span>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -443,61 +363,24 @@ export default function CRM() {
   // List View Row
   const ListViewRow = ({ lead }) => {
     const stale = isStale(lead);
-    const partnerReferral = isPartnerReferral(lead);
-    const priority = PRIORITY_OPTIONS.find(p => p.value === lead.priority);
-    const PriorityIcon = priority?.icon;
     const column = columns.find(c => c.id === lead.status);
 
     return (
-      <TableRow className={stale ? "bg-amber-50" : ""}>
+      <TableRow
+        className={`cursor-pointer hover:bg-gray-50 ${stale ? "bg-amber-50" : ""}`}
+        onClick={() => handleOpenLeadDetail(lead)}
+      >
         <TableCell>
-          <div className="flex items-center gap-2">
-            {PriorityIcon && <PriorityIcon className={`w-4 h-4 ${priority.color}`} />}
-            <div>
-              <div className="font-medium flex items-center gap-2">
-                {lead.company_name}
-                {partnerReferral && (
-                  <Badge className="bg-purple-100 text-purple-700 text-xs">Partner</Badge>
-                )}
-                {stale && (
-                  <Badge className="bg-amber-100 text-amber-700 text-xs">Stale</Badge>
-                )}
-              </div>
-              <div className="text-sm text-gray-500">{lead.contact_name}</div>
-            </div>
-          </div>
+          <div className="font-medium">{lead.company_name}</div>
+          <div className="text-sm text-gray-500">{lead.contact_name}</div>
         </TableCell>
         <TableCell>{lead.email}</TableCell>
         <TableCell>
-          <Badge className={`${column?.bgLight} ${column?.textColor}`}>
-            {column?.label}
-          </Badge>
+          <Badge className={`${column?.bgLight} ${column?.textColor}`}>{column?.label}</Badge>
         </TableCell>
+        <TableCell>{lead.estimated_value ? `$${lead.estimated_value.toLocaleString()}` : "—"}</TableCell>
         <TableCell>
-          {lead.estimated_value ? `$${lead.estimated_value.toLocaleString()}` : "—"}
-        </TableCell>
-        <TableCell>
-          {lead.source && (
-            <Badge variant="outline" className={sourceColors[lead.source] || sourceColors.other}>
-              {lead.source.replace('_', ' ')}
-            </Badge>
-          )}
-        </TableCell>
-        <TableCell>{getLeadAge(lead)}d</TableCell>
-        <TableCell>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => handleEditLead(lead)}>
-              Edit
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-red-500"
-              onClick={() => setDeleteDialog({ open: true, leadId: lead.id })}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
+          {lead.next_action_date ? new Date(lead.next_action_date).toLocaleDateString() : "—"}
         </TableCell>
       </TableRow>
     );
@@ -514,152 +397,79 @@ export default function CRM() {
               <p className="text-gray-500 mt-1">Track leads through your sales process</p>
             </div>
             <div className="flex items-center gap-4">
-              {/* Stats */}
               <div className="hidden lg:flex items-center gap-6">
                 <div>
-                  <p className="text-sm text-gray-600">Pipeline Value</p>
-                  <p className="text-2xl font-bold text-indigo-600">${stats.pipelineValue.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600">Pipeline</p>
+                  <p className="text-xl font-bold text-indigo-600">${stats.pipelineValue.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Won Deals</p>
-                  <p className="text-2xl font-bold text-green-600">${stats.wonValue.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600">Won</p>
+                  <p className="text-xl font-bold text-green-600">${stats.wonValue.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Active</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.activeLeads}</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.activeLeads}</p>
                 </div>
                 {stats.staleLeads > 0 && (
                   <div>
                     <p className="text-sm text-amber-600">Stale</p>
-                    <p className="text-2xl font-bold text-amber-600">{stats.staleLeads}</p>
+                    <p className="text-xl font-bold text-amber-600">{stats.staleLeads}</p>
                   </div>
                 )}
                 <div>
                   <p className="text-sm text-gray-600">Win Rate</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.conversionRate.toFixed(0)}%</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.conversionRate.toFixed(0)}%</p>
                 </div>
               </div>
-              <Button
-                onClick={() => {
-                  setEditingLead(null);
-                  setShowDrawer(true);
-                }}
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
+              <Button onClick={() => { setEditingLead(null); setShowLeadForm(true); }} className="bg-indigo-600 hover:bg-indigo-700">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Lead
               </Button>
             </div>
           </div>
 
-          {/* Search, Filters, View Toggle */}
+          {/* Search & Filters */}
           <div className="flex items-center gap-4 mt-6">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search leads..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+              <Input placeholder="Search leads..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
             </div>
-
-            <Button
-              variant={showFilters ? "default" : "outline"}
-              onClick={() => setShowFilters(!showFilters)}
-            >
+            <Button variant={showFilters ? "default" : "outline"} onClick={() => setShowFilters(!showFilters)}>
               <Filter className="w-4 h-4 mr-2" />
               Filters
-              {(filters.source || filters.assignedTo || filters.priority) && (
-                <Badge className="ml-2 bg-indigo-600 text-white">
-                  {[filters.source, filters.assignedTo, filters.priority].filter(Boolean).length}
-                </Badge>
-              )}
             </Button>
-
             <div className="flex items-center border rounded-lg overflow-hidden">
-              <Button
-                variant={viewMode === "kanban" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("kanban")}
-                className="rounded-none"
-              >
+              <Button variant={viewMode === "kanban" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("kanban")} className="rounded-none">
                 <LayoutGrid className="w-4 h-4" />
               </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-                className="rounded-none"
-              >
+              <Button variant={viewMode === "list" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("list")} className="rounded-none">
                 <List className="w-4 h-4" />
               </Button>
             </div>
           </div>
 
-          {/* Filter Row */}
           {showFilters && (
             <div className="flex items-center gap-4 mt-4 p-4 bg-gray-50 rounded-lg">
-              <Select
-                value={filters.source}
-                onValueChange={(value) => setFilters({ ...filters, source: value })}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Source" />
-                </SelectTrigger>
+              <Select value={filters.source} onValueChange={(value) => setFilters({ ...filters, source: value })}>
+                <SelectTrigger className="w-40"><SelectValue placeholder="Source" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">All Sources</SelectItem>
                   <SelectItem value="referral">Referral</SelectItem>
                   <SelectItem value="website">Website</SelectItem>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="cold_outreach">Cold Outreach</SelectItem>
-                  <SelectItem value="event">Event</SelectItem>
                 </SelectContent>
               </Select>
-
-              <Select
-                value={filters.assignedTo}
-                onValueChange={(value) => setFilters({ ...filters, assignedTo: value })}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Assigned To" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Team</SelectItem>
-                  {teamMembers.map(tm => (
-                    <SelectItem key={tm.id} value={tm.id}>{tm.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filters.priority}
-                onValueChange={(value) => setFilters({ ...filters, priority: value })}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
+              <Select value={filters.priority} onValueChange={(value) => setFilters({ ...filters, priority: value })}>
+                <SelectTrigger className="w-40"><SelectValue placeholder="Priority" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">All Priorities</SelectItem>
-                  {PRIORITY_OPTIONS.map(p => (
-                    <SelectItem key={p.value} value={p.value}>
-                      <div className="flex items-center gap-2">
-                        <p.icon className={`w-4 h-4 ${p.color}`} />
-                        {p.label}
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-
-              {(filters.source || filters.assignedTo || filters.priority) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFilters({ source: "", assignedTo: "", priority: "" })}
-                >
-                  <X className="w-4 h-4 mr-1" />
-                  Clear
+              {(filters.source || filters.priority) && (
+                <Button variant="ghost" size="sm" onClick={() => setFilters({ source: "", assignedTo: "", priority: "" })}>
+                  <X className="w-4 h-4 mr-1" /> Clear
                 </Button>
               )}
             </div>
@@ -681,14 +491,10 @@ export default function CRM() {
 
                   if (isCollapsed) {
                     return (
-                      <div
-                        key={column.id}
-                        className="flex-shrink-0 w-12 flex flex-col cursor-pointer"
-                        onClick={() => toggleColumn(column.id)}
-                      >
-                        <div className={`flex-1 ${column.bgLight} rounded-xl flex flex-col items-center py-4`}>
-                          <div className={`w-3 h-3 rounded-full ${column.color} mb-2`}></div>
-                          <span className="text-xs font-medium text-gray-600 writing-mode-vertical transform rotate-180" style={{ writingMode: "vertical-rl" }}>
+                      <div key={column.id} className="flex-shrink-0 w-12 cursor-pointer" onClick={() => toggleColumn(column.id)}>
+                        <div className={`h-full ${column.bgLight} rounded-xl flex flex-col items-center py-4`}>
+                          <div className={`w-3 h-3 rounded-full ${column.color} mb-2`} />
+                          <span className="text-xs font-medium text-gray-600" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>
                             {column.label} ({columnLeads.length})
                           </span>
                           <ChevronRight className="w-4 h-4 text-gray-400 mt-2" />
@@ -698,69 +504,45 @@ export default function CRM() {
                   }
 
                   return (
-                    <div key={column.id} className="flex-shrink-0 w-80 flex flex-col">
-                      {/* Column Header */}
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between mb-2">
+                    <div key={column.id} className="flex-shrink-0 w-72 flex flex-col">
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${column.color}`}></div>
-                            <h3 className="font-semibold text-gray-900">{column.label}</h3>
-                            <Badge variant="secondary" className="bg-gray-100">
-                              {columnLeads.length}
-                            </Badge>
+                            <div className={`w-2.5 h-2.5 rounded-full ${column.color}`} />
+                            <h3 className="font-semibold text-gray-900 text-sm">{column.label}</h3>
+                            <Badge variant="secondary" className="bg-gray-100 text-xs">{columnLeads.length}</Badge>
                           </div>
                           {canCollapse && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleColumn(column.id)}
-                              className="h-6 w-6 p-0"
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => toggleColumn(column.id)} className="h-6 w-6 p-0">
                               <ChevronDown className="w-4 h-4" />
                             </Button>
                           )}
                         </div>
-                        <p className="text-sm font-medium text-gray-600">
-                          ${columnValue.toLocaleString()}
-                        </p>
+                        <p className="text-xs text-gray-500">${columnValue.toLocaleString()}</p>
                       </div>
 
-                      {/* Column Content */}
                       <Droppable droppableId={column.id}>
                         {(provided, snapshot) => (
                           <div
                             ref={provided.innerRef}
                             {...provided.droppableProps}
-                            className={`flex-1 rounded-xl transition-colors ${
-                              snapshot.isDraggingOver
-                                ? `${column.bgLight} ring-2 ring-${column.color}`
-                                : 'bg-gray-50'
-                            } p-3 overflow-y-auto`}
+                            className={`flex-1 rounded-xl transition-colors ${snapshot.isDraggingOver ? column.bgLight : 'bg-gray-50/50'} p-2 overflow-y-auto`}
                           >
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                               {columnLeads.map((lead, index) => (
                                 <Draggable key={lead.id} draggableId={lead.id} index={index}>
                                   {(provided, snapshot) => (
-                                    <div
-                                      ref={provided.innerRef}
-                                      {...provided.draggableProps}
-                                      {...provided.dragHandleProps}
-                                    >
-                                      <LeadCard
-                                        lead={lead}
-                                        onEdit={handleEditLead}
-                                        isDragging={snapshot.isDragging}
-                                      />
+                                    <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+                                      <LeadCard lead={lead} isDragging={snapshot.isDragging} />
                                     </div>
                                   )}
                                 </Draggable>
                               ))}
                               {provided.placeholder}
-
                               {columnLeads.length === 0 && (
                                 <div className="text-center py-8 text-gray-400">
-                                  <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                  <p className="text-sm">No leads yet</p>
+                                  <Building2 className="w-6 h-6 mx-auto mb-1 opacity-50" />
+                                  <p className="text-xs">No leads</p>
                                 </div>
                               )}
                             </div>
@@ -784,15 +566,11 @@ export default function CRM() {
                       <TableHead>Email</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Value</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Age</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead>Next Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredLeads.map(lead => (
-                      <ListViewRow key={lead.id} lead={lead} />
-                    ))}
+                    {filteredLeads.map(lead => <ListViewRow key={lead.id} lead={lead} />)}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -801,86 +579,184 @@ export default function CRM() {
         )}
       </div>
 
+      {/* Lead Detail Sheet */}
+      <Sheet open={showLeadDetail} onOpenChange={setShowLeadDetail}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          {selectedLead && (
+            <>
+              <SheetHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <SheetTitle className="text-xl">{selectedLead.company_name}</SheetTitle>
+                    <p className="text-gray-500 mt-1">{selectedLead.contact_name}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Priority Selector */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          {(() => {
+                            const p = PRIORITY_OPTIONS.find(p => p.value === selectedLead.priority);
+                            return p ? <p.icon className={`w-4 h-4 ${p.color}`} /> : <Thermometer className="w-4 h-4 text-gray-400" />;
+                          })()}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {PRIORITY_OPTIONS.map(p => (
+                          <DropdownMenuItem key={p.value} onClick={() => handleUpdatePriority(selectedLead, p.value)}>
+                            <p.icon className={`w-4 h-4 mr-2 ${p.color}`} /> {p.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button variant="outline" size="sm" onClick={() => { setEditingLead(selectedLead); setShowLeadForm(true); }}>
+                      Edit
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-red-600" onClick={() => setDeleteDialog({ open: true, leadId: selectedLead.id })}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </SheetHeader>
+
+              {/* Lead Info */}
+              <div className="mt-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Value</p>
+                    <p className="font-medium">${selectedLead.estimated_value?.toLocaleString() || 0}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Status</p>
+                    <p className="font-medium capitalize">{selectedLead.status}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="font-medium text-sm truncate">{selectedLead.email || "—"}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Phone</p>
+                    <p className="font-medium">{selectedLead.phone || "—"}</p>
+                  </div>
+                </div>
+
+                {selectedLead.next_action && (
+                  <div className="bg-indigo-50 rounded-lg p-3">
+                    <p className="text-xs text-indigo-600 font-medium">Next Action</p>
+                    <p className="text-sm mt-1">{selectedLead.next_action}</p>
+                    {selectedLead.next_action_date && (
+                      <p className="text-xs text-indigo-500 mt-1">Due: {new Date(selectedLead.next_action_date).toLocaleDateString()}</p>
+                    )}
+                  </div>
+                )}
+
+                {isPartnerReferral(selectedLead) && (
+                  <div className="bg-purple-50 rounded-lg p-3">
+                    <p className="text-xs text-purple-600 font-medium flex items-center gap-1">
+                      <Users className="w-3 h-3" /> Partner Referral
+                    </p>
+                    <p className="text-sm mt-1">{selectedLead.source}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Log Activity */}
+              <div className="mt-6 border-t pt-6">
+                <h3 className="font-medium text-gray-900 mb-3">Log Activity</h3>
+                <div className="flex gap-2 mb-3">
+                  {ACTIVITY_TYPES.map(type => (
+                    <Button
+                      key={type.value}
+                      variant={activityType === type.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setActivityType(type.value)}
+                      className={activityType === type.value ? "" : ""}
+                    >
+                      <type.icon className="w-4 h-4 mr-1" />
+                      {type.label}
+                    </Button>
+                  ))}
+                </div>
+                <Textarea
+                  placeholder={`What happened in this ${activityType}?`}
+                  value={activityDescription}
+                  onChange={(e) => setActivityDescription(e.target.value)}
+                  rows={2}
+                />
+                <Button className="mt-2" onClick={handleLogActivity} disabled={savingActivity || !activityDescription.trim()}>
+                  {savingActivity ? "Saving..." : "Log Activity"}
+                </Button>
+              </div>
+
+              {/* Activity Timeline */}
+              <div className="mt-6 border-t pt-6">
+                <h3 className="font-medium text-gray-900 mb-3">Activity Timeline</h3>
+                {loadingActivities ? (
+                  <div className="text-center py-4">
+                    <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                  </div>
+                ) : activities.length === 0 ? (
+                  <p className="text-gray-500 text-sm text-center py-4">No activities yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {activities.map((activity) => {
+                      const typeInfo = ACTIVITY_TYPES.find(t => t.value === activity.type);
+                      const Icon = typeInfo?.icon || MessageSquare;
+                      return (
+                        <div key={activity.id} className="flex gap-3">
+                          <div className={`w-8 h-8 rounded-full ${typeInfo?.bg || 'bg-gray-100'} flex items-center justify-center flex-shrink-0`}>
+                            <Icon className={`w-4 h-4 ${typeInfo?.color || 'text-gray-600'}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">{typeInfo?.label || activity.type}</span>
+                              <span className="text-xs text-gray-400">
+                                {new Date(activity.created_at).toLocaleDateString()} at {new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-0.5">{activity.description}</p>
+                            {activity.user_profiles?.full_name && (
+                              <p className="text-xs text-gray-400 mt-1">by {activity.user_profiles.full_name}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
       {/* Lead Form Sheet */}
-      <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
+      <Sheet open={showLeadForm} onOpenChange={setShowLeadForm}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{editingLead ? "Edit Lead" : "Add New Lead"}</SheetTitle>
-            <SheetDescription>
-              {editingLead ? "Update lead information" : "Add a new lead to your pipeline"}
-            </SheetDescription>
           </SheetHeader>
           <div className="mt-6">
             <LeadForm
               lead={editingLead}
               teamMembers={teamMembers}
-              onSubmit={handleSubmit}
-              onCancel={() => {
-                setShowDrawer(false);
-                setEditingLead(null);
-              }}
+              onSubmit={handleSubmitLead}
+              onCancel={() => { setShowLeadForm(false); setEditingLead(null); }}
             />
           </div>
         </SheetContent>
       </Sheet>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Dialog */}
       <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Lead</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this lead? This action cannot be undone.
-            </DialogDescription>
+            <DialogDescription>Are you sure? This cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialog({ open: false, leadId: null })}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Activity Log Dialog */}
-      <Dialog open={activityDialog.open} onOpenChange={(open) => setActivityDialog({ ...activityDialog, open })}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Log {activityDialog.type === "email" ? "Email" : activityDialog.type === "call" ? "Call" : "Meeting"}
-            </DialogTitle>
-            <DialogDescription>
-              Add a note about your {activityDialog.type} with {activityDialog.lead?.contact_name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              placeholder={`What was discussed in the ${activityDialog.type}?`}
-              value={activityNote}
-              onChange={(e) => setActivityNote(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setActivityDialog({ open: false, lead: null, type: null });
-                setActivityNote("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={() => handleQuickAction(activityDialog.type)}>
-              Log Activity
-            </Button>
+            <Button variant="outline" onClick={() => setDeleteDialog({ open: false, leadId: null })}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
