@@ -36,13 +36,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Edit, Mail, Users, Search, Clock, Check, X } from "lucide-react";
+import { Plus, Edit, Users, Search, DollarSign, TrendingUp, UserCheck } from "lucide-react";
 
 export default function Partners() {
   const { userProfile, invitePartner } = useAuth();
   const [partners, setPartners] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [pendingReferrals, setPendingReferrals] = useState([]);
+  const [stats, setStats] = useState({ totalPartners: 0, activeReferrals: 0, totalPaid: 0, pendingPayouts: 0 });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -80,10 +80,13 @@ export default function Partners() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [partnersRes, projectsRes, pendingRes] = await Promise.all([
+      const [partnersRes, projectsRes, payoutsRes] = await Promise.all([
         supabase
           .from("referral_partners")
-          .select("*, referrals(id, projects(name))")
+          .select(`
+            *,
+            referrals(id, status, client_name, projects(name))
+          `)
           .order("created_at", { ascending: false }),
         supabase
           .from("projects")
@@ -91,15 +94,31 @@ export default function Partners() {
           .in("billing_type", ["retainer", "exit"])
           .eq("status", "active"),
         supabase
-          .from("referrals")
-          .select("*, referral_partners(contact_name, company_name, email)")
-          .eq("status", "pending")
-          .order("submitted_at", { ascending: false }),
+          .from("referral_payouts")
+          .select("amount, status"),
       ]);
 
-      setPartners(partnersRes.data || []);
+      const partnersData = partnersRes.data || [];
+      setPartners(partnersData);
       setProjects(projectsRes.data || []);
-      setPendingReferrals(pendingRes.data || []);
+
+      // Calculate stats
+      const payouts = payoutsRes.data || [];
+      const activeReferrals = partnersData.reduce((sum, p) =>
+        sum + (p.referrals?.filter(r => r.status === "active").length || 0), 0);
+      const totalPaid = payouts
+        .filter(p => p.status === "paid")
+        .reduce((sum, p) => sum + (p.amount || 0), 0);
+      const pendingPayouts = payouts
+        .filter(p => p.status === "pending")
+        .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+      setStats({
+        totalPartners: partnersData.filter(p => p.status === "active").length,
+        activeReferrals,
+        totalPaid,
+        pendingPayouts,
+      });
     } catch (error) {
       console.error("Error loading partners:", error);
     } finally {
@@ -162,6 +181,7 @@ export default function Partners() {
         project_id: referralData.project_id,
         commission_rate: referralData.commission_rate,
         commission_months: referralData.commission_months,
+        status: "active",
       });
 
       setReferralDialog(false);
@@ -170,33 +190,6 @@ export default function Partners() {
       loadData();
     } catch (error) {
       console.error("Error adding referral:", error);
-    }
-  };
-
-  const handleApproveReferral = async (referralId, projectId) => {
-    try {
-      await supabase
-        .from("referrals")
-        .update({
-          status: "active",
-          project_id: projectId || null,
-        })
-        .eq("id", referralId);
-      loadData();
-    } catch (error) {
-      console.error("Error approving referral:", error);
-    }
-  };
-
-  const handleRejectReferral = async (referralId) => {
-    try {
-      await supabase
-        .from("referrals")
-        .update({ status: "cancelled" })
-        .eq("id", referralId);
-      loadData();
-    } catch (error) {
-      console.error("Error rejecting referral:", error);
     }
   };
 
@@ -241,6 +234,62 @@ export default function Partners() {
         </Button>
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 rounded-lg">
+                <UserCheck className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Active Partners</p>
+                <p className="text-2xl font-bold">{stats.totalPartners}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Active Referrals</p>
+                <p className="text-2xl font-bold">{stats.activeReferrals}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <DollarSign className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Total Paid</p>
+                <p className="text-2xl font-bold">${stats.totalPaid.toLocaleString()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <DollarSign className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Pending Payouts</p>
+                <p className="text-2xl font-bold">${stats.pendingPayouts.toLocaleString()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Search */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-md">
@@ -256,119 +305,6 @@ export default function Partners() {
           {filteredPartners.length} partner{filteredPartners.length !== 1 ? "s" : ""}
         </span>
       </div>
-
-      {/* Pending Referrals */}
-      {pendingReferrals.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/50">
-          <CardContent className="p-0">
-            <div className="p-4 border-b border-amber-200 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-600" />
-              <h3 className="font-medium text-amber-900">
-                Pending Referrals ({pendingReferrals.length})
-              </h3>
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Partner</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Notes</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead>Link to Project</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pendingReferrals.map((referral) => (
-                  <TableRow key={referral.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {referral.referral_partners?.contact_name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {referral.referral_partners?.company_name}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{referral.client_name}</div>
-                        {referral.client_company && (
-                          <div className="text-sm text-gray-500">
-                            {referral.client_company}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>{referral.client_email}</div>
-                        {referral.client_phone && (
-                          <div className="text-gray-500">{referral.client_phone}</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <div className="text-sm text-gray-600 truncate">
-                        {referral.notes || "—"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-gray-500">
-                        {referral.submitted_at
-                          ? new Date(referral.submitted_at).toLocaleDateString()
-                          : "—"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        onValueChange={(value) =>
-                          handleApproveReferral(referral.id, value)
-                        }
-                      >
-                        <SelectTrigger className="w-40">
-                          <SelectValue placeholder="Select project" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {projects.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleApproveReferral(referral.id, null)}
-                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                          title="Approve without project"
-                        >
-                          <Check className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRejectReferral(referral.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          title="Reject"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Partners Table */}
       <Card>
@@ -396,62 +332,71 @@ export default function Partners() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPartners.map((partner) => (
-                  <TableRow key={partner.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{partner.contact_name}</div>
-                        {partner.company_name && (
-                          <div className="text-sm text-gray-500">
-                            {partner.company_name}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{partner.email}</TableCell>
-                    <TableCell>
-                      {partner.commission_rate}% / {partner.commission_months}mo
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span>{partner.referrals?.length || 0}</span>
+                {filteredPartners.map((partner) => {
+                  const activeRefs = partner.referrals?.filter(r => r.status === "active").length || 0;
+                  const pendingRefs = partner.referrals?.filter(r => r.status === "pending").length || 0;
+
+                  return (
+                    <TableRow key={partner.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{partner.contact_name}</div>
+                          {partner.company_name && (
+                            <div className="text-sm text-gray-500">
+                              {partner.company_name}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{partner.email}</TableCell>
+                      <TableCell>
+                        {partner.commission_rate}% / {partner.commission_months}mo
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-600 font-medium">{activeRefs} active</span>
+                          {pendingRefs > 0 && (
+                            <span className="text-amber-600 text-sm">({pendingRefs} in pipeline)</span>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPartner(partner);
+                              setReferralDialog(true);
+                            }}
+                            title="Link project manually"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            partner.status === "active"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }
+                        >
+                          {partner.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setSelectedPartner(partner);
-                            setReferralDialog(true);
+                            setEditingPartner({ ...partner });
+                            setEditSheet(true);
                           }}
                         >
-                          <Plus className="w-3 h-3" />
+                          <Edit className="w-4 h-4" />
                         </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={
-                          partner.status === "active"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }
-                      >
-                        {partner.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setEditingPartner({ ...partner });
-                          setEditSheet(true);
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -637,9 +582,20 @@ export default function Partners() {
                     {editingPartner.referrals.map((ref) => (
                       <div
                         key={ref.id}
-                        className="text-sm p-2 bg-gray-50 rounded"
+                        className="text-sm p-3 bg-gray-50 rounded-lg flex justify-between items-center"
                       >
-                        {ref.projects?.name || "Unknown Project"}
+                        <span>{ref.projects?.name || ref.client_name || "Pending"}</span>
+                        <Badge
+                          className={
+                            ref.status === "active"
+                              ? "bg-green-100 text-green-700"
+                              : ref.status === "pending"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-gray-100 text-gray-700"
+                          }
+                        >
+                          {ref.status}
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -654,9 +610,10 @@ export default function Partners() {
       <Dialog open={referralDialog} onOpenChange={setReferralDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Referral</DialogTitle>
+            <DialogTitle>Link Project to Partner</DialogTitle>
             <DialogDescription>
-              Link a project to {selectedPartner?.contact_name}
+              Manually link a project to {selectedPartner?.contact_name} for commission tracking.
+              Note: Referrals from the CRM are linked automatically when won.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -717,7 +674,7 @@ export default function Partners() {
               onClick={handleAddReferral}
               disabled={!referralData.project_id}
             >
-              Add Referral
+              Link Project
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { supabase } from "@/api/supabaseClient";
 import { Lead, TeamMember } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Plus, Building2, Mail, Phone, DollarSign, Calendar, User, Trash2 } from "lucide-react";
@@ -67,6 +68,15 @@ export default function CRM() {
     const lead = leads.find(l => l.id === draggableId);
     if (lead && source.droppableId !== destination.droppableId) {
       await Lead.update(lead.id, { ...lead, status: destination.droppableId });
+
+      // Auto-approve referral when lead is marked as won
+      if (destination.droppableId === "won" && lead.referral_id) {
+        await supabase
+          .from("referrals")
+          .update({ status: "active" })
+          .eq("id", lead.referral_id);
+      }
+
       loadData();
     }
   };
