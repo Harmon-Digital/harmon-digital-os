@@ -30,7 +30,7 @@ export default function PartnerSubmitReferral() {
     try {
       const { data } = await supabase
         .from("referral_partners")
-        .select("id, commission_rate, commission_months")
+        .select("id, contact_name, commission_rate, commission_months")
         .eq("user_id", user.id)
         .single();
 
@@ -65,6 +65,25 @@ export default function PartnerSubmitReferral() {
       });
 
       if (error) throw error;
+
+      // Notify all admins about the new referral
+      const { data: admins } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("role", "admin");
+
+      if (admins?.length) {
+        await supabase.from("notifications").insert(
+          admins.map((admin) => ({
+            user_id: admin.id,
+            type: "referral",
+            title: "New Referral Submitted",
+            message: `${partner.contact_name} submitted a referral for ${formData.client_name}`,
+            link: "/Partners",
+            read: false,
+          }))
+        );
+      }
 
       setMessage({ type: "success", text: "Referral submitted successfully! We'll be in touch soon." });
       setFormData({

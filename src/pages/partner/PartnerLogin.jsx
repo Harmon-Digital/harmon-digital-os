@@ -114,11 +114,11 @@ export default function PartnerLogin() {
             .single();
 
           if (existingBroker) {
-            // Update existing broker to partnered status
+            // Update existing broker to signed_up status (keep existing status if further along)
             await supabase
               .from("brokers")
               .update({
-                status: "partnered",
+                status: "signed_up",
                 partner_id: partnerData.id,
                 updated_at: new Date().toISOString(),
               })
@@ -129,7 +129,7 @@ export default function PartnerLogin() {
               name: contactName,
               firm: companyName || "",
               email,
-              status: "partnered",
+              status: "signed_up",
               partner_id: partnerData.id,
             });
           }

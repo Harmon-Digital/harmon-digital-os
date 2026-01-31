@@ -42,6 +42,7 @@ const STATUS_OPTIONS = [
   { value: "responded", label: "Responded", color: "bg-purple-100 text-purple-700" },
   { value: "call_booked", label: "Call Booked", color: "bg-yellow-100 text-yellow-700" },
   { value: "call_complete", label: "Call Complete", color: "bg-indigo-100 text-indigo-700" },
+  { value: "signed_up", label: "Signed Up", color: "bg-cyan-100 text-cyan-700" },
   { value: "partnered", label: "Partnered", color: "bg-green-100 text-green-700" },
   { value: "dead", label: "Dead", color: "bg-red-100 text-red-700" },
 ];
