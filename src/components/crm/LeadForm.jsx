@@ -23,7 +23,18 @@ export default function LeadForm({ lead, teamMembers = [], onSubmit, onCancel })
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Convert empty strings to null for optional fields
+    const cleanedData = {
+      ...formData,
+      next_action_date: formData.next_action_date || null,
+      assigned_to: formData.assigned_to || null,
+      email: formData.email || null,
+      phone: formData.phone || null,
+      website: formData.website || null,
+      notes: formData.notes || null,
+      next_action: formData.next_action || null,
+    };
+    onSubmit(cleanedData);
   };
 
   return (

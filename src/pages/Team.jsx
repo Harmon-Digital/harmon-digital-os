@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { TeamMember } from "@/api/entities";
-import { User } from "@/api/entities";
+import { supabase } from "@/api/supabaseClient";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Mail, UserCheck, UserX, Users, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -22,15 +23,23 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import TeamMemberForm from "../components/team/TeamMemberForm";
 
 export default function Team() {
+  const { user: authUser, userProfile } = useAuth();
   const [teamMembers, setTeamMembers] = useState([]);
   const [users, setUsers] = useState([]);
   const [showDrawer, setShowDrawer] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
   const [viewTab, setViewTab] = useState("team");
   const [syncDialog, setSyncDialog] = useState({ open: false, user: null });
   const [statusTab, setStatusTab] = useState("active");
@@ -43,16 +52,13 @@ export default function Team() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const user = await User.me();
-      setCurrentUser(user);
-      
-      const [membersData, usersData] = await Promise.all([
-        TeamMember.list("-created_date"),
-        User.list()
+      const [membersData, { data: usersData }] = await Promise.all([
+        TeamMember.list("-created_at"),
+        supabase.from("user_profiles").select("*").order("created_at", { ascending: false })
       ]);
-      
+
       setTeamMembers(membersData);
-      setUsers(usersData);
+      setUsers(usersData || []);
     } catch (error) {
       console.error("Error loading team:", error);
     } finally {
@@ -133,7 +139,7 @@ export default function Team() {
     );
   });
 
-  const isAdmin = currentUser?.role === "admin";
+  const isAdmin = userProfile?.role === "admin";
 
   return (
     <div className="p-6 lg:p-8">
@@ -153,51 +159,6 @@ export default function Team() {
             <Plus className="w-4 h-4 mr-2" />
             Add Team Member
           </Button>
-        )}
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Active Members
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{activeMembers.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <UserCheck className="w-4 h-4" />
-              Synced with Users
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">
-              {teamMembers.filter(tm => tm.user_id).length}
-            </div>
-          </CardContent>
-        </Card>
-
-        {isAdmin && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                <UserX className="w-4 h-4" />
-                Users Without Team Profile
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-orange-600">
-                {usersWithoutTeamMember.length}
-              </div>
-            </CardContent>
-          </Card>
         )}
       </div>
 
@@ -248,99 +209,97 @@ export default function Team() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {loading ? (
-              <div className="col-span-full text-center py-12">
-                <p className="text-gray-500">Loading...</p>
-              </div>
-            ) : filteredMembers.length === 0 ? (
-              <div className="col-span-full text-center py-12">
-                <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {searchQuery ? "No team members found" : "No team members yet"}
-                </h3>
-                <p className="text-gray-500">
-                  {searchQuery ? "Try adjusting your search" : isAdmin ? "Click \"Add Team Member\" to get started" : "Team members will appear here"}
-                </p>
-              </div>
-            ) : (
-              filteredMembers.map((member) => {
-                const linkedUser = getUserForMember(member.user_id);
-                return (
-                  <Card key={member.id} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="pt-6">
-                      <div className="flex items-start gap-4 mb-4">
-                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                          {member.profile_image_url ? (
-                            <img 
-                              src={member.profile_image_url} 
-                              alt={member.full_name}
-                              className="w-full h-full rounded-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-2xl font-bold text-white">
-                              {member.full_name?.charAt(0) || '?'}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 text-lg mb-1 truncate">
-                            {member.full_name}
-                          </h3>
-                          <Badge className={roleColors[member.role]}>
-                            {member.role.replace('_', ' ')}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      {member.bio && (
-                        <p className="text-sm text-gray-600 mb-4 line-clamp-3">
-                          {member.bio}
-                        </p>
-                      )}
-
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Mail className="w-4 h-4" />
-                          <span className="truncate">{member.email}</span>
-                        </div>
-                        {linkedUser && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <UserCheck className="w-4 h-4 text-green-600" />
-                            <span className="text-green-600">User account linked</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {member.skills && member.skills.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {member.skills.map((skill, idx) => (
-                            <Badge key={idx} variant="outline" className="text-xs">
-                              {skill}
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">Loading...</p>
+                </div>
+              ) : filteredMembers.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {searchQuery ? "No team members found" : "No team members yet"}
+                  </h3>
+                  <p className="text-gray-500">
+                    {searchQuery ? "Try adjusting your search" : isAdmin ? "Click \"Add Team Member\" to get started" : "Team members will appear here"}
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Account</TableHead>
+                      {isAdmin && <TableHead className="w-[100px]">Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMembers.map((member) => {
+                      const linkedUser = getUserForMember(member.user_id);
+                      return (
+                        <TableRow key={member.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                {member.profile_image_url ? (
+                                  <img
+                                    src={member.profile_image_url}
+                                    alt={member.full_name}
+                                    className="w-full h-full rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-bold text-white">
+                                    {member.full_name?.charAt(0) || '?'}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="font-medium">{member.full_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={roleColors[member.role]}>
+                              {member.role?.replace('_', ' ')}
                             </Badge>
-                          ))}
-                        </div>
-                      )}
-
-                      {isAdmin && (
-                        <div className="pt-4 border-t">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(member)}
-                            className="w-full"
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Profile
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })
-            )}
-          </div>
+                          </TableCell>
+                          <TableCell className="text-gray-600">{member.email}</TableCell>
+                          <TableCell>
+                            <span className="text-gray-600 capitalize">
+                              {member.employment_type?.replace('_', ' ')}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {linkedUser ? (
+                              <div className="flex items-center gap-1 text-green-600">
+                                <UserCheck className="w-4 h-4" />
+                                <span className="text-sm">Linked</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                          {isAdmin && (
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(member)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
 

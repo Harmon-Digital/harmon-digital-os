@@ -19,7 +19,14 @@ export default function TaskForm({ task, projects, teamMembers = [], onSubmit, o
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Convert empty strings to null for optional fields
+    const cleanedData = {
+      ...formData,
+      project_id: formData.project_id || null,
+      assigned_to: formData.assigned_to || null,
+      due_date: formData.due_date || null,
+    };
+    onSubmit(cleanedData);
   };
 
   return (
@@ -44,12 +51,13 @@ export default function TaskForm({ task, projects, teamMembers = [], onSubmit, o
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="project_id">Project *</Label>
-          <Select value={formData.project_id} onValueChange={(value) => setFormData({...formData, project_id: value})} required>
+          <Label htmlFor="project_id">Project</Label>
+          <Select value={formData.project_id || "none"} onValueChange={(value) => setFormData({...formData, project_id: value === "none" ? null : value})}>
             <SelectTrigger>
-              <SelectValue placeholder="Select project" />
+              <SelectValue placeholder="Select project (optional)" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">No Project</SelectItem>
               {projects.map(project => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.name}

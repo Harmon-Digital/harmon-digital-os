@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Project, Account, Task, TimeEntry, Contact, User, Invoice, TeamMember } from "@/api/entities";
+import { Project, Account, Task, TimeEntry, Contact, Invoice, TeamMember } from "@/api/entities";
+import { useAuth } from "@/contexts/AuthContext";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,11 @@ import {
   Check,
   HelpCircle,
   Ticket,
-  RefreshCw // Added RefreshCw icon
+  RefreshCw,
+  Upload,
+  File,
+  Download,
+  Loader2
 } from "lucide-react";
 import {
   Table,
@@ -80,23 +85,25 @@ import TaskForm from "../components/tasks/TaskForm";
 import TimeEntryForm from "../components/time/TimeEntryForm";
 import ContactForm from "../components/contacts/ContactForm";
 import ProjectAccountingView from "../components/accounting/ProjectAccountingView";
-import { base44 } from "@/api/base44Client"; // Added base44 import
+import { api } from "@/api/legacyClient";
+import { supabase } from "@/api/supabaseClient";
 
 export default function ProjectDetail() {
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get('id');
+  const { user: authUser, userProfile } = useAuth();
 
   const [project, setProject] = useState(null);
   const [account, setAccount] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [timeEntries, setTimeEntries] = useState([]);
   const [contacts, setContacts] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [allAccounts, setAllAccounts] = useState([]);
   const [invoices, setInvoices] = useState([]);
-  const [subscriptions, setSubscriptions] = useState([]); // Added subscriptions state
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Edit states
@@ -131,19 +138,15 @@ export default function ProjectDetail() {
       setProject(currentProject);
       setEditedProject(currentProject);
 
-      const [accountData, tasksData, timeData, contactsData, usersData, invoicesData, teamMembersData, subscriptionsData, user] = await Promise.all([
+      const [accountData, tasksData, timeData, contactsData, invoicesData, teamMembersData, subscriptionsData] = await Promise.all([
         Account.list(),
         Task.filter({ project_id: projectId }),
         TimeEntry.filter({ project_id: projectId }),
         Contact.list(),
-        User.list(),
         Invoice.list(),
         TeamMember.list(),
-        base44.entities.StripeSubscription.list(), // Fetch subscriptions
-        User.me()
+        api.entities.StripeSubscription.list()
       ]);
-
-      setCurrentUser(user);
       const projectAccount = accountData.find(a => a.id === currentProject.account_id);
       setAccount(projectAccount);
       setAllAccounts(accountData);
@@ -158,10 +161,67 @@ export default function ProjectDetail() {
       ));
       // Filter subscriptions that are linked to this project
       setSubscriptions(subscriptionsData.filter(sub => sub.project_id === projectId));
+
+      // Load documents
+      const { data: docsData } = await supabase
+        .from('project_documents')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+      setDocuments(docsData || []);
     } catch (error) {
       console.error("Error loading project:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDocumentUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingDocument(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${projectId}/${Date.now()}-${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('uploads')
+        .upload(`documents/${fileName}`, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('uploads')
+        .getPublicUrl(`documents/${fileName}`);
+
+      const { error: dbError } = await supabase
+        .from('project_documents')
+        .insert({
+          project_id: projectId,
+          name: file.name,
+          file_path: publicUrl,
+          file_type: file.type,
+          file_size: file.size,
+          uploaded_by: authUser?.id
+        });
+
+      if (dbError) throw dbError;
+
+      loadProjectData();
+    } catch (error) {
+      console.error('Error uploading document:', error);
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId, filePath) => {
+    try {
+      await supabase.from('project_documents').delete().eq('id', docId);
+      setDocuments(documents.filter(d => d.id !== docId));
+    } catch (error) {
+      console.error('Error deleting document:', error);
     }
   };
 
@@ -232,8 +292,7 @@ export default function ProjectDetail() {
       if (editingTimeEntry) {
         await TimeEntry.update(editingTimeEntry.id, timeData);
       } else {
-        const currentUser = await User.me();
-        await TimeEntry.create({ ...timeData, project_id: projectId, user_id: currentUser.id });
+        await TimeEntry.create({ ...timeData, project_id: projectId, user_id: authUser?.id });
       }
       setShowTimeDrawer(false);
       setEditingTimeEntry(null);
@@ -303,8 +362,8 @@ export default function ProjectDetail() {
     );
   }
 
-  const isAdmin = currentUser?.role === "admin";
-  const currentTeamMember = teamMembers.find(tm => tm.user_id === currentUser?.id);
+  const isAdmin = userProfile?.role === "admin";
+  const currentTeamMember = teamMembers.find(tm => tm.user_id === authUser?.id);
 
   // Calculate current month hours for retainer projects
   const getCurrentMonthHours = () => {
@@ -557,113 +616,55 @@ export default function ProjectDetail() {
       )}
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="flex flex-wrap gap-4 mb-6">
         {isAdmin && (
           <>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  Time-Based Revenue
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  ${timeBasedRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">{billableHours.toFixed(1)}h billable</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  Billed Revenue
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  ${billedRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">{billedHours.toFixed(1)}h billed</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4" />
-                  Labor Cost
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">
-                  ${laborCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">{totalHours.toFixed(1)}h logged</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" />
-                  Net Margin
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${billedRevenue - laborCost >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ${(billedRevenue - laborCost).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {billedRevenue > 0 ? (((billedRevenue - laborCost) / billedRevenue) * 100).toFixed(1) : 0}% margin
-                </p>
-              </CardContent>
-            </Card>
+            <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
+              <TrendingUp className="w-4 h-4 text-blue-500" />
+              <span className="text-sm text-gray-500">Revenue</span>
+              <span className="font-semibold text-blue-600">${timeBasedRevenue.toLocaleString()}</span>
+              <span className="text-xs text-gray-400">({billableHours.toFixed(1)}h)</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              <span className="text-sm text-gray-500">Billed</span>
+              <span className="font-semibold text-green-600">${billedRevenue.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
+              <TrendingDown className="w-4 h-4 text-red-500" />
+              <span className="text-sm text-gray-500">Labor</span>
+              <span className="font-semibold text-red-600">${laborCost.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
+              <DollarSign className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-500">Margin</span>
+              <span className={`font-semibold ${billedRevenue - laborCost >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                ${(billedRevenue - laborCost).toLocaleString()}
+              </span>
+              <span className="text-xs text-gray-400">
+                ({billedRevenue > 0 ? (((billedRevenue - laborCost) / billedRevenue) * 100).toFixed(0) : 0}%)
+              </span>
+            </div>
           </>
         )}
-
         {!isAdmin && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                Total Hours
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
-                {totalHours.toFixed(1)}h
-              </div>
-              <p className="text-xs text-gray-500 mt-1">{billableHours.toFixed(1)}h billable</p>
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
+            <Clock className="w-4 h-4 text-gray-500" />
+            <span className="text-sm text-gray-500">Hours</span>
+            <span className="font-semibold">{totalHours.toFixed(1)}h</span>
+            <span className="text-xs text-gray-400">({billableHours.toFixed(1)}h billable)</span>
+          </div>
         )}
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Weekly Hours
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">
-              {weeklyHours.toFixed(1)}h
-              {weeklyMinimum > 0 && <span className="text-lg text-gray-500"> / {weeklyMinimum}h</span>}
-            </div>
-            {weeklyMinimum > 0 && (
-              <>
-                <Progress value={weeklyProgress} className="mt-2" />
-                <p className="text-xs text-gray-500 mt-1">
-                  {weeklyProgress >= 100 ? '✓ ' : ''}
-                  {weeklyProgress.toFixed(0)}% of minimum
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
+          <Clock className="w-4 h-4 text-gray-500" />
+          <span className="text-sm text-gray-500">This Week</span>
+          <span className="font-semibold">{weeklyHours.toFixed(1)}h</span>
+          {weeklyMinimum > 0 && (
+            <span className={`text-xs ${weeklyProgress >= 100 ? 'text-green-500' : 'text-gray-400'}`}>
+              / {weeklyMinimum}h ({weeklyProgress.toFixed(0)}%)
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Additional Metrics for Retainer - Admin Only */}
@@ -700,18 +701,57 @@ export default function ProjectDetail() {
       <Tabs defaultValue="details" className="space-y-6">
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
-          <TabsTrigger value="time">Time Entries ({timeEntries.length})</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks</TabsTrigger>
+          <TabsTrigger value="time">Time</TabsTrigger>
           {isAdmin && <TabsTrigger value="reports">Reports</TabsTrigger>}
-          <TabsTrigger value="contacts">Contacts ({contacts.length})</TabsTrigger>
-          <TabsTrigger value="billing">Billing ({invoices.length + subscriptions.length})</TabsTrigger>
-          <TabsTrigger value="api">
-            <Ticket className="w-4 h-4 mr-2" />
-            Ticket API
-          </TabsTrigger>
+          <TabsTrigger value="contacts">Contacts</TabsTrigger>
+          <TabsTrigger value="billing">Billing</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="api">API</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="space-y-6">
+          {/* Billing Type Overview - Compact inline stats */}
+          {project.billing_type === 'exit' && (
+            <div className="flex flex-wrap gap-3 p-3 bg-white rounded-lg border">
+              <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                <TrendingUp className="w-4 h-4" /> Exit
+              </span>
+              <span className="text-sm text-gray-600">Baseline: <span className="font-semibold">${(project.baseline_valuation || 0).toLocaleString()}</span></span>
+              <span className="text-sm text-gray-600">Fee: <span className="font-semibold text-green-600">{project.valuation_percentage || 8}%</span></span>
+              <span className="text-sm text-gray-600">Retainer: <span className="font-semibold">${(project.monthly_retainer || 0).toLocaleString()}/mo</span></span>
+              <span className="text-sm text-gray-600">Target: <span className="font-semibold">{project.exit_target_date ? new Date(project.exit_target_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Not set'}</span></span>
+            </div>
+          )}
+
+          {project.billing_type === 'retainer' && (
+            <div className="flex flex-wrap gap-3 p-3 bg-white rounded-lg border">
+              <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                <Users className="w-4 h-4" /> Retainer
+              </span>
+              <span className="text-sm text-gray-600">Monthly: <span className="font-semibold">${(project.monthly_retainer || 0).toLocaleString()}</span></span>
+              <span className="text-sm text-gray-600">Hours: <span className="font-semibold text-purple-600">{project.retainer_hours_included || project.budget_hours || 0}h</span>/mo</span>
+              <span className="text-sm text-gray-600">Used: <span className="font-semibold">{currentMonthHours.toFixed(1)}h</span></span>
+              <span className={`text-sm ${hoursRemaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {hoursRemaining >= 0 ? `${hoursRemaining.toFixed(1)}h left` : `${Math.abs(hoursRemaining).toFixed(1)}h over`}
+              </span>
+            </div>
+          )}
+
+          {project.billing_type === 'hourly' && (
+            <div className="flex flex-wrap gap-3 p-3 bg-white rounded-lg border">
+              <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                <Clock className="w-4 h-4" /> Hourly
+              </span>
+              <span className="text-sm text-gray-600">Rate: <span className="font-semibold">${(project.hourly_rate || 0).toLocaleString()}/hr</span></span>
+              <span className="text-sm text-gray-600">Billable: <span className="font-semibold text-blue-600">{billableHours.toFixed(1)}h</span></span>
+              <span className="text-sm text-gray-600">Revenue: <span className="font-semibold text-green-600">${(billableHours * (project.hourly_rate || 0)).toLocaleString()}</span></span>
+              {(billableHours - billedHours) > 0 && (
+                <span className="text-sm text-gray-600">Unbilled: <span className="font-semibold text-orange-600">${((billableHours - billedHours) * (project.hourly_rate || 0)).toLocaleString()}</span></span>
+              )}
+            </div>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Project Information</CardTitle>
@@ -799,11 +839,13 @@ export default function ProjectDetail() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="exit_systematization">Exit Systematization</SelectItem>
                       <SelectItem value="web_development">Web Development</SelectItem>
-                      <SelectItem value="mobile_app">Mobile App</SelectItem>
-                      <SelectItem value="design">Design</SelectItem>
                       <SelectItem value="consulting">Consulting</SelectItem>
+                      <SelectItem value="automation">Automation</SelectItem>
+                      <SelectItem value="design">Design</SelectItem>
                       <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="marketing">Marketing</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -826,46 +868,133 @@ export default function ProjectDetail() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="hourly">Hourly</SelectItem>
-                            <SelectItem value="fixed">Fixed Price</SelectItem>
                             <SelectItem value="retainer">Retainer</SelectItem>
+                            <SelectItem value="exit">Exit (Retainer + Success Fee)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Hourly Rate ($)</Label>
-                        <Input
-                          type="number"
-                          value={editedProject?.hourly_rate || ''}
-                          onChange={(e) => handleProjectFieldChange('hourly_rate', parseFloat(e.target.value) || 0)}
-                          placeholder="150.00"
-                        />
-                      </div>
+                      {editedProject?.billing_type === 'hourly' && (
+                        <div className="space-y-2">
+                          <Label>Hourly Rate ($)</Label>
+                          <Input
+                            type="number"
+                            value={editedProject?.hourly_rate || ''}
+                            onChange={(e) => handleProjectFieldChange('hourly_rate', parseFloat(e.target.value) || 0)}
+                            placeholder="150.00"
+                          />
+                        </div>
+                      )}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                      {editedProject?.billing_type === 'retainer' && (
+
+                    {/* Retainer-specific fields */}
+                    {editedProject?.billing_type === 'retainer' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                         <div className="space-y-2">
                           <Label>Monthly Retainer ($)</Label>
                           <Input
                             type="number"
-                            value={editedProject?.retainer_monthly || ''}
-                            onChange={(e) => handleProjectFieldChange('retainer_monthly', parseFloat(e.target.value) || 0)}
-                            placeholder="5000.00"
+                            value={editedProject?.monthly_retainer || ''}
+                            onChange={(e) => handleProjectFieldChange('monthly_retainer', parseFloat(e.target.value) || 0)}
+                            placeholder="2500.00"
                           />
                         </div>
-                      )}
-                      {editedProject?.billing_type === 'fixed' && (
                         <div className="space-y-2">
-                          <Label>Fixed Budget ($)</Label>
+                          <Label>Hours Included (per month)</Label>
                           <Input
                             type="number"
-                            value={editedProject?.budget || ''}
-                            onChange={(e) => handleProjectFieldChange('budget', parseFloat(e.target.value) || 0)}
-                            placeholder="10000.00"
+                            value={editedProject?.retainer_hours_included || ''}
+                            onChange={(e) => handleProjectFieldChange('retainer_hours_included', parseFloat(e.target.value) || 0)}
+                            placeholder="20"
                           />
                         </div>
-                      )}
+                      </div>
+                    )}
+
+                    {/* Exit-specific fields */}
+                    {editedProject?.billing_type === 'exit' && (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                          <div className="space-y-2">
+                            <Label>Monthly Retainer ($)</Label>
+                            <Input
+                              type="number"
+                              value={editedProject?.monthly_retainer || ''}
+                              onChange={(e) => handleProjectFieldChange('monthly_retainer', parseFloat(e.target.value) || 0)}
+                              placeholder="2500.00"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Success Fee (%)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={editedProject?.valuation_percentage || ''}
+                              onChange={(e) => handleProjectFieldChange('valuation_percentage', parseFloat(e.target.value) || 0)}
+                              placeholder="8"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                          <div className="space-y-2">
+                            <Label>Baseline Valuation ($)</Label>
+                            <Input
+                              type="number"
+                              value={editedProject?.baseline_valuation || ''}
+                              onChange={(e) => handleProjectFieldChange('baseline_valuation', parseFloat(e.target.value) || 0)}
+                              placeholder="2000000"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Engagement Length (months)</Label>
+                            <Select
+                              value={String(editedProject?.engagement_months || 3)}
+                              onValueChange={(value) => handleProjectFieldChange('engagement_months', parseInt(value))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">1 month</SelectItem>
+                                <SelectItem value="2">2 months</SelectItem>
+                                <SelectItem value="3">3 months</SelectItem>
+                                <SelectItem value="6">6 months</SelectItem>
+                                <SelectItem value="12">12 months</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                          <div className="space-y-2">
+                            <Label>Exit Target Date</Label>
+                            <Input
+                              type="date"
+                              value={editedProject?.exit_target_date || ''}
+                              onChange={(e) => handleProjectFieldChange('exit_target_date', e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Success Fee Status</Label>
+                            <Select
+                              value={editedProject?.success_fee_status || 'pending'}
+                              onValueChange={(value) => handleProjectFieldChange('success_fee_status', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="paid">Paid</SelectItem>
+                                <SelectItem value="waived">Waived (Guarantee)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                       <div className="space-y-2">
-                        <Label>Budget Hours</Label>
+                        <Label>Budget Hours {editedProject?.billing_type === 'retainer' ? '(Monthly)' : ''}</Label>
                         <Input
                           type="number"
                           value={editedProject?.budget_hours || ''}
@@ -1041,7 +1170,37 @@ export default function ProjectDetail() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="time">
+        <TabsContent value="time" className="space-y-6">
+          {/* Time Summary */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-sm text-gray-600">Total Hours</div>
+                <div className="text-2xl font-bold text-gray-900">{totalHours.toFixed(1)}h</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-sm text-gray-600">This Month</div>
+                <div className="text-2xl font-bold text-indigo-600">{currentMonthHours.toFixed(1)}h</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-sm text-gray-600">
+                  {project?.billing_type === 'hourly' ? 'Billable' : 'Tracked'}
+                </div>
+                <div className="text-2xl font-bold text-green-600">{billableHours.toFixed(1)}h</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-sm text-gray-600">Entries</div>
+                <div className="text-2xl font-bold text-gray-600">{timeEntries.length}</div>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Time Entries</CardTitle>
@@ -1054,12 +1213,16 @@ export default function ProjectDetail() {
                 className="bg-indigo-600 hover:bg-indigo-700"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add Time
+                Log Time
               </Button>
             </CardHeader>
             <CardContent>
               {timeEntries.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No time entries yet</p>
+                <div className="text-center py-12">
+                  <Clock className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No time logged yet</h3>
+                  <p className="text-gray-500">Start tracking time for this project</p>
+                </div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -1068,7 +1231,7 @@ export default function ProjectDetail() {
                       <TableHead>Team Member</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Hours</TableHead>
-                      <TableHead>Billable</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1078,11 +1241,15 @@ export default function ProjectDetail() {
                         <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
                         <TableCell>{getTeamMemberNameById(entry.team_member_id)}</TableCell>
                         <TableCell className="max-w-xs truncate">{entry.description || '—'}</TableCell>
-                        <TableCell>{entry.hours}h</TableCell>
+                        <TableCell className="font-medium">{entry.hours}h</TableCell>
                         <TableCell>
-                          <Badge className={entry.billable ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>
-                            {entry.billable ? "Yes" : "No"}
-                          </Badge>
+                          {project?.billing_type === 'retainer' || project?.billing_type === 'exit' ? (
+                            <Badge className="bg-purple-100 text-purple-700">Retainer</Badge>
+                          ) : entry.billable ? (
+                            <Badge className="bg-green-100 text-green-700">Billable</Badge>
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-700">Non-billable</Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
@@ -1207,98 +1374,83 @@ export default function ProjectDetail() {
           </Card>
         </TabsContent>
 
-        {/* Updated Billing Tab (was Invoices) */}
-        <TabsContent value="billing">
-          <div className="space-y-6">
-            {/* Subscriptions Section */}
-            {subscriptions.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <RefreshCw className="w-5 h-5" />
-                      Active Subscriptions
-                    </CardTitle>
+        <TabsContent value="billing" className="space-y-6">
+          {/* Billing Summary based on project type */}
+          {project && (
+            <Card className="bg-gray-50">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div>
+                    <p className="text-sm text-gray-600">Billing Type</p>
+                    <p className="text-lg font-semibold capitalize">{project.billing_type}</p>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {subscriptions.map((subscription) => (
-                      <div key={subscription.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <RefreshCw className="w-6 h-6 text-purple-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">
-                              {subscription.product_name || 'Subscription'}
-                            </h3>
-                            <p className="text-sm text-gray-600">
-                              {subscription.interval && `Billed ${subscription.interval}ly`}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Current period: {subscription.current_period_start ? new Date(subscription.current_period_start).toLocaleDateString() : '—'} - {subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : '—'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <div className="text-xl font-bold text-gray-900">
-                              ${(subscription.amount || 0).toLocaleString()}
-                              <span className="text-sm text-gray-500">/{subscription.interval || 'month'}</span>
-                            </div>
-                          </div>
-                          <Badge className={
-                            subscription.status === 'active' ? 'bg-green-100 text-green-800' :
-                            subscription.status === 'trialing' ? 'bg-blue-100 text-blue-800' :
-                            subscription.status === 'past_due' ? 'bg-red-100 text-red-800' :
-                            subscription.status === 'canceled' ? 'bg-gray-100 text-gray-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }>
-                            {subscription.status}
-                          </Badge>
-                        </div>
+                  {project.billing_type === 'hourly' && (
+                    <>
+                      <div>
+                        <p className="text-sm text-gray-600">Hourly Rate</p>
+                        <p className="text-lg font-semibold">${project.hourly_rate || 0}</p>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Invoices Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Invoices
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {invoices.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No invoices yet</p>
-                ) : (
-                  <div className="space-y-4">
-                    {invoices.map((invoice) => (
-                      <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                            <FileText className="w-6 h-6 text-indigo-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">
-                              {invoice.invoice_number || `INV-${invoice.id.slice(0, 8)}`}
-                            </h3>
-                            <p className="text-sm text-gray-600">
-                              Due: {new Date(invoice.due_date).toLocaleDateString()}
-                            </p>
-                          </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Billable Value</p>
+                        <p className="text-lg font-semibold text-green-600">
+                          ${(billableHours * (project.hourly_rate || 0)).toLocaleString()}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  {(project.billing_type === 'retainer' || project.billing_type === 'exit') && (
+                    <>
+                      <div>
+                        <p className="text-sm text-gray-600">Monthly Retainer</p>
+                        <p className="text-lg font-semibold">${(project.monthly_retainer || 0).toLocaleString()}</p>
+                      </div>
+                      {project.billing_type === 'exit' && (
+                        <div>
+                          <p className="text-sm text-gray-600">Success Fee</p>
+                          <p className="text-lg font-semibold">{project.valuation_percentage || 8}%</p>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <div className="text-xl font-bold text-gray-900">
-                              ${(invoice.total || 0).toLocaleString()}
-                            </div>
-                          </div>
+                      )}
+                    </>
+                  )}
+                  <div>
+                    <p className="text-sm text-gray-600">Invoices</p>
+                    <p className="text-lg font-semibold">{invoices.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Invoices */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoices</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {invoices.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p className="text-gray-500">No invoices yet</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">
+                          {invoice.invoice_number || `INV-${invoice.id.slice(0, 8)}`}
+                        </TableCell>
+                        <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
+                        <TableCell className="font-semibold">${(invoice.total || 0).toLocaleString()}</TableCell>
+                        <TableCell>
                           <Badge className={
                             invoice.status === 'paid' ? 'bg-green-100 text-green-800' :
                             invoice.status === 'sent' ? 'bg-blue-100 text-blue-800' :
@@ -1307,26 +1459,145 @@ export default function ProjectDetail() {
                           }>
                             {invoice.status}
                           </Badge>
-                        </div>
-                      </div>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </div>
-                )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Subscriptions */}
+          {subscriptions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Active Subscriptions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {subscriptions.map((sub) => (
+                      <TableRow key={sub.id}>
+                        <TableCell className="font-medium">{sub.product_name || 'Subscription'}</TableCell>
+                        <TableCell>${(sub.amount || 0).toLocaleString()}/{sub.interval || 'month'}</TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={sub.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            {sub.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
-
-            {/* Empty State for Billing Tab */}
-            {subscriptions.length === 0 && invoices.length === 0 && (
-              <div className="text-center py-12">
-                <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No billing records yet</h3>
-                <p className="text-gray-500">Invoices and subscriptions for this project will appear here</p>
-              </div>
-            )}
-          </div>
+          )}
         </TabsContent>
 
-        {/* New Ticket API Tab */}
+        {/* Documents Tab */}
+        <TabsContent value="documents">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <File className="w-5 h-5" />
+                Project Documents
+              </CardTitle>
+              <div>
+                <input
+                  type="file"
+                  id="document-upload"
+                  className="hidden"
+                  onChange={handleDocumentUpload}
+                />
+                <Button
+                  size="sm"
+                  onClick={() => document.getElementById('document-upload').click()}
+                  disabled={uploadingDocument}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  {uploadingDocument ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Document
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {documents.length === 0 ? (
+                <div className="text-center py-12">
+                  <File className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No documents yet</h3>
+                  <p className="text-gray-500 mb-4">Upload contracts, proposals, and other project files</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => document.getElementById('document-upload').click()}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload First Document
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900">{doc.name}</h4>
+                          <p className="text-xs text-gray-500">
+                            {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : ''}
+                            {doc.created_at && ` • Uploaded ${new Date(doc.created_at).toLocaleDateString()}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={doc.file_path}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteDocument(doc.id, doc.file_path)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Ticket API Tab */}
         <TabsContent value="api">
           <Card>
             <CardHeader>
@@ -1509,7 +1780,7 @@ export default function ProjectDetail() {
     "priority": "high",
     "project_id": "${projectId}",
     "project_name": "${project.name}",
-    "created_date": "2025-01-15T10:30:00Z"
+    "created_at": "2025-01-15T10:30:00Z"
   },
   "message": "Ticket #42 created successfully for project \\"${project.name}\\""
 }`}
@@ -1536,7 +1807,7 @@ export default function ProjectDetail() {
             <TaskForm
               task={editingTask}
               projects={[project]}
-              users={users}
+              teamMembers={teamMembers}
               onSubmit={handleTaskSubmit}
               onCancel={() => {
                 setShowTaskDrawer(false);
@@ -1562,7 +1833,7 @@ export default function ProjectDetail() {
               projects={[project]}
               tasks={tasks}
               teamMembers={teamMembers}
-              currentTeamMember={teamMembers.find(tm => tm.user_id === currentUser?.id)} // Updated to match outline
+              currentTeamMember={currentTeamMember}
               onSubmit={handleTimeSubmit}
               onCancel={() => {
                 setShowTimeDrawer(false);

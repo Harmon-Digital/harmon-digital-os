@@ -33,7 +33,7 @@ export default function Clients() {
 
   const loadClients = async () => {
     setLoading(true);
-    const data = await Client.list("-created_date");
+    const data = await Client.list("-created_at");
     setClients(data);
     setLoading(false);
   };

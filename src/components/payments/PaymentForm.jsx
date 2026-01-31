@@ -20,7 +20,14 @@ export default function PaymentForm({ payment, teamMembers, onSubmit, onCancel }
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Convert empty strings to null for optional fields
+    const cleanedData = {
+      ...formData,
+      period_start: formData.period_start || null,
+      period_end: formData.period_end || null,
+      notes: formData.notes || null,
+    };
+    onSubmit(cleanedData);
   };
 
   return (

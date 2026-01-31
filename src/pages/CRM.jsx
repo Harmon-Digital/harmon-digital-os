@@ -35,7 +35,7 @@ export default function CRM() {
 
   const loadData = async () => {
     const [leadsData, teamMembersData] = await Promise.all([
-      Lead.list("-created_date"),
+      Lead.list("-created_at"),
       TeamMember.list()
     ]);
     setLeads(leadsData);

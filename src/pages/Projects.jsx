@@ -70,7 +70,7 @@ export default function Projects() {
     setLoading(true);
     try {
       const [projectsData, accountsData] = await Promise.all([
-        Project.list("-created_date"),
+        Project.list("-created_at"),
         Account.list()
       ]);
       setProjects(projectsData);

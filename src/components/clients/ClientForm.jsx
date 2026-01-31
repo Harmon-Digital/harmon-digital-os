@@ -23,7 +23,14 @@ export default function ClientForm({ client, onSubmit, onCancel }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Convert empty strings to null for optional fields
+    const cleanedData = {
+      ...formData,
+      phone: formData.phone || null,
+      website: formData.website || null,
+      notes: formData.notes || null,
+    };
+    onSubmit(cleanedData);
   };
 
   return (

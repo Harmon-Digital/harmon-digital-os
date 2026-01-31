@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Task, Project, Account, TeamMember } from "@/api/entities";
-import { User } from "@/api/entities";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3 } from "lucide-react";
@@ -46,14 +46,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import TaskForm from "../components/tasks/TaskForm";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/legacyClient";
 
 export default function Tasks() {
+  const { user: authUser, userProfile } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
   const [currentTeamMember, setCurrentTeamMember] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -99,13 +99,10 @@ export default function Tasks() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const user = await User.me();
-      setCurrentUser(user);
-      
       const [tasksData, projectsData, accountsData, teamMembersData] = await Promise.all([
-        Task.list("-created_date", 500),
-        Project.list("-created_date", 200),
-        Account.list("-created_date", 100),
+        Task.list("-created_at", 500),
+        Project.list("-created_at", 200),
+        Account.list("-created_at", 100),
         TeamMember.list()
       ]);
 
@@ -114,7 +111,7 @@ export default function Tasks() {
       setAccounts(accountsData);
       setTeamMembers(teamMembersData);
 
-      const myTeamMember = teamMembersData.find(tm => tm.user_id === user.id);
+      const myTeamMember = teamMembersData.find(tm => tm.user_id === authUser?.id);
       setCurrentTeamMember(myTeamMember);
     } catch (error) {
       console.error("Error loading tasks:", error);
@@ -140,13 +137,9 @@ export default function Tasks() {
       try {
         const assignedTeamMember = teamMembersMap[taskData.assigned_to];
         const project = projectsMap[taskData.project_id];
-        
+
         if (assignedTeamMember?.user_id) {
-          const assignedUser = await User.list().then(users => 
-            users.find(u => u.id === assignedTeamMember.user_id)
-          );
-          
-          await base44.functions.invoke('sendNotification', {
+          await api.functions.invoke('sendNotification', {
             userId: assignedTeamMember.user_id,
             title: 'New Task Assigned',
             message: `You've been assigned to "${taskData.title}"${project ? ` on project "${project.name}"` : ''}.`,
@@ -242,6 +235,7 @@ export default function Tasks() {
   };
 
   const getProjectName = (projectId) => {
+    if (!projectId) return "No Project";
     return projectsMap[projectId]?.name || "Unknown";
   };
 

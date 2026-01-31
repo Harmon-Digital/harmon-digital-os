@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/legacyClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,7 +55,7 @@ export default function ContactForm({ contact, accounts, onSubmit, onCancel }) {
   const loadStripeCustomers = async () => {
     setLoadingCustomers(true);
     try {
-      const response = await base44.functions.invoke('listStripeCustomers', {});
+      const response = await api.functions.invoke('listStripeCustomers', {});
       if (response.data?.success) {
         setStripeCustomers(response.data.customers);
       }
@@ -72,7 +72,15 @@ export default function ContactForm({ contact, accounts, onSubmit, onCancel }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Convert empty strings to null for optional fields
+    const cleanedData = {
+      ...formData,
+      phone: formData.phone || null,
+      title: formData.title || null,
+      stripe_customer_id: formData.stripe_customer_id || null,
+      notes: formData.notes || null,
+    };
+    onSubmit(cleanedData);
   };
 
   const handleCreateStripeCustomer = async () => {
@@ -83,7 +91,7 @@ export default function ContactForm({ contact, accounts, onSubmit, onCancel }) {
 
     setProcessing(true);
     try {
-      const response = await base44.functions.invoke('createStripeCustomer', {
+      const response = await api.functions.invoke('createStripeCustomer', {
         email: formData.email,
         name: `${formData.first_name} ${formData.last_name}`,
         contactId: contact?.id,
@@ -115,7 +123,7 @@ export default function ContactForm({ contact, accounts, onSubmit, onCancel }) {
     if (contact?.id) {
       setProcessing(true);
       try {
-        const response = await base44.functions.invoke('linkStripeCustomer', {
+        const response = await api.functions.invoke('linkStripeCustomer', {
           contactId: contact.id,
           stripeCustomerId: selectedStripeCustomer,
         });

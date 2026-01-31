@@ -21,7 +21,17 @@ export default function ActivityForm({ activity, contactId, accountId, onSubmit,
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Convert empty strings to null for optional fields
+    const cleanedData = {
+      ...formData,
+      contact_id: formData.contact_id || null,
+      account_id: formData.account_id || null,
+      description: formData.description || null,
+      outcome: formData.outcome || null,
+      next_action: formData.next_action || null,
+      next_action_date: formData.next_action_date || null,
+    };
+    onSubmit(cleanedData);
   };
 
   return (

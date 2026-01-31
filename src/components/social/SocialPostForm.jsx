@@ -20,7 +20,14 @@ export default function SocialPostForm({ socialPost, accounts, teamMembers, onSu
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Convert empty strings to null for optional fields
+    const cleanedData = {
+      ...formData,
+      client_id: formData.client_id || null,
+      assigned_to: formData.assigned_to || null,
+      image_url: formData.image_url || null,
+    };
+    onSubmit(cleanedData);
   };
 
   const handlePlatformToggle = (platform) => {
@@ -127,12 +134,12 @@ export default function SocialPostForm({ socialPost, accounts, teamMembers, onSu
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="client_id">Account (Optional)</Label>
-            <Select value={formData.client_id} onValueChange={(value) => setFormData({...formData, client_id: value})}>
+            <Select value={formData.client_id || "none"} onValueChange={(value) => setFormData({...formData, client_id: value === "none" ? "" : value})}>
               <SelectTrigger>
                 <SelectValue placeholder="Select account" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={null}>None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {accounts.map(account => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.company_name}

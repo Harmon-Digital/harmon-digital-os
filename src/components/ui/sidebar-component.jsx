@@ -19,16 +19,17 @@ import {
   Building2,
   UserCircle,
   Briefcase,
-  TrendingUp, // Changed from ShoppingCart
-  Receipt,    // Changed from Calculator
+  TrendingUp,
+  Receipt,
   Settings,
   ChevronDown,
   LogOut,
   User as UserIcon,
   GripVertical,
   DollarSign,
+  Handshake,
 } from "lucide-react";
-import { User } from "@/api/entities";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,10 +49,10 @@ const DEFAULT_SIDEBAR_WIDTH = 240;
 
 function InterfacesLogoSquare() {
   return (
-    <div className="w-6 h-6 overflow-clip relative shrink-0">
-      <img 
-        src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68e5a112b53f4b50bdce1fda/08a68bdc6_Icon.png"
-        alt="Harmon Digital"
+    <div className="w-5 h-5 overflow-clip relative shrink-0">
+      <img
+        src="/logo.png"
+        alt="Harmon Digital OS"
         className="w-full h-full object-contain"
       />
     </div>
@@ -63,7 +64,7 @@ function BrandBadge() {
     <div className="relative shrink-0 w-full">
       <div className="flex items-center gap-2 p-3 w-full">
         <InterfacesLogoSquare />
-        <div className="font-semibold text-[14px] text-neutral-50">
+        <div className="font-medium text-sm text-neutral-50">
           Harmon Digital OS
         </div>
       </div>
@@ -118,6 +119,7 @@ function getSidebarContent(activeSection, user) {
           title: "Sales & Marketing",
           items: [
             { icon: <Target className="w-4 h-4 text-neutral-50" />, label: "CRM", path: "CRM" },
+            { icon: <Briefcase className="w-4 h-4 text-neutral-50" />, label: "Brokers", path: "BrokerOutreach" },
             { icon: <Building2 className="w-4 h-4 text-neutral-50" />, label: "Accounts", path: "Accounts" },
             { icon: <UserCircle className="w-4 h-4 text-neutral-50" />, label: "Contacts", path: "Contacts" },
             { icon: <Calendar className="w-4 h-4 text-neutral-50" />, label: "Social Media", path: "SocialMedia" },
@@ -128,28 +130,18 @@ function getSidebarContent(activeSection, user) {
   };
 
   if (isAdmin) {
-    contentMap.accounting = {
-      title: "Accounting",
-      sections: [
-        {
-          title: "Financial",
-          items: [
-            { icon: <LayoutDashboard className="w-4 h-4 text-neutral-50" />, label: "Overview", path: "AccountingDashboard" },
-            { icon: <CreditCard className="w-4 h-4 text-neutral-50" />, label: "Stripe", path: "StripeSync" },
-            { icon: <BarChart3 className="w-4 h-4 text-neutral-50" />, label: "Reports", path: "Reports" },
-          ],
-        },
-      ],
-    };
-
     contentMap.admin = {
       title: "Admin",
       sections: [
         {
-          title: "Administration",
+          title: "Admin",
           items: [
-            { icon: <LayoutDashboard className="w-4 h-4 text-neutral-50" />, label: "Admin Dashboard", path: "AdminDashboard" },
+            { icon: <LayoutDashboard className="w-4 h-4 text-neutral-50" />, label: "Dashboard", path: "AdminDashboard" },
             { icon: <UsersRound className="w-4 h-4 text-neutral-50" />, label: "Team", path: "Team" },
+            { icon: <DollarSign className="w-4 h-4 text-neutral-50" />, label: "Accounting", path: "AccountingDashboard" },
+            { icon: <BarChart3 className="w-4 h-4 text-neutral-50" />, label: "Reports", path: "Reports" },
+            { icon: <Handshake className="w-4 h-4 text-neutral-50" />, label: "Partners", path: "Partners" },
+            { icon: <Receipt className="w-4 h-4 text-neutral-50" />, label: "Referral Payouts", path: "ReferralPayouts" },
           ],
         },
       ],
@@ -161,21 +153,22 @@ function getSidebarContent(activeSection, user) {
 
 /* ---------------------------- Left Icon Nav Rail -------------------------- */
 
-function IconNavButton({ children, isActive = false, onClick }) {
+function IconNavButton({ children, label, isActive = false, onClick }) {
   return (
     <button
       type="button"
-      className={`flex items-center justify-center rounded-lg size-10 min-w-10 transition-colors duration-500
+      className={`flex flex-col items-center justify-center rounded-lg size-10 min-w-10 transition-colors duration-500
         ${isActive ? "bg-neutral-800 text-neutral-50" : "hover:bg-neutral-800 text-neutral-400 hover:text-neutral-300"}`}
       style={{ transitionTimingFunction: softSpringEasing }}
       onClick={onClick}
+      title={label}
     >
       {children}
     </button>
   );
 }
 
-function IconNavigation({ activeSection, onSectionChange, user, onLogout }) {
+function IconNavigation({ activeSection, onSectionChange, user, onLogout, onSettings }) {
   const isAdmin = user?.role === "admin";
   
   const navItems = [
@@ -184,7 +177,6 @@ function IconNavigation({ activeSection, onSectionChange, user, onLogout }) {
   ];
 
   if (isAdmin) {
-    navItems.push({ id: "accounting", icon: <Receipt className="w-4 h-4" />, label: "Accounting" }); // Icon changed to Receipt
     navItems.push({ id: "admin", icon: <Settings className="w-4 h-4" />, label: "Admin" });
   }
 
@@ -192,7 +184,7 @@ function IconNavigation({ activeSection, onSectionChange, user, onLogout }) {
     <aside className="bg-black flex flex-col gap-2 items-center p-4 w-16 h-screen border-r border-neutral-800">
       {/* Logo */}
       <div className="mb-2 size-10 flex items-center justify-center">
-        <div className="size-7">
+        <div className="size-5">
           <InterfacesLogoSquare />
         </div>
       </div>
@@ -202,6 +194,7 @@ function IconNavigation({ activeSection, onSectionChange, user, onLogout }) {
         {navItems.map((item) => (
           <IconNavButton
             key={item.id}
+            label={item.label}
             isActive={activeSection === item.id}
             onClick={() => onSectionChange(item.id)}
           >
@@ -230,7 +223,7 @@ function IconNavigation({ activeSection, onSectionChange, user, onLogout }) {
               <p className="text-xs text-gray-500">{user?.email}</p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer">
+            <DropdownMenuItem onClick={onSettings} className="cursor-pointer">
               <UserIcon className="w-4 h-4 mr-2" />
               Personal Settings
             </DropdownMenuItem>
@@ -299,6 +292,14 @@ function DetailSidebar({ activeSection, user, sidebarWidth, onWidthChange }) {
       }}
     >
       {!isCollapsed && <BrandBadge />}
+
+      {!isCollapsed && (
+        <div className="px-3 pb-2 w-full">
+          <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+            {content.title}
+          </span>
+        </div>
+      )}
 
       <div
         className={`flex flex-col w-full overflow-y-auto flex-1 transition-all duration-500 ${
@@ -426,7 +427,7 @@ function MenuSection({ section, isCollapsed, navigate, currentPath }) {
 
 export function ModernSidebar({ children }) {
   const [activeSection, setActiveSection] = useState("operations");
-  const [user, setUser] = useState(null);
+  const { user, userProfile, signOut } = useAuth();
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const savedWidth = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return savedWidth ? parseInt(savedWidth, 10) : DEFAULT_SIDEBAR_WIDTH;
@@ -435,33 +436,28 @@ export function ModernSidebar({ children }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadUser();
-  }, []);
-
-  useEffect(() => {
-    const path = location.pathname;
-    if (path.includes('Dashboard') || path.includes('Projects') || path.includes('Tasks') || path.includes('TimeTracking') || path.includes('SOPs') || path.includes('ProjectDetail') || path.includes('Branding')) {
-      setActiveSection('operations');
-    } else if (path.includes('CRM') || path.includes('Accounts') || path.includes('Contacts') || path.includes('SocialMedia')) {
-      setActiveSection('sales');
-    } else if (path.includes('AccountingDashboard') || path.includes('Reports') || path.includes('StripeSync')) { // Updated path checks
-      setActiveSection('accounting');
-    } else if (path.includes('Team') || path.includes('AdminDashboard')) {
+    const path = location.pathname.toLowerCase();
+    // Check admin paths first (more specific)
+    if (path.includes('team') || path.includes('admindashboard') || path.includes('accountingdashboard') || path.includes('reports') || path.includes('partners') || path.includes('referralpayouts')) {
       setActiveSection('admin');
+    } else if (path.includes('crm') || path.includes('brokeroutreach') || path.includes('accounts') || path.includes('contacts') || path.includes('socialmedia')) {
+      setActiveSection('sales');
+    } else {
+      setActiveSection('operations');
     }
   }, [location.pathname]);
 
-  const loadUser = async () => {
-    try {
-      const currentUser = await User.me();
-      setUser(currentUser);
-    } catch (error) {
-      console.error("Error loading user:", error);
-    }
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
   };
 
-  const handleLogout = async () => {
-    await User.logout();
+  const handleSettings = () => {
+    navigate('/PersonalSettings');
+  };
+
+  const handleSectionChange = (section) => {
+    setActiveSection(section);
   };
 
   const handleWidthChange = (newWidth) => {
@@ -471,15 +467,16 @@ export function ModernSidebar({ children }) {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      <IconNavigation 
-        activeSection={activeSection} 
-        onSectionChange={setActiveSection} 
-        user={user}
+      <IconNavigation
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
+        user={userProfile}
         onLogout={handleLogout}
+        onSettings={handleSettings}
       />
-      <DetailSidebar 
-        activeSection={activeSection} 
-        user={user} 
+      <DetailSidebar
+        activeSection={activeSection}
+        user={userProfile}
         sidebarWidth={sidebarWidth}
         onWidthChange={handleWidthChange}
       />

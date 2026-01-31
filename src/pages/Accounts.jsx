@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Account, Contact } from "@/api/entities";
-import { User } from "@/api/entities";
+import { useAuth } from "@/contexts/AuthContext";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,9 +47,9 @@ import {
 import AccountForm from "../components/accounts/AccountForm";
 
 export default function Accounts() {
+  const { user: authUser, userProfile } = useAuth();
   const [accounts, setAccounts] = useState([]);
   const [contacts, setContacts] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -69,14 +69,11 @@ export default function Accounts() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const user = await User.me();
-      setCurrentUser(user);
-
       const [accountsData, contactsData] = await Promise.all([
-        Account.list("-created_date"),
+        Account.list("-created_at"),
         Contact.list()
       ]);
-      
+
       setAccounts(accountsData);
       setContacts(contactsData);
     } catch (error) {

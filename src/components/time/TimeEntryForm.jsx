@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/legacyClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,16 +49,25 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [monthlyHoursData, setMonthlyHoursData] = useState(null);
   const [loadingMonthlyData, setLoadingMonthlyData] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
 
   useEffect(() => {
     if (formData.project_id) {
+      const project = projects.find(p => p.id === formData.project_id);
+      setSelectedProject(project);
       setFilteredTasks(tasks.filter(t => t.project_id === formData.project_id));
       loadMonthlyRetainerData(formData.project_id, formData.date);
+
+      // For retainer and exit projects, billable doesn't apply (covered by retainer)
+      if (project && (project.billing_type === 'retainer' || project.billing_type === 'exit')) {
+        setFormData(prev => ({ ...prev, billable: false }));
+      }
     } else {
+      setSelectedProject(null);
       setFilteredTasks([]);
       setMonthlyHoursData(null);
     }
-  }, [formData.project_id, formData.date, tasks]);
+  }, [formData.project_id, formData.date, tasks, projects]);
 
   // Calculate hours when start/end time changes
   useEffect(() => {
@@ -89,7 +98,7 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
         const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
         
         // Fetch all time entries for this project
-        const allTimeEntries = await base44.entities.TimeEntry.list();
+        const allTimeEntries = await api.entities.TimeEntry.list();
         
         // Filter to current month for this project
         const monthlyEntries = allTimeEntries.filter(entry => {
@@ -162,7 +171,15 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
       if (!confirmed) return;
     }
     
-    onSubmit(formData);
+    // Convert empty strings to null for optional fields
+    const cleanedData = {
+      ...formData,
+      task_id: formData.task_id || null,
+      description: formData.description || null,
+      start_time: formData.start_time || null,
+      end_time: formData.end_time || null,
+    };
+    onSubmit(cleanedData);
   };
 
   // Convert existing hours to start/end if editing old entry (legacy entries without start/end times)
@@ -311,12 +328,12 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
       {filteredTasks.length > 0 && (
         <div className="space-y-2">
           <Label>Task (Optional)</Label>
-          <Select value={formData.task_id || ""} onValueChange={(value) => handleChange("task_id", value)}>
+          <Select value={formData.task_id || "none"} onValueChange={(value) => handleChange("task_id", value === "none" ? "" : value)}>
             <SelectTrigger>
               <SelectValue placeholder="Select task" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={null}>None</SelectItem>
+              <SelectItem value="none">None</SelectItem>
               {filteredTasks.map(task => (
                 <SelectItem key={task.id} value={task.id}>
                   {task.title}
@@ -353,16 +370,34 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
         />
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id="billable"
-          checked={formData.billable}
-          onCheckedChange={(checked) => handleChange("billable", checked)}
-        />
-        <Label htmlFor="billable" className="cursor-pointer">
-          Billable to client
-        </Label>
-      </div>
+      {/* Only show billable checkbox for hourly projects */}
+      {selectedProject?.billing_type === 'hourly' ? (
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="billable"
+            checked={formData.billable}
+            onCheckedChange={(checked) => handleChange("billable", checked)}
+          />
+          <Label htmlFor="billable" className="cursor-pointer">
+            Billable to client
+          </Label>
+        </div>
+      ) : selectedProject && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+          <p className="text-sm text-gray-600">
+            {selectedProject.billing_type === 'retainer' && (
+              <>
+                <span className="font-medium">Retainer Project</span> - Time is tracked for budget monitoring but not billed hourly (covered by monthly retainer).
+              </>
+            )}
+            {selectedProject.billing_type === 'exit' && (
+              <>
+                <span className="font-medium">Exit Project</span> - Time is tracked but not billed hourly (covered by retainer + success fee).
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
       <div className="flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel}>

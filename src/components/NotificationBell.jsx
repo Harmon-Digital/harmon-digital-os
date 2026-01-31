@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/legacyClient";
 import {
   Popover,
   PopoverContent,
@@ -26,12 +26,12 @@ export default function NotificationBell() {
 
   const loadNotifications = async () => {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
 
-      const notificationsData = await base44.entities.Notification.filter(
+      const notificationsData = await api.entities.Notification.filter(
         { user_id: currentUser.id },
-        "-created_date",
+        "-created_at",
         50
       );
       setNotifications(notificationsData);
@@ -45,7 +45,7 @@ export default function NotificationBell() {
   const handleMarkAsRead = async (notificationId) => {
     try {
       const notification = notifications.find(n => n.id === notificationId);
-      await base44.entities.Notification.update(notificationId, { ...notification, read: true });
+      await api.entities.Notification.update(notificationId, { ...notification, read: true });
       loadNotifications();
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -57,7 +57,7 @@ export default function NotificationBell() {
       const unreadNotifications = notifications.filter(n => !n.read);
       await Promise.all(
         unreadNotifications.map(n => 
-          base44.entities.Notification.update(n.id, { ...n, read: true })
+          api.entities.Notification.update(n.id, { ...n, read: true })
         )
       );
       loadNotifications();

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { BrandingSettings } from "@/api/entities";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/legacyClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +29,7 @@ export default function Branding() {
       } else {
         // Create default settings
         const defaultSettings = await BrandingSettings.create({
-          logo_url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68e5a112b53f4b50bdce1fda/08a68bdc6_Icon.png",
+          logo_url: "",
           primary_color: "#4F46E5",
           secondary_color: "#3B82F6",
           accent_color: "#10B981",
@@ -55,7 +55,7 @@ export default function Branding() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await base44.integrations.Core.UploadFile({ file });
+      const response = await api.integrations.Core.UploadFile({ file });
       const fileUrl = response.file_url;
 
       handleChange(field, fileUrl);

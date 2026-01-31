@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Task, Project, TimeEntry, Lead, TeamMember, Account } from "@/api/entities";
-import { User } from "@/api/entities";
+import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
+  const { user: authUser, userProfile } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
   const [currentTeamMember, setCurrentTeamMember] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -35,14 +35,11 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const currentUser = await User.me();
-      setUser(currentUser);
-
       const [tasksData, projectsData, timeEntriesData, leadsData, teamMembersData] = await Promise.all([
-        Task.list("-created_date", 100),
-        Project.list("-created_date", 50),
+        Task.list("-created_at", 100),
+        Project.list("-created_at", 50),
         TimeEntry.list("-date", 100),
-        Lead.list("-created_date", 50),
+        Lead.list("-created_at", 50),
         TeamMember.list()
       ]);
 
@@ -51,7 +48,7 @@ export default function Dashboard() {
       setTimeEntries(timeEntriesData);
       setLeads(leadsData);
 
-      const myTeamMember = teamMembersData.find(tm => tm.user_id === currentUser.id);
+      const myTeamMember = teamMembersData.find(tm => tm.user_id === authUser?.id);
       setCurrentTeamMember(myTeamMember);
     } catch (error) {
       console.error("Error loading dashboard:", error);
@@ -146,7 +143,7 @@ export default function Dashboard() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">
-          Welcome back, {user?.full_name?.split(' ')[0] || 'there'}! 👋
+          Welcome back, {userProfile?.full_name?.split(' ')[0] || 'there'}! 👋
         </h1>
         <p className="text-gray-500 mt-1">Here's what's on your plate today</p>
       </div>

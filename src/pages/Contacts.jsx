@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Contact, Account, Activity } from "@/api/entities";
-import { User } from "@/api/entities";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Edit, Trash2, Mail, Phone, Building2, MessageSquare } from "lucide-react";
@@ -46,10 +46,10 @@ import ContactForm from "../components/contacts/ContactForm";
 import ActivityForm from "../components/contacts/ActivityForm";
 
 export default function Contacts() {
+  const { user: authUser, userProfile } = useAuth();
   const [contacts, setContacts] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [activities, setActivities] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -70,15 +70,12 @@ export default function Contacts() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const user = await User.me();
-      setCurrentUser(user);
-
       const [contactsData, accountsData, activitiesData] = await Promise.all([
-        Contact.list("-created_date"),
+        Contact.list("-created_at"),
         Account.list(),
         Activity.list("-date")
       ]);
-      
+
       setContacts(contactsData);
       setAccounts(accountsData);
       setActivities(activitiesData);

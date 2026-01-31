@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { TimeEntry, Project, Task, TeamMember } from "@/api/entities";
-import { User } from "@/api/entities";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +43,7 @@ import TimeEntryForm from "../components/time/TimeEntryForm";
 import WeeklyCalendarView from "../components/time/WeeklyCalendarView";
 
 export default function TimeTracking() {
+  const { user: authUser, userProfile } = useAuth();
   const [timeEntries, setTimeEntries] = useState([]);
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -50,7 +51,6 @@ export default function TimeTracking() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
   const [currentTeamMember, setCurrentTeamMember] = useState(null);
   const [viewMode, setViewMode] = useState("list");
   const [deleteDialog, setDeleteDialog] = useState({ open: false, entryId: null });
@@ -64,8 +64,10 @@ export default function TimeTracking() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (authUser) {
+      loadData();
+    }
+  }, [authUser]);
 
   useEffect(() => {
     // Set default to this week
@@ -85,9 +87,6 @@ export default function TimeTracking() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const user = await User.me();
-      setCurrentUser(user);
-
       const [entriesData, projectsData, tasksData, teamMembersData] = await Promise.all([
         TimeEntry.list("-date"),
         Project.list(),
@@ -100,18 +99,8 @@ export default function TimeTracking() {
       setTasks(tasksData);
       setTeamMembers(teamMembersData);
 
-      const myTeamMember = teamMembersData.find(tm => tm.user_id === user.id);
+      const myTeamMember = teamMembersData.find(tm => tm.user_id === authUser?.id);
       setCurrentTeamMember(myTeamMember);
-
-      // Initialize team member filter if not already set or if user is not admin
-      if (!isAdmin && teamMemberFilter === "all" && myTeamMember) {
-        setTeamMemberFilter("me");
-      } else if (isAdmin && teamMemberFilter === "me" && !myTeamMember) {
-        // Fallback for admin user without own team member entry
-        setTeamMemberFilter("all");
-      }
-
-
     } catch (error) {
       console.error("Error loading time tracking:", error);
     } finally {
@@ -158,7 +147,42 @@ export default function TimeTracking() {
     return member?.full_name || "Unknown";
   };
 
-  const isAdmin = currentUser?.role === "admin";
+  const getProject = (projectId) => {
+    return projects.find(p => p.id === projectId);
+  };
+
+  const getBillingDisplay = (entry) => {
+    const project = getProject(entry.project_id);
+    if (!project) return { label: "Unknown", color: "bg-gray-100 text-gray-800" };
+
+    if (project.billing_type === 'retainer' || project.billing_type === 'exit') {
+      return { label: "Retainer", color: "bg-purple-100 text-purple-800" };
+    }
+
+    if (entry.billable) {
+      return { label: "Billable", color: "bg-green-100 text-green-800" };
+    }
+    return { label: "Non-billable", color: "bg-gray-100 text-gray-800" };
+  };
+
+  const getStatusDisplay = (entry) => {
+    const project = getProject(entry.project_id);
+    if (!project) return { label: "Unknown", color: "bg-gray-100 text-gray-800" };
+
+    if (project.billing_type === 'retainer' || project.billing_type === 'exit') {
+      return { label: "Tracked", color: "bg-blue-100 text-blue-800" };
+    }
+
+    if (entry.client_billed) {
+      return { label: "Billed", color: "bg-blue-100 text-blue-800" };
+    }
+    if (entry.billable) {
+      return { label: "Unbilled", color: "bg-orange-100 text-orange-800" };
+    }
+    return { label: "N/A", color: "bg-gray-100 text-gray-800" };
+  };
+
+  const isAdmin = userProfile?.role === "admin";
 
   // Filter entries
   const filteredEntries = timeEntries.filter(entry => {
@@ -210,8 +234,24 @@ export default function TimeTracking() {
   });
 
   const totalHours = filteredEntries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
-  const billableHours = filteredEntries.filter(e => e.billable).reduce((sum, entry) => sum + (entry.hours || 0), 0);
-  const unbilledHours = filteredEntries.filter(e => e.billable && !e.client_billed).reduce((sum, entry) => sum + (entry.hours || 0), 0);
+
+  // Hours on hourly projects that are billable
+  const hourlyBillableHours = filteredEntries.filter(e => {
+    const project = getProject(e.project_id);
+    return project?.billing_type === 'hourly' && e.billable;
+  }).reduce((sum, entry) => sum + (entry.hours || 0), 0);
+
+  // Hours on retainer/exit projects
+  const retainerHours = filteredEntries.filter(e => {
+    const project = getProject(e.project_id);
+    return project?.billing_type === 'retainer' || project?.billing_type === 'exit';
+  }).reduce((sum, entry) => sum + (entry.hours || 0), 0);
+
+  // Unbilled hours (only for hourly projects)
+  const unbilledHours = filteredEntries.filter(e => {
+    const project = getProject(e.project_id);
+    return project?.billing_type === 'hourly' && e.billable && !e.client_billed;
+  }).reduce((sum, entry) => sum + (entry.hours || 0), 0);
 
   const resetFilters = () => {
     const today = new Date();
@@ -374,22 +414,24 @@ export default function TimeTracking() {
             <div className="text-3xl font-bold text-gray-900">{totalHours.toFixed(1)}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Billable Hours</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Retainer Hours</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">{billableHours.toFixed(1)}</div>
+            <div className="text-3xl font-bold text-purple-600">{retainerHours.toFixed(1)}</div>
+            <p className="text-xs text-gray-500 mt-1">Covered by retainer</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Unbilled Hours</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Hourly Billable</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-orange-600">{unbilledHours.toFixed(1)}</div>
+            <div className="text-3xl font-bold text-green-600">{hourlyBillableHours.toFixed(1)}</div>
+            <p className="text-xs text-gray-500 mt-1">{unbilledHours.toFixed(1)}h unbilled</p>
           </CardContent>
         </Card>
 
@@ -460,20 +502,16 @@ export default function TimeTracking() {
                       {entry.description || "—"}
                     </TableCell>
                     <TableCell>
-                      {entry.billable ? (
-                        <Badge className="bg-green-100 text-green-800">Yes</Badge>
-                      ) : (
-                        <Badge variant="secondary">No</Badge>
-                      )}
+                      {(() => {
+                        const billing = getBillingDisplay(entry);
+                        return <Badge className={billing.color}>{billing.label}</Badge>;
+                      })()}
                     </TableCell>
                     <TableCell>
-                      {entry.client_billed ? (
-                        <Badge className="bg-blue-100 text-blue-800">Billed</Badge>
-                      ) : entry.billable ? (
-                        <Badge className="bg-orange-100 text-orange-800">Unbilled</Badge>
-                      ) : (
-                        <Badge variant="secondary">Non-billable</Badge>
-                      )}
+                      {(() => {
+                        const status = getStatusDisplay(entry);
+                        return <Badge className={status.color}>{status.label}</Badge>;
+                      })()}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">

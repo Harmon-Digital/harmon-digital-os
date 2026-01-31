@@ -1,31 +1,64 @@
-import { base44 } from './base44Client';
+// Supabase Edge Functions
+import { supabase } from './supabaseClient';
+import { Project, TeamMember, Notification } from './supabaseEntities';
 
+// Helper to invoke Edge Functions
+const invokeFunction = async (functionName, params = {}) => {
+  const { data, error } = await supabase.functions.invoke(functionName, {
+    body: params
+  });
+  if (error) throw error;
+  return { data };
+};
 
-export const createStripeInvoice = base44.functions.createStripeInvoice;
+// Stripe functions - require Edge Function deployment
+export const createStripeInvoice = (params) => invokeFunction('create-stripe-invoice', params);
+export const stripeWebhook = (params) => invokeFunction('stripe-webhook', params);
+export const syncStripeData = (params) => invokeFunction('sync-stripe-data', params);
+export const createStripeCustomer = (params) => invokeFunction('create-stripe-customer', params);
+export const listStripeCustomers = (params) => invokeFunction('list-stripe-customers', params);
+export const listStripeSubscriptions = (params) => invokeFunction('list-stripe-subscriptions', params);
 
-export const stripeWebhook = base44.functions.stripeWebhook;
+// These can be direct database operations
+export const linkStripeCustomer = async ({ contactId, stripeCustomerId }) => {
+  const { data, error } = await supabase
+    .from('contacts')
+    .update({ stripe_customer_id: stripeCustomerId })
+    .eq('id', contactId)
+    .select()
+    .single();
 
-export const syncStripeData = base44.functions.syncStripeData;
+  if (error) throw error;
+  return { data: { success: true } };
+};
 
-export const createStripeCustomer = base44.functions.createStripeCustomer;
+// Email functions - require Edge Function deployment
+export const sendNotificationEmail = (params) => invokeFunction('send-notification-email', params);
+export const testEmail = (params) => invokeFunction('test-email', params);
 
-export const linkStripeCustomer = base44.functions.linkStripeCustomer;
+// Notification functions - direct database operations
+export const sendNotification = async ({ userId, type, title, message, link }) => {
+  return Notification.create({
+    user_id: userId,
+    type,
+    title,
+    message,
+    link,
+    read: false
+  });
+};
 
-export const listStripeCustomers = base44.functions.listStripeCustomers;
+export const checkNotificationTriggers = (params) => invokeFunction('check-notification-triggers', params);
 
-export const sendNotificationEmail = base44.functions.sendNotificationEmail;
+// Ticket function - requires Edge Function if external
+export const createTicket = (params) => invokeFunction('create-ticket', params);
 
-export const sendNotification = base44.functions.sendNotification;
+// These can be direct database queries
+export const getProjects = async () => {
+  return Project.list('-created_at');
+};
 
-export const checkNotificationTriggers = base44.functions.checkNotificationTriggers;
-
-export const testEmail = base44.functions.testEmail;
-
-export const createTicket = base44.functions.createTicket;
-
-export const getProjects = base44.functions.getProjects;
-
-export const getTeamMembers = base44.functions.getTeamMembers;
-
-export const listStripeSubscriptions = base44.functions.listStripeSubscriptions;
+export const getTeamMembers = async () => {
+  return TeamMember.filter({ status: 'active' });
+};
 

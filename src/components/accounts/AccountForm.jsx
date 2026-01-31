@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/legacyClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,7 +58,7 @@ export default function AccountForm({ account, onSubmit, onCancel }) {
     
     setLoadingContacts(true);
     try {
-      const contactsData = await base44.entities.Contact.filter({ account_id: account.id });
+      const contactsData = await api.entities.Contact.filter({ account_id: account.id });
       setContacts(contactsData);
     } catch (error) {
       console.error("Error loading contacts:", error);
@@ -83,7 +83,7 @@ export default function AccountForm({ account, onSubmit, onCancel }) {
 
     setUploading(true);
     try {
-      const response = await base44.integrations.Core.UploadFile({ file });
+      const response = await api.integrations.Core.UploadFile({ file });
       
       if (response.file_url) {
         setFormData({ ...formData, logo_url: response.file_url });
@@ -140,12 +140,12 @@ export default function AccountForm({ account, onSubmit, onCancel }) {
   const handleSaveContact = async () => {
     try {
       if (editingContact) {
-        await base44.entities.Contact.update(editingContact.id, {
+        await api.entities.Contact.update(editingContact.id, {
           ...contactFormData,
           account_id: account.id
         });
       } else {
-        await base44.entities.Contact.create({
+        await api.entities.Contact.create({
           ...contactFormData,
           account_id: account.id
         });
@@ -162,7 +162,7 @@ export default function AccountForm({ account, onSubmit, onCancel }) {
   const handleDeleteContact = async () => {
     if (deleteDialog.contactId) {
       try {
-        await base44.entities.Contact.delete(deleteDialog.contactId);
+        await api.entities.Contact.delete(deleteDialog.contactId);
         setDeleteDialog({ open: false, contactId: null });
         loadContacts();
       } catch (error) {

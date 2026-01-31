@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/legacyClient";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,21 +27,21 @@ import {
 import { Plus, Clock, Play, Pause, Square, CheckCircle, Briefcase, Building2 } from "lucide-react";
 
 export default function QuickActions() {
+  const { user: authUser, userProfile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerPaused, setTimerPaused] = useState(false);
-  const [actualStartTime, setActualStartTime] = useState(null); // Real wall-clock start time
-  const [startTime, setStartTime] = useState(null); // For calculating elapsed time
+  const [actualStartTime, setActualStartTime] = useState(null);
+  const [startTime, setStartTime] = useState(null);
   const [pausedDuration, setPausedDuration] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [timerProject, setTimerProject] = useState("");
   const [timerTask, setTimerTask] = useState("");
   const [timerDescription, setTimerDescription] = useState("");
-  
+
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [accounts, setAccounts] = useState([]);
-  const [users, setUsers] = useState([]);
   const [currentTeamMember, setCurrentTeamMember] = useState(null);
   
   const [activeDialog, setActiveDialog] = useState(null);
@@ -73,21 +74,18 @@ export default function QuickActions() {
 
   const loadData = async () => {
     try {
-      const user = await base44.auth.me();
-      const [projectsData, tasksData, accountsData, usersData, teamMembersData] = await Promise.all([
-        base44.entities.Project.list(),
-        base44.entities.Task.list(),
-        base44.entities.Account.list(),
-        base44.entities.User.list(),
-        base44.entities.TeamMember.list(),
+      const [projectsData, tasksData, accountsData, teamMembersData] = await Promise.all([
+        api.entities.Project.list(),
+        api.entities.Task.list(),
+        api.entities.Account.list(),
+        api.entities.TeamMember.list(),
       ]);
-      
+
       setProjects(projectsData);
       setTasks(tasksData);
       setAccounts(accountsData);
-      setUsers(usersData);
-      
-      const myTeamMember = teamMembersData.find(tm => tm.user_id === user.id);
+
+      const myTeamMember = teamMembersData.find(tm => tm.user_id === authUser?.id);
       setCurrentTeamMember(myTeamMember);
     } catch (error) {
       console.error("Error loading data:", error);
@@ -178,7 +176,7 @@ export default function QuickActions() {
       // Use the actual start time we saved, and current time as end time
       const endTime = new Date(now);
       
-      await base44.entities.TimeEntry.create({
+      await api.entities.TimeEntry.create({
         project_id: timerProject,
         task_id: timerTask || null,
         team_member_id: currentTeamMember.id,
@@ -213,7 +211,7 @@ export default function QuickActions() {
     if (!quickTaskData.title || !quickTaskData.project_id) return;
     
     try {
-      await base44.entities.Task.create({
+      await api.entities.Task.create({
         title: quickTaskData.title,
         project_id: quickTaskData.project_id,
         status: "todo",
@@ -232,7 +230,7 @@ export default function QuickActions() {
     if (!quickProjectData.name) return;
     
     try {
-      await base44.entities.Project.create({
+      await api.entities.Project.create({
         name: quickProjectData.name,
         account_id: quickProjectData.account_id || null,
         status: "active",
@@ -251,7 +249,7 @@ export default function QuickActions() {
     if (!quickAccountData.company_name) return;
     
     try {
-      await base44.entities.Account.create({
+      await api.entities.Account.create({
         company_name: quickAccountData.company_name,
         status: "active",
       });

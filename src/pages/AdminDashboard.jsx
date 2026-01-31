@@ -11,7 +11,7 @@ import {
   Transaction,
   StripeSubscription
 } from "@/api/entities";
-import { User } from "@/api/entities";
+import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,8 +40,8 @@ import {
 } from "lucide-react";
 
 export default function AdminDashboard() {
+  const { user: authUser, userProfile } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [timeEntries, setTimeEntries] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -61,11 +61,8 @@ export default function AdminDashboard() {
   const loadAdminData = async () => {
     setLoading(true);
     try {
-      const currentUser = await User.me();
-      setUser(currentUser);
-
       // Check if admin
-      if (currentUser.role !== 'admin') {
+      if (userProfile?.role !== 'admin') {
         navigate(createPageUrl('Dashboard'));
         return;
       }
@@ -82,7 +79,7 @@ export default function AdminDashboard() {
         transactionsData,
         subscriptionsData
       ] = await Promise.all([
-        Invoice.list("-created_date", 100),
+        Invoice.list("-created_at", 100),
         TimeEntry.list("-date", 500),
         Project.list(),
         Account.list(),

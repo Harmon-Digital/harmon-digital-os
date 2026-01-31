@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/legacyClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw, Package, CreditCard, Users, CheckCircle, XCircle, Link2, X, FileText, Edit, Trash2, Plus } from "lucide-react";
@@ -81,13 +81,13 @@ export default function StripeSync() {
     setLoading(true);
     try {
       const [currentUser, productsData, subscriptionsData, accountsData, projectsData, contactsData, invoicesData] = await Promise.all([
-        base44.auth.me(),
-        base44.entities.StripeProduct.list(),
-        base44.entities.StripeSubscription.list("-created_date"),
-        base44.entities.Account.list(),
-        base44.entities.Project.list(),
-        base44.entities.Contact.list(),
-        base44.entities.Invoice.list("-created_date")
+        api.auth.me(),
+        api.entities.StripeProduct.list(),
+        api.entities.StripeSubscription.list("-created_at"),
+        api.entities.Account.list(),
+        api.entities.Project.list(),
+        api.entities.Contact.list(),
+        api.entities.Invoice.list("-created_at")
       ]);
 
       setUser(currentUser);
@@ -114,7 +114,7 @@ export default function StripeSync() {
   const loadStripeCustomers = async () => {
     setSyncingCustomers(true);
     try {
-      const response = await base44.functions.invoke('listStripeCustomers', {});
+      const response = await api.functions.invoke('listStripeCustomers', {});
       if (response.data?.success) {
         setStripeCustomers(response.data.customers);
       }
@@ -128,7 +128,7 @@ export default function StripeSync() {
   const loadStripeSubscriptions = async () => {
     setSyncingSubscriptions(true);
     try {
-      const response = await base44.functions.invoke('listStripeSubscriptions', {});
+      const response = await api.functions.invoke('listStripeSubscriptions', {});
       if (response.data?.success) {
         setStripeSubscriptions(response.data.subscriptions);
       }
@@ -143,7 +143,7 @@ export default function StripeSync() {
     setSyncing(true);
     setSyncResults(null);
     try {
-      const response = await base44.functions.invoke('syncStripeData', { syncType });
+      const response = await api.functions.invoke('syncStripeData', { syncType });
       if (response.data?.success) {
         setSyncResults(response.data.results);
         await loadData();
@@ -163,7 +163,7 @@ export default function StripeSync() {
       const contact = contacts.find(c => c.id === selectedContactId);
       if (!contact) return;
 
-      await base44.entities.Contact.update(selectedContactId, {
+      await api.entities.Contact.update(selectedContactId, {
         ...contact,
         stripe_customer_id: linkCustomerDialog.customer.id
       });
@@ -186,7 +186,7 @@ export default function StripeSync() {
     if (!confirm('Are you sure you want to unlink this customer?')) return;
 
     try {
-      await base44.entities.Contact.update(contact.id, {
+      await api.entities.Contact.update(contact.id, {
         ...contact,
         stripe_customer_id: null
       });
@@ -209,7 +209,7 @@ export default function StripeSync() {
         return;
       }
 
-      await base44.entities.StripeSubscription.update(dbSubscription.id, {
+      await api.entities.StripeSubscription.update(dbSubscription.id, {
         ...dbSubscription,
         project_id: selectedProjectId
       });
@@ -232,7 +232,7 @@ export default function StripeSync() {
     if (!confirm('Are you sure you want to unlink this subscription?')) return;
 
     try {
-      await base44.entities.StripeSubscription.update(subscription.id, {
+      await api.entities.StripeSubscription.update(subscription.id, {
         ...subscription,
         project_id: null
       });
@@ -248,9 +248,9 @@ export default function StripeSync() {
   const handleSaveInvoice = async (invoiceData) => {
     try {
       if (editingInvoice) {
-        await base44.entities.Invoice.update(editingInvoice.id, invoiceData);
+        await api.entities.Invoice.update(editingInvoice.id, invoiceData);
       } else {
-        await base44.entities.Invoice.create(invoiceData);
+        await api.entities.Invoice.create(invoiceData);
       }
       setShowInvoiceDrawer(false);
       setEditingInvoice(null);
@@ -263,7 +263,7 @@ export default function StripeSync() {
 
   const handleDeleteInvoice = async () => {
     try {
-      await base44.entities.Invoice.delete(deleteInvoiceDialog.invoiceId);
+      await api.entities.Invoice.delete(deleteInvoiceDialog.invoiceId);
       setDeleteInvoiceDialog({ open: false, invoiceId: null });
       await loadData();
     } catch (error) {

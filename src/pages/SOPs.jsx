@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/legacyClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Edit, Trash2, FileText, Eye } from "lucide-react";
@@ -56,7 +56,7 @@ export default function SOPs() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const sopsData = await base44.entities.SOP.list("-created_date");
+      const sopsData = await api.entities.SOP.list("-created_at");
       setSops(sopsData);
     } catch (error) {
       console.error("Error loading SOPs:", error);
@@ -68,9 +68,9 @@ export default function SOPs() {
   const handleSubmit = async (sopData) => {
     try {
       if (editingSOP) {
-        await base44.entities.SOP.update(editingSOP.id, sopData);
+        await api.entities.SOP.update(editingSOP.id, sopData);
       } else {
-        await base44.entities.SOP.create(sopData);
+        await api.entities.SOP.create(sopData);
       }
       setShowDrawer(false);
       setEditingSOP(null);
@@ -82,7 +82,7 @@ export default function SOPs() {
 
   const handleDelete = async () => {
     try {
-      await base44.entities.SOP.delete(deleteDialog.sopId);
+      await api.entities.SOP.delete(deleteDialog.sopId);
       setDeleteDialog({ open: false, sopId: null });
       loadData();
     } catch (error) {
@@ -234,7 +234,7 @@ export default function SOPs() {
                   <p className="text-sm text-gray-600 mb-4 line-clamp-2">{sop.description || "No description"}</p>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">
-                      v{sop.version || 1} • {new Date(sop.created_date).toLocaleDateString()}
+                      v{sop.version || 1} • {new Date(sop.created_at).toLocaleDateString()}
                     </span>
                     <div className="flex gap-2">
                       <Button
@@ -327,7 +327,7 @@ export default function SOPs() {
               <div dangerouslySetInnerHTML={{ __html: viewingSOP?.content || '' }} />
             </div>
             <div className="mt-4 pt-4 border-t text-xs text-gray-500 flex justify-between">
-              <span>Created: {viewingSOP && new Date(viewingSOP.created_date).toLocaleDateString()}</span>
+              <span>Created: {viewingSOP && new Date(viewingSOP.created_at).toLocaleDateString()}</span>
               {viewingSOP?.last_reviewed_date && (
                 <span>Last reviewed: {new Date(viewingSOP.last_reviewed_date).toLocaleDateString()}</span>
               )}

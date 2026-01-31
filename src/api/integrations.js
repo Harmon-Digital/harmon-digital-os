@@ -1,23 +1,89 @@
-import { base44 } from './base44Client';
+// Supabase integrations (file uploads, email, etc.)
+import { supabase } from './supabaseClient';
 
+// File upload to Supabase Storage
+export const UploadFile = async ({ file }) => {
+  const fileName = `${Date.now()}-${file.name}`;
+  const { data, error } = await supabase.storage
+    .from('uploads')
+    .upload(fileName, file);
 
+  if (error) throw error;
 
+  const { data: urlData } = supabase.storage
+    .from('uploads')
+    .getPublicUrl(fileName);
 
-export const Core = base44.integrations.Core;
+  return { file_url: urlData.publicUrl };
+};
 
-export const InvokeLLM = base44.integrations.Core.InvokeLLM;
+// Private file upload
+export const UploadPrivateFile = async ({ file }) => {
+  const fileName = `private/${Date.now()}-${file.name}`;
+  const { data, error } = await supabase.storage
+    .from('uploads')
+    .upload(fileName, file);
 
-export const SendEmail = base44.integrations.Core.SendEmail;
+  if (error) throw error;
+  return { file_path: data.path };
+};
 
-export const UploadFile = base44.integrations.Core.UploadFile;
+// Create signed URL for private files
+export const CreateFileSignedUrl = async ({ filePath, expiresIn = 3600 }) => {
+  const { data, error } = await supabase.storage
+    .from('uploads')
+    .createSignedUrl(filePath, expiresIn);
 
-export const GenerateImage = base44.integrations.Core.GenerateImage;
+  if (error) throw error;
+  return { signed_url: data.signedUrl };
+};
 
-export const ExtractDataFromUploadedFile = base44.integrations.Core.ExtractDataFromUploadedFile;
+// Email sending - requires Edge Function
+export const SendEmail = async (params) => {
+  const { data, error } = await supabase.functions.invoke('send-email', {
+    body: params
+  });
+  if (error) throw error;
+  return data;
+};
 
-export const CreateFileSignedUrl = base44.integrations.Core.CreateFileSignedUrl;
+// LLM invocation - requires Edge Function
+export const InvokeLLM = async (params) => {
+  const { data, error } = await supabase.functions.invoke('invoke-llm', {
+    body: params
+  });
+  if (error) throw error;
+  return data;
+};
 
-export const UploadPrivateFile = base44.integrations.Core.UploadPrivateFile;
+// Image generation - requires Edge Function
+export const GenerateImage = async (params) => {
+  const { data, error } = await supabase.functions.invoke('generate-image', {
+    body: params
+  });
+  if (error) throw error;
+  return data;
+};
+
+// Extract data from uploaded file - requires Edge Function
+export const ExtractDataFromUploadedFile = async (params) => {
+  const { data, error } = await supabase.functions.invoke('extract-file-data', {
+    body: params
+  });
+  if (error) throw error;
+  return data;
+};
+
+// Core object for backward compatibility
+export const Core = {
+  UploadFile,
+  UploadPrivateFile,
+  CreateFileSignedUrl,
+  SendEmail,
+  InvokeLLM,
+  GenerateImage,
+  ExtractDataFromUploadedFile
+};
 
 
 

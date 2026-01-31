@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Transaction, Expense, Payment, Account } from "@/api/entities";
-import { User } from "@/api/entities";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, DollarSign, AlertCircle, TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
@@ -38,14 +38,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/legacyClient";
 
 export default function Accounting() {
+  const { user: authUser, userProfile } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [payments, setPayments] = useState([]);
   const [accounts, setAccounts] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -65,16 +65,11 @@ export default function Accounting() {
 
   const loadData = async () => {
     let isMounted = true;
-    
+
     if (!isMounted) return;
 
     try {
-      const user = await User.me();
-      if (!isMounted) return;
-      
-      setCurrentUser(user);
-
-      if (user.role !== "admin") {
+      if (userProfile?.role !== "admin") {
         setLoading(false);
         return;
       }
@@ -108,7 +103,7 @@ export default function Accounting() {
   const handleSyncTransactions = async () => {
     setSyncing(true);
     try {
-      await base44.functions.invoke('syncStripeData', {
+      await api.functions.invoke('syncStripeData', {
         syncType: 'transactions',
         initialSync: false,
       });

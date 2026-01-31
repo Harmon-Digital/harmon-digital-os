@@ -41,7 +41,7 @@ export default function NotificationItem({ notification, onMarkAsRead, onClose }
   };
 
   const config = typeConfig[notification.type] || typeConfig.info;
-  const timeAgo = getTimeAgo(new Date(notification.created_date));
+  const timeAgo = getTimeAgo(new Date(notification.created_at));
 
   return (
     <div
