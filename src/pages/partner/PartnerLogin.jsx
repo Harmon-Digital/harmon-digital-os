@@ -94,12 +94,46 @@ export default function PartnerLogin() {
         });
 
         // Create referral_partners record
-        await supabase.from("referral_partners").insert({
-          user_id: data.user.id,
-          contact_name: contactName,
-          company_name: companyName,
-          email,
-        });
+        const { data: partnerData } = await supabase
+          .from("referral_partners")
+          .insert({
+            user_id: data.user.id,
+            contact_name: contactName,
+            company_name: companyName,
+            email,
+          })
+          .select()
+          .single();
+
+        // Link to brokers table (create or update)
+        if (partnerData) {
+          const { data: existingBroker } = await supabase
+            .from("brokers")
+            .select("id")
+            .eq("email", email)
+            .single();
+
+          if (existingBroker) {
+            // Update existing broker to partnered status
+            await supabase
+              .from("brokers")
+              .update({
+                status: "partnered",
+                partner_id: partnerData.id,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existingBroker.id);
+          } else {
+            // Create new broker record
+            await supabase.from("brokers").insert({
+              name: contactName,
+              firm: companyName || "",
+              email,
+              status: "partnered",
+              partner_id: partnerData.id,
+            });
+          }
+        }
 
         // Check if user is already confirmed (auto-confirm disabled) or session exists
         if (data.session) {
