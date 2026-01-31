@@ -50,21 +50,39 @@ export default function PartnerSubmitReferral() {
     setMessage({ type: "", text: "" });
 
     try {
-      const { error } = await supabase.from("referrals").insert({
-        partner_id: partner.id,
-        client_name: formData.client_name,
-        client_email: formData.client_email,
-        client_phone: formData.client_phone || null,
-        client_company: formData.client_company || null,
-        notes: formData.notes || null,
-        status: "pending",
-        commission_rate: partner.commission_rate || 15,
-        commission_months: partner.commission_months || 6,
-        referral_date: new Date().toISOString().split("T")[0],
-        submitted_at: new Date().toISOString(),
-      });
+      // Create the referral
+      const { data: referralData, error } = await supabase
+        .from("referrals")
+        .insert({
+          partner_id: partner.id,
+          client_name: formData.client_name,
+          client_email: formData.client_email,
+          client_phone: formData.client_phone || null,
+          client_company: formData.client_company || null,
+          notes: formData.notes || null,
+          status: "pending",
+          commission_rate: partner.commission_rate || 15,
+          commission_months: partner.commission_months || 6,
+          referral_date: new Date().toISOString().split("T")[0],
+          submitted_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Also create a lead in the CRM
+      await supabase.from("leads").insert({
+        company_name: formData.client_company || formData.client_name,
+        contact_name: formData.client_name,
+        email: formData.client_email,
+        phone: formData.client_phone || null,
+        source: `Partner Referral - ${partner.contact_name}`,
+        status: "new",
+        notes: formData.notes || null,
+        next_action: "Follow up on partner referral",
+        referral_id: referralData.id,
+      });
 
       // Notify all admins about the new referral
       const { data: admins } = await supabase
