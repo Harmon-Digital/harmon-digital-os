@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -25,6 +28,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import {
   Plus,
@@ -34,6 +43,14 @@ import {
   ArrowUpDown,
   Check,
   X,
+  PhoneCall,
+  Mail,
+  Linkedin,
+  Target,
+  Trophy,
+  TrendingUp,
+  Settings,
+  MessageSquare,
 } from "lucide-react";
 
 const STATUS_OPTIONS = [
@@ -47,6 +64,13 @@ const STATUS_OPTIONS = [
   { value: "dead", label: "Dead", color: "bg-red-100 text-red-700" },
 ];
 
+const REACH_OUT_TYPES = [
+  { value: "call", label: "Call", icon: PhoneCall, color: "text-green-600", bg: "bg-green-100" },
+  { value: "email", label: "Email", icon: Mail, color: "text-blue-600", bg: "bg-blue-100" },
+  { value: "linkedin", label: "LinkedIn", icon: Linkedin, color: "text-indigo-600", bg: "bg-indigo-100" },
+  { value: "meeting", label: "Meeting", icon: MessageSquare, color: "text-purple-600", bg: "bg-purple-100" },
+];
+
 const VIEWS = [
   { id: "all", label: "All Brokers" },
   { id: "need_contact", label: "Need to Contact" },
@@ -56,13 +80,17 @@ const VIEWS = [
 ];
 
 export default function BrokerOutreach() {
+  const { user } = useAuth();
   const [brokers, setBrokers] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeView, setActiveView] = useState("all");
   const [sortField, setSortField] = useState("created_at");
   const [sortDirection, setSortDirection] = useState("desc");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showKpiSettings, setShowKpiSettings] = useState(false);
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState("");
   const [inlineCreate, setInlineCreate] = useState({ name: "", firm: "", email: "", status: "new", last_contact: "", next_action: "", linkedin_url: "" });
@@ -78,23 +106,129 @@ export default function BrokerOutreach() {
     notes: "",
   });
 
+  // Reach out dialog
+  const [showReachOutDialog, setShowReachOutDialog] = useState(false);
+  const [reachOutBroker, setReachOutBroker] = useState(null);
+  const [reachOutType, setReachOutType] = useState("call");
+  const [reachOutBy, setReachOutBy] = useState("");
+  const [reachOutNote, setReachOutNote] = useState("");
+  const [savingReachOut, setSavingReachOut] = useState(false);
+
+  // KPI settings
+  const [kpiMember, setKpiMember] = useState(null);
+  const [kpiDailyGoal, setKpiDailyGoal] = useState(0);
+  const [kpiWeeklyGoal, setKpiWeeklyGoal] = useState(0);
+  const [kpiBonus, setKpiBonus] = useState(0);
+
   useEffect(() => {
-    loadBrokers();
+    loadData();
   }, []);
 
-  const loadBrokers = async () => {
+  const loadData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("brokers")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [brokersRes, teamRes, activitiesRes] = await Promise.all([
+      supabase.from("brokers").select("*").order("created_at", { ascending: false }),
+      supabase.from("team_members").select("*").eq("status", "active"),
+      supabase.from("broker_activities").select("*, team_members(full_name)").order("created_at", { ascending: false }),
+    ]);
 
-    if (error) {
-      console.error("Error loading brokers:", error);
-    } else {
-      setBrokers(data || []);
-    }
+    setBrokers(brokersRes.data || []);
+    setTeamMembers(teamRes.data || []);
+    setActivities(activitiesRes.data || []);
     setLoading(false);
+  };
+
+  // Calculate KPI stats for each team member
+  const kpiStats = useMemo(() => {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    return teamMembers
+      .filter(tm => tm.outreach_daily_goal > 0 || tm.outreach_weekly_goal > 0)
+      .map(member => {
+        const memberActivities = activities.filter(a => a.team_member_id === member.id);
+        const todayCount = memberActivities.filter(a => new Date(a.created_at) >= startOfDay).length;
+        const weekCount = memberActivities.filter(a => new Date(a.created_at) >= startOfWeek).length;
+
+        const dailyProgress = member.outreach_daily_goal > 0 ? (todayCount / member.outreach_daily_goal) * 100 : 0;
+        const weeklyProgress = member.outreach_weekly_goal > 0 ? (weekCount / member.outreach_weekly_goal) * 100 : 0;
+        const onTrackForBonus = weeklyProgress >= 100 || (dailyProgress >= 100 && weeklyProgress >= (today.getDay() / 7) * 100);
+
+        return {
+          ...member,
+          todayCount,
+          weekCount,
+          dailyProgress: Math.min(dailyProgress, 100),
+          weeklyProgress: Math.min(weeklyProgress, 100),
+          onTrackForBonus,
+        };
+      });
+  }, [teamMembers, activities]);
+
+  const handleLogReachOut = async () => {
+    if (!reachOutBroker || !reachOutBy) return;
+
+    setSavingReachOut(true);
+    try {
+      // Create activity record
+      await supabase.from("broker_activities").insert({
+        broker_id: reachOutBroker.id,
+        team_member_id: reachOutBy,
+        type: reachOutType,
+        description: reachOutNote,
+      });
+
+      // Update broker's last_contact and status
+      const updates = {
+        last_contact: new Date().toISOString().split("T")[0],
+        updated_at: new Date().toISOString(),
+      };
+      if (reachOutBroker.status === "new") {
+        updates.status = "contacted";
+      }
+      await supabase.from("brokers").update(updates).eq("id", reachOutBroker.id);
+
+      setShowReachOutDialog(false);
+      setReachOutBroker(null);
+      setReachOutType("call");
+      setReachOutBy("");
+      setReachOutNote("");
+      loadData();
+    } catch (error) {
+      console.error("Error logging reach out:", error);
+    } finally {
+      setSavingReachOut(false);
+    }
+  };
+
+  const handleSaveKpi = async () => {
+    if (!kpiMember) return;
+
+    await supabase.from("team_members").update({
+      outreach_daily_goal: kpiDailyGoal,
+      outreach_weekly_goal: kpiWeeklyGoal,
+      outreach_bonus_amount: kpiBonus,
+    }).eq("id", kpiMember.id);
+
+    setShowKpiSettings(false);
+    setKpiMember(null);
+    loadData();
+  };
+
+  const openKpiSettings = (member) => {
+    setKpiMember(member);
+    setKpiDailyGoal(member.outreach_daily_goal || 0);
+    setKpiWeeklyGoal(member.outreach_weekly_goal || 0);
+    setKpiBonus(member.outreach_bonus_amount || 0);
+    setShowKpiSettings(true);
+  };
+
+  const openReachOutDialog = (broker) => {
+    setReachOutBroker(broker);
+    setShowReachOutDialog(true);
   };
 
   const handleAddBroker = async () => {
@@ -185,7 +319,6 @@ export default function BrokerOutreach() {
   const filteredBrokers = useMemo(() => {
     let filtered = brokers;
 
-    // Apply view filter
     const today = new Date();
     const fiveDaysAgo = new Date(today.setDate(today.getDate() - 5));
 
@@ -210,7 +343,6 @@ export default function BrokerOutreach() {
         break;
     }
 
-    // Apply search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(b =>
@@ -220,7 +352,6 @@ export default function BrokerOutreach() {
       );
     }
 
-    // Apply sort
     filtered = [...filtered].sort((a, b) => {
       let aVal = a[sortField];
       let bVal = b[sortField];
@@ -313,7 +444,6 @@ export default function BrokerOutreach() {
     );
   };
 
-  // View counts
   const viewCounts = useMemo(() => {
     const today = new Date();
     const fiveDaysAgo = new Date(new Date().setDate(today.getDate() - 5));
@@ -333,6 +463,11 @@ export default function BrokerOutreach() {
     };
   }, [brokers]);
 
+  // Get recent activities for a broker
+  const getBrokerActivities = (brokerId) => {
+    return activities.filter(a => a.broker_id === brokerId).slice(0, 3);
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -345,6 +480,107 @@ export default function BrokerOutreach() {
           Add Broker
         </Button>
       </div>
+
+      {/* KPI Dashboard */}
+      {kpiStats.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Target className="w-5 h-5 text-indigo-600" />
+              Team KPIs
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {kpiStats.map(member => (
+              <Card key={member.id} className={`${member.onTrackForBonus ? 'border-green-300 bg-green-50/50' : ''}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">{member.full_name}</span>
+                      {member.onTrackForBonus && (
+                        <Trophy className="w-4 h-4 text-yellow-500" />
+                      )}
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openKpiSettings(member)}>
+                      <Settings className="w-3 h-3 text-gray-400" />
+                    </Button>
+                  </div>
+
+                  {/* Daily Progress */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-gray-600">Today</span>
+                      <span className="font-medium">{member.todayCount} / {member.outreach_daily_goal}</span>
+                    </div>
+                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${member.dailyProgress >= 100 ? 'bg-green-500' : 'bg-indigo-500'}`}
+                        style={{ width: `${member.dailyProgress}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Weekly Progress */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-gray-600">This Week</span>
+                      <span className="font-medium">{member.weekCount} / {member.outreach_weekly_goal}</span>
+                    </div>
+                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${member.weeklyProgress >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
+                        style={{ width: `${member.weeklyProgress}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bonus Info */}
+                  {member.outreach_bonus_amount > 0 && (
+                    <div className={`text-xs px-2 py-1 rounded-full text-center ${member.onTrackForBonus ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {member.onTrackForBonus ? '✓ On track for' : 'Goal:'} ${member.outreach_bonus_amount} bonus
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+
+            {/* Add KPI Card */}
+            <Card className="border-dashed border-2 border-gray-200 hover:border-gray-300 cursor-pointer" onClick={() => {
+              const membersWithoutKpi = teamMembers.filter(tm => !tm.outreach_daily_goal && !tm.outreach_weekly_goal);
+              if (membersWithoutKpi.length > 0) {
+                openKpiSettings(membersWithoutKpi[0]);
+              }
+            }}>
+              <CardContent className="p-4 flex items-center justify-center h-full min-h-[140px]">
+                <div className="text-center text-gray-400">
+                  <Plus className="w-6 h-6 mx-auto mb-1" />
+                  <span className="text-sm">Set Team KPIs</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Show setup prompt if no KPIs */}
+      {kpiStats.length === 0 && teamMembers.length > 0 && (
+        <Card className="mb-6 bg-indigo-50 border-indigo-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Target className="w-8 h-8 text-indigo-600" />
+                <div>
+                  <h3 className="font-medium text-gray-900">Set Up Team KPIs</h3>
+                  <p className="text-sm text-gray-600">Track daily and weekly reach out goals with bonus incentives</p>
+                </div>
+              </div>
+              <Button onClick={() => openKpiSettings(teamMembers[0])}>
+                Configure
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Views */}
       <div className="flex gap-2 mb-4 border-b">
@@ -391,13 +627,14 @@ export default function BrokerOutreach() {
               <SortableHeader field="last_contact">Last Contact</SortableHeader>
               <TableHead>Next Action</TableHead>
               <TableHead>LinkedIn</TableHead>
+              <TableHead>Reach Out</TableHead>
               <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                   Loading...
                 </TableCell>
               </TableRow>
@@ -459,6 +696,17 @@ export default function BrokerOutreach() {
                         —
                       </span>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => openReachOutDialog(broker)}
+                    >
+                      <TrendingUp className="w-3 h-3 mr-1" />
+                      Log
+                    </Button>
                   </TableCell>
                   <TableCell>
                     <Button
@@ -569,6 +817,7 @@ export default function BrokerOutreach() {
                     }}
                   />
                 </TableCell>
+                <TableCell></TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <Button
@@ -601,12 +850,149 @@ export default function BrokerOutreach() {
                     <Plus className="w-4 h-4" />
                   </div>
                 </TableCell>
-                <TableCell colSpan={7}></TableCell>
+                <TableCell colSpan={8}></TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Log Reach Out Dialog */}
+      <Dialog open={showReachOutDialog} onOpenChange={setShowReachOutDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Log Reach Out</DialogTitle>
+          </DialogHeader>
+          {reachOutBroker && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="font-medium">{reachOutBroker.name}</p>
+                <p className="text-sm text-gray-500">{reachOutBroker.firm}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <div className="flex gap-2">
+                  {REACH_OUT_TYPES.map(type => (
+                    <Button
+                      key={type.value}
+                      variant={reachOutType === type.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setReachOutType(type.value)}
+                    >
+                      <type.icon className="w-4 h-4 mr-1" />
+                      {type.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Reached out by *</Label>
+                <Select value={reachOutBy} onValueChange={setReachOutBy}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select team member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMembers.map(member => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notes (optional)</Label>
+                <Textarea
+                  value={reachOutNote}
+                  onChange={(e) => setReachOutNote(e.target.value)}
+                  placeholder="Any notes about this reach out..."
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReachOutDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleLogReachOut} disabled={!reachOutBy || savingReachOut}>
+              {savingReachOut ? "Saving..." : "Log Reach Out"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* KPI Settings Sheet */}
+      <Sheet open={showKpiSettings} onOpenChange={setShowKpiSettings}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Set KPI Goals</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-6">
+            <div className="space-y-2">
+              <Label>Team Member</Label>
+              <Select value={kpiMember?.id || ""} onValueChange={(id) => {
+                const member = teamMembers.find(m => m.id === id);
+                if (member) {
+                  setKpiMember(member);
+                  setKpiDailyGoal(member.outreach_daily_goal || 0);
+                  setKpiWeeklyGoal(member.outreach_weekly_goal || 0);
+                  setKpiBonus(member.outreach_bonus_amount || 0);
+                }
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamMembers.map(member => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Daily Goal (reach outs per day)</Label>
+              <Input
+                type="number"
+                value={kpiDailyGoal}
+                onChange={(e) => setKpiDailyGoal(parseInt(e.target.value) || 0)}
+                placeholder="e.g., 5"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Weekly Goal (reach outs per week)</Label>
+              <Input
+                type="number"
+                value={kpiWeeklyGoal}
+                onChange={(e) => setKpiWeeklyGoal(parseInt(e.target.value) || 0)}
+                placeholder="e.g., 25"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Bonus Amount ($)</Label>
+              <Input
+                type="number"
+                value={kpiBonus}
+                onChange={(e) => setKpiBonus(parseFloat(e.target.value) || 0)}
+                placeholder="e.g., 50"
+              />
+              <p className="text-xs text-gray-500">Bonus earned when weekly goal is met</p>
+            </div>
+
+            <Button className="w-full" onClick={handleSaveKpi} disabled={!kpiMember}>
+              Save KPI Settings
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Add Broker Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
