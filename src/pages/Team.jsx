@@ -88,6 +88,19 @@ export default function Team() {
     if (editingMember) {
       await TeamMember.update(editingMember.id, memberData);
     } else {
+      // Check if team member with this email already exists
+      if (memberData.email) {
+        const { data: existing } = await supabase
+          .from("team_members")
+          .select("id")
+          .eq("email", memberData.email)
+          .limit(1);
+
+        if (existing?.length > 0) {
+          alert("A team member with this email already exists");
+          return;
+        }
+      }
       await TeamMember.create(memberData);
     }
     setShowDrawer(false);
