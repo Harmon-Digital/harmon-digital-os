@@ -3,7 +3,7 @@ import { TeamMember } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Mail, UserCheck, UserX, Users, Search, Send, Loader2 } from "lucide-react";
+import { Plus, Edit, Mail, UserCheck, UserX, Users, Search, Send, Loader2, Trash2, Shield, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,6 +58,10 @@ export default function Team() {
   const [inviteData, setInviteData] = useState({ email: "", full_name: "", role: "member" });
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState("");
+
+  // Delete dialog
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, member: null });
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -225,12 +229,68 @@ export default function Team() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteDialog.member) return;
+
+    setDeleting(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke("delete-team-member", {
+        body: {
+          team_member_id: deleteDialog.member.id,
+          user_id: deleteDialog.member.user_id || null,
+        },
+      });
+
+      if (error) {
+        alert(error.message || "Failed to delete team member");
+        return;
+      }
+
+      if (result?.error) {
+        alert(result.error);
+        return;
+      }
+
+      setDeleteDialog({ open: false, member: null });
+      loadData();
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("Failed to delete team member. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const getUserForMember = (userId) => {
     return users.find(u => u.id === userId);
   };
 
   const getMemberForUser = (userId) => {
     return teamMembers.find(tm => tm.user_id === userId);
+  };
+
+  const handleChangePortalRole = async (userId, newRole) => {
+    if (!userId) return;
+
+    // Prevent changing own role
+    if (userId === authUser?.id) {
+      alert("You cannot change your own admin status");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("user_profiles")
+        .update({ role: newRole })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      loadData();
+    } catch (error) {
+      console.error("Error changing role:", error);
+      alert("Failed to change portal role");
+    }
   };
 
   const usersWithoutTeamMember = users.filter(user => !getMemberForUser(user.id));
@@ -402,10 +462,45 @@ export default function Team() {
                           </TableCell>
                           <TableCell>
                             {linkedUser ? (
-                              <div className="flex items-center gap-1 text-green-600">
-                                <UserCheck className="w-4 h-4" />
-                                <span className="text-sm">Linked</span>
-                              </div>
+                              isAdmin && linkedUser.id !== authUser?.id ? (
+                                <Select
+                                  value={linkedUser.role}
+                                  onValueChange={(value) => handleChangePortalRole(linkedUser.id, value)}
+                                >
+                                  <SelectTrigger className="w-[130px] h-8">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="admin">
+                                      <div className="flex items-center gap-2">
+                                        <ShieldCheck className="w-3 h-3 text-amber-600" />
+                                        Admin
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="member">
+                                      <div className="flex items-center gap-2">
+                                        <UserCheck className="w-3 h-3 text-green-600" />
+                                        Member
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="viewer">
+                                      <div className="flex items-center gap-2">
+                                        <Shield className="w-3 h-3 text-gray-500" />
+                                        Viewer
+                                      </div>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  {linkedUser.role === 'admin' ? (
+                                    <ShieldCheck className="w-4 h-4 text-amber-600" />
+                                  ) : (
+                                    <UserCheck className="w-4 h-4 text-green-600" />
+                                  )}
+                                  <span className="text-sm capitalize">{linkedUser.role}</span>
+                                </div>
+                              )
                             ) : isAdmin ? (
                               <Button
                                 variant="outline"
@@ -422,13 +517,23 @@ export default function Team() {
                           </TableCell>
                           {isAdmin && (
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(member)}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEdit(member)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setDeleteDialog({ open: true, member })}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           )}
                         </TableRow>
@@ -656,6 +761,55 @@ export default function Team() {
                 <>
                   <Send className="w-4 h-4 mr-2" />
                   Send Invite
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Delete Team Member</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deleteDialog.member?.full_name}</strong>?
+              <br /><br />
+              This will:
+              <ul className="list-disc list-inside mt-2 space-y-1 text-red-600">
+                {deleteDialog.member?.user_id && (
+                  <li>Remove their portal login access</li>
+                )}
+                <li>Delete their team member profile</li>
+                <li>Remove them from all assigned tasks</li>
+              </ul>
+              <br />
+              <strong className="text-red-600">This action cannot be undone.</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialog({ open: false, member: null })}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Member
                 </>
               )}
             </Button>
