@@ -497,6 +497,17 @@ export default function Team() {
                                     <Clock className="w-3 h-3 mr-1" />
                                     Pending
                                   </Badge>
+                                  {isAdmin && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleInviteExisting(member)}
+                                      className="h-6 px-2 text-xs text-amber-600 hover:text-amber-700"
+                                    >
+                                      <Send className="w-3 h-3 mr-1" />
+                                      Resend
+                                    </Button>
+                                  )}
                                 </div>
                               )
                             ) : isAdmin ? (
