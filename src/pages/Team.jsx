@@ -126,25 +126,17 @@ export default function Team() {
     setInviteError("");
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
+      const { data: result, error } = await supabase.functions.invoke("invite-team-member", {
+        body: inviteData,
+      });
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-team-member`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(inviteData),
-        }
-      );
+      if (error) {
+        setInviteError(error.message || "Failed to send invite");
+        return;
+      }
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        setInviteError(result.error || "Failed to send invite");
+      if (result?.error) {
+        setInviteError(result.error);
         return;
       }
 
@@ -187,29 +179,21 @@ export default function Team() {
     }
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
+      const { data: result, error } = await supabase.functions.invoke("invite-team-member", {
+        body: {
+          email: member.email,
+          full_name: member.full_name,
+          role: "member",
+        },
+      });
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-team-member`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            email: member.email,
-            full_name: member.full_name,
-            role: "member",
-          }),
-        }
-      );
+      if (error) {
+        alert(error.message || "Failed to send invite");
+        return;
+      }
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(result.error || "Failed to send invite");
+      if (result?.error) {
+        alert(result.error);
         return;
       }
 
