@@ -245,9 +245,12 @@ export default function BrokerOutreach() {
   const handleAddBroker = async () => {
     if (!formData.name || !formData.firm) return;
 
+    // Remove last_contact from insert (it's auto-set via reach outs)
+    const { last_contact, ...brokerData } = formData;
+
     const { data, error } = await supabase
       .from("brokers")
-      .insert([formData])
+      .insert([brokerData])
       .select()
       .single();
 
@@ -272,9 +275,12 @@ export default function BrokerOutreach() {
   const handleInlineCreate = async () => {
     if (!inlineCreate.name || !inlineCreate.firm) return;
 
+    // Remove last_contact from insert (it's auto-set via reach outs)
+    const { last_contact, ...brokerData } = inlineCreate;
+
     const { data, error } = await supabase
       .from("brokers")
-      .insert([{ ...inlineCreate, status: "new" }])
+      .insert([{ ...brokerData, status: "new" }])
       .select()
       .single();
 
