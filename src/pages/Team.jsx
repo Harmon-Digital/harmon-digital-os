@@ -3,9 +3,17 @@ import { TeamMember } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Mail, UserCheck, UserX, Users, Search } from "lucide-react";
+import { Plus, Edit, Mail, UserCheck, UserX, Users, Search, Send, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -44,6 +52,12 @@ export default function Team() {
   const [syncDialog, setSyncDialog] = useState({ open: false, user: null });
   const [statusTab, setStatusTab] = useState("active");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Invite dialog
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [inviteData, setInviteData] = useState({ email: "", full_name: "", role: "member" });
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState("");
 
   useEffect(() => {
     loadData();
@@ -105,6 +119,62 @@ export default function Team() {
     }
   };
 
+  const handleInvite = async () => {
+    if (!inviteData.email || !inviteData.full_name) return;
+
+    setInviting(true);
+    setInviteError("");
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-team-member`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(inviteData),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setInviteError(result.error || "Failed to send invite");
+        return;
+      }
+
+      // Create team member record linked to the new user
+      if (result.user_id) {
+        await TeamMember.create({
+          user_id: result.user_id,
+          full_name: inviteData.full_name,
+          email: inviteData.email,
+          role: "developer",
+          employment_type: "full_time",
+          status: "active",
+          hourly_rate: 0,
+          skills: [],
+          bio: ""
+        });
+      }
+
+      setShowInviteDialog(false);
+      setInviteData({ email: "", full_name: "", role: "member" });
+      loadData();
+      alert(`Invitation sent to ${inviteData.email}!`);
+    } catch (error) {
+      console.error("Invite error:", error);
+      setInviteError("Failed to send invite. Please try again.");
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const getUserForMember = (userId) => {
     return users.find(u => u.id === userId);
   };
@@ -149,16 +219,25 @@ export default function Team() {
           <p className="text-gray-500 mt-1">Meet the team members</p>
         </div>
         {isAdmin && (
-          <Button 
-            onClick={() => {
-              setEditingMember(null);
-              setShowDrawer(true);
-            }}
-            className="bg-indigo-600 hover:bg-indigo-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Team Member
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowInviteDialog(true)}
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Invite Member
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingMember(null);
+                setShowDrawer(true);
+              }}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Team Member
+            </Button>
+          </div>
         )}
       </div>
 
@@ -440,6 +519,85 @@ export default function Team() {
               className="bg-indigo-600 hover:bg-indigo-700"
             >
               Create Profile
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Team Member Dialog */}
+      <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite Team Member</DialogTitle>
+            <DialogDescription>
+              Send an email invitation for them to join the team. They'll receive a link to set up their password.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Full Name *</Label>
+              <Input
+                placeholder="John Smith"
+                value={inviteData.full_name}
+                onChange={(e) => setInviteData({ ...inviteData, full_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email Address *</Label>
+              <Input
+                type="email"
+                placeholder="john@example.com"
+                value={inviteData.email}
+                onChange={(e) => setInviteData({ ...inviteData, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Portal Access</Label>
+              <Select
+                value={inviteData.role}
+                onValueChange={(value) => setInviteData({ ...inviteData, role: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin (Full access)</SelectItem>
+                  <SelectItem value="member">Member (Limited access)</SelectItem>
+                  <SelectItem value="viewer">Viewer (Read only)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {inviteError && (
+              <p className="text-sm text-red-600">{inviteError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowInviteDialog(false);
+                setInviteData({ email: "", full_name: "", role: "member" });
+                setInviteError("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleInvite}
+              disabled={inviting || !inviteData.email || !inviteData.full_name}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              {inviting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Invite
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
