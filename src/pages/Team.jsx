@@ -146,8 +146,14 @@ export default function Team() {
 
       // Create or update team member record linked to the new user
       if (result.user_id) {
-        // Check if team member with this email already exists
-        const existingMember = teamMembers.find(tm => tm.email === inviteData.email);
+        // Check if team member with this email already exists (query DB directly to avoid stale state)
+        const { data: existingMembers } = await supabase
+          .from("team_members")
+          .select("*")
+          .eq("email", inviteData.email)
+          .limit(1);
+
+        const existingMember = existingMembers?.[0];
 
         if (existingMember) {
           // Just link the existing team member to the new user
