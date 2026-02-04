@@ -175,6 +175,60 @@ export default function Team() {
     }
   };
 
+  // Invite existing team member (who doesn't have a login account yet)
+  const handleInviteExisting = async (member) => {
+    if (!member.email) {
+      alert("This team member doesn't have an email address. Please edit their profile first.");
+      return;
+    }
+
+    if (!confirm(`Send login invitation to ${member.full_name} (${member.email})?`)) {
+      return;
+    }
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-team-member`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            email: member.email,
+            full_name: member.full_name,
+            role: "member",
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result.error || "Failed to send invite");
+        return;
+      }
+
+      // Link the new user to the existing team member
+      if (result.user_id) {
+        await TeamMember.update(member.id, {
+          ...member,
+          user_id: result.user_id,
+        });
+      }
+
+      loadData();
+      alert(`Invitation sent to ${member.email}!`);
+    } catch (error) {
+      console.error("Invite error:", error);
+      alert("Failed to send invite. Please try again.");
+    }
+  };
+
   const getUserForMember = (userId) => {
     return users.find(u => u.id === userId);
   };
@@ -356,8 +410,18 @@ export default function Team() {
                                 <UserCheck className="w-4 h-4" />
                                 <span className="text-sm">Linked</span>
                               </div>
+                            ) : isAdmin ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleInviteExisting(member)}
+                                className="h-7 text-xs"
+                              >
+                                <Send className="w-3 h-3 mr-1" />
+                                Invite
+                              </Button>
                             ) : (
-                              <span className="text-gray-400">-</span>
+                              <span className="text-gray-400">No account</span>
                             )}
                           </TableCell>
                           {isAdmin && (
