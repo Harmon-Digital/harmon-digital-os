@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,13 +11,49 @@ import { Loader2 } from 'lucide-react';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [showReset, setShowReset] = useState(false);
+  const [isInvite, setIsInvite] = useState(false);
+  const [inviteProcessing, setInviteProcessing] = useState(true);
 
-  const { signIn, resetPassword } = useAuth();
+  const { signIn, resetPassword, updatePassword } = useAuth();
   const navigate = useNavigate();
+
+  // Check if this is an invite/recovery flow
+  useEffect(() => {
+    const handleInviteFlow = async () => {
+      // Check URL hash for tokens (Supabase puts them there)
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token')) {
+        // Parse the hash
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        const type = params.get('type');
+
+        if (accessToken && (type === 'invite' || type === 'recovery' || type === 'magiclink')) {
+          // Set the session
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          });
+
+          if (!error && data.user) {
+            setIsInvite(true);
+            setEmail(data.user.email || '');
+            // Clear the hash from URL
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        }
+      }
+      setInviteProcessing(false);
+    };
+
+    handleInviteFlow();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,6 +90,49 @@ export default function Login() {
     }
   };
 
+  const handleSetPassword = async (e) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+
+    try {
+      await updatePassword(password);
+
+      // Update last_sign_in_at in user_profiles
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('user_profiles')
+          .update({ last_sign_in_at: new Date().toISOString() })
+          .eq('id', user.id);
+      }
+
+      navigate('/');
+    } catch (err) {
+      setError(err.message || 'Failed to set password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show loading while processing invite token
+  if (inviteProcessing) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black flex flex-col">
       {/* Header */}
@@ -69,10 +149,12 @@ export default function Login() {
           {/* Heading */}
           <div className="mb-10">
             <h1 className="text-4xl font-medium text-white mb-3">
-              {showReset ? 'Reset your password.' : 'Welcome back.'}
+              {isInvite ? 'Set your password.' : showReset ? 'Reset your password.' : 'Welcome back.'}
             </h1>
             <p className="text-neutral-500 text-lg">
-              {showReset
+              {isInvite
+                ? 'Create a password to access the Operations Portal.'
+                : showReset
                 ? 'Enter your email to receive a reset link.'
                 : 'Sign in to the Operations Portal.'}
             </p>
@@ -96,7 +178,8 @@ export default function Login() {
 
           {/* Form */}
           {!resetSent && (
-            <form onSubmit={showReset ? handleResetPassword : handleSubmit} className="space-y-6">
+            <form onSubmit={isInvite ? handleSetPassword : showReset ? handleResetPassword : handleSubmit} className="space-y-6">
+              {/* Email field - shown for login and reset, readonly for invite */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-neutral-400 text-sm">
                   Email
@@ -109,20 +192,40 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-12 bg-neutral-900 border-neutral-800 text-white placeholder:text-neutral-600 focus:border-neutral-700 focus:ring-0"
                   required
+                  readOnly={isInvite}
                 />
               </div>
 
+              {/* Password field - shown for login and invite */}
               {!showReset && (
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-neutral-400 text-sm">
-                    Password
+                    {isInvite ? 'Create Password' : 'Password'}
                   </Label>
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder={isInvite ? 'Create a secure password' : 'Enter your password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    className="h-12 bg-neutral-900 border-neutral-800 text-white placeholder:text-neutral-600 focus:border-neutral-700 focus:ring-0"
+                    required
+                  />
+                </div>
+              )}
+
+              {/* Confirm password - only for invite */}
+              {isInvite && (
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-neutral-400 text-sm">
+                    Confirm Password
+                  </Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     className="h-12 bg-neutral-900 border-neutral-800 text-white placeholder:text-neutral-600 focus:border-neutral-700 focus:ring-0"
                     required
                   />
@@ -135,25 +238,27 @@ export default function Login() {
                 disabled={loading}
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {showReset ? 'Send Reset Link' : 'Continue'}
+                {isInvite ? 'Set Password & Continue' : showReset ? 'Send Reset Link' : 'Continue'}
               </Button>
             </form>
           )}
 
-          {/* Toggle Reset/Login */}
-          <div className="mt-8">
-            <button
-              type="button"
-              onClick={() => {
-                setShowReset(!showReset);
-                setError('');
-                setResetSent(false);
-              }}
-              className="text-neutral-500 hover:text-neutral-300 text-sm transition-colors"
-            >
-              {showReset ? 'Back to sign in' : 'Forgot your password?'}
-            </button>
-          </div>
+          {/* Toggle Reset/Login - hide when in invite mode */}
+          {!isInvite && (
+            <div className="mt-8">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReset(!showReset);
+                  setError('');
+                  setResetSent(false);
+                }}
+                className="text-neutral-500 hover:text-neutral-300 text-sm transition-colors"
+              >
+                {showReset ? 'Back to sign in' : 'Forgot your password?'}
+              </button>
+            </div>
+          )}
         </div>
       </main>
 
