@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Project, Account } from "@/api/entities";
 import { createPageUrl } from "@/utils";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Edit, Building2, ExternalLink, Search, Trash2 } from "lucide-react";
@@ -51,6 +52,7 @@ export default function Projects() {
   const [editingProject, setEditingProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   
   // Filter states
   const [activeTab, setActiveTab] = useState("client");
@@ -404,17 +406,19 @@ export default function Projects() {
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteDialog({ open: true, projectId: project.id });
-                              }}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteDialog({ open: true, projectId: project.id });
+                                }}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
