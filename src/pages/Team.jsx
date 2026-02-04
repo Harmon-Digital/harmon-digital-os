@@ -157,43 +157,16 @@ export default function Team() {
         return;
       }
 
-      // Create or update team member record linked to the new user
-      if (result.user_id) {
-        // Check if team member with this email already exists (query DB directly to avoid stale state)
-        const { data: existingMembers } = await supabase
-          .from("team_members")
-          .select("*")
-          .eq("email", inviteData.email)
-          .limit(1);
-
-        const existingMember = existingMembers?.[0];
-
-        if (existingMember) {
-          // Just link the existing team member to the new user
-          await TeamMember.update(existingMember.id, {
-            ...existingMember,
-            user_id: result.user_id,
-          });
-        } else {
-          // Create new team member
-          await TeamMember.create({
-            user_id: result.user_id,
-            full_name: inviteData.full_name,
-            email: inviteData.email,
-            role: "developer",
-            employment_type: "full_time",
-            status: "active",
-            hourly_rate: 0,
-            skills: [],
-            bio: ""
-          });
-        }
-      }
+      // Edge function + database trigger handle everything:
+      // - Creates auth user
+      // - Creates user_profile (with invited_at)
+      // - Trigger links/creates team_member
+      // Just reload data to see the changes
 
       setShowInviteDialog(false);
       setInviteData({ email: "", full_name: "", role: "member" });
       loadData();
-      alert(`Invitation sent to ${inviteData.email}!`);
+      alert(result.resent ? `Invitation resent to ${inviteData.email}!` : `Invitation sent to ${inviteData.email}!`);
     } catch (error) {
       console.error("Invite error:", error);
       setInviteError("Failed to send invite. Please try again.");
@@ -232,16 +205,10 @@ export default function Team() {
         return;
       }
 
-      // Link the new user to the existing team member
-      if (result.user_id) {
-        await TeamMember.update(member.id, {
-          ...member,
-          user_id: result.user_id,
-        });
-      }
-
+      // Edge function handles linking team_member to user
+      // Just reload to see updated status
       loadData();
-      alert(`Invitation sent to ${member.email}!`);
+      alert(result.resent ? `Invitation resent to ${member.email}!` : `Invitation sent to ${member.email}!`);
     } catch (error) {
       console.error("Invite error:", error);
       alert("Failed to send invite. Please try again.");
