@@ -51,6 +51,8 @@ import {
   TrendingUp,
   Settings,
   MessageSquare,
+  Clock,
+  Filter,
 } from "lucide-react";
 
 const STATUS_OPTIONS = [
@@ -73,10 +75,18 @@ const REACH_OUT_TYPES = [
 
 const VIEWS = [
   { id: "all", label: "All Brokers" },
-  { id: "need_contact", label: "Need to Contact" },
-  { id: "waiting", label: "Waiting on Response" },
+  { id: "need_contact", label: "New (Never Contacted)" },
+  { id: "needs_follow_up", label: "Needs Follow Up" },
   { id: "active", label: "Active Pipeline" },
   { id: "partners", label: "Partners" },
+];
+
+const FOLLOW_UP_DAYS_OPTIONS = [
+  { value: 3, label: "3+ days" },
+  { value: 5, label: "5+ days" },
+  { value: 7, label: "7+ days" },
+  { value: 14, label: "14+ days" },
+  { value: 30, label: "30+ days" },
 ];
 
 export default function BrokerOutreach() {
@@ -87,6 +97,7 @@ export default function BrokerOutreach() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeView, setActiveView] = useState("all");
+  const [followUpDays, setFollowUpDays] = useState(5);
   const [sortField, setSortField] = useState("created_at");
   const [sortDirection, setSortDirection] = useState("desc");
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -319,18 +330,19 @@ export default function BrokerOutreach() {
   const filteredBrokers = useMemo(() => {
     let filtered = brokers;
 
-    const today = new Date();
-    const fiveDaysAgo = new Date(today.setDate(today.getDate() - 5));
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - followUpDays);
 
     switch (activeView) {
       case "need_contact":
         filtered = filtered.filter(b => b.status === "new");
         break;
-      case "waiting":
+      case "needs_follow_up":
         filtered = filtered.filter(b =>
-          b.status === "contacted" &&
-          b.last_contact &&
-          new Date(b.last_contact) < fiveDaysAgo
+          b.status !== "dead" &&
+          b.status !== "partnered" &&
+          b.status !== "new" &&
+          (!b.last_contact || new Date(b.last_contact) < cutoffDate)
         );
         break;
       case "active":
@@ -445,23 +457,24 @@ export default function BrokerOutreach() {
   };
 
   const viewCounts = useMemo(() => {
-    const today = new Date();
-    const fiveDaysAgo = new Date(new Date().setDate(today.getDate() - 5));
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - followUpDays);
 
     return {
       all: brokers.length,
       need_contact: brokers.filter(b => b.status === "new").length,
-      waiting: brokers.filter(b =>
-        b.status === "contacted" &&
-        b.last_contact &&
-        new Date(b.last_contact) < fiveDaysAgo
+      needs_follow_up: brokers.filter(b =>
+        b.status !== "dead" &&
+        b.status !== "partnered" &&
+        b.status !== "new" &&
+        (!b.last_contact || new Date(b.last_contact) < cutoffDate)
       ).length,
       active: brokers.filter(b =>
         ["responded", "call_booked", "call_complete"].includes(b.status)
       ).length,
       partners: brokers.filter(b => b.status === "partnered").length,
     };
-  }, [brokers]);
+  }, [brokers, followUpDays]);
 
   // Get recent activities for a broker
   const getBrokerActivities = (brokerId) => {
@@ -583,23 +596,45 @@ export default function BrokerOutreach() {
       )}
 
       {/* Views */}
-      <div className="flex gap-2 mb-4 border-b">
-        {VIEWS.map(view => (
-          <button
-            key={view.id}
-            onClick={() => setActiveView(view.id)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              activeView === view.id
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            {view.label}
-            <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-              {viewCounts[view.id]}
-            </span>
-          </button>
-        ))}
+      <div className="flex items-center gap-2 mb-4 border-b">
+        <div className="flex gap-2">
+          {VIEWS.map(view => (
+            <button
+              key={view.id}
+              onClick={() => setActiveView(view.id)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                activeView === view.id
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {view.label}
+              <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                {viewCounts[view.id]}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Follow-up days filter - shows when "Needs Follow Up" is selected */}
+        {activeView === "needs_follow_up" && (
+          <div className="flex items-center gap-2 ml-4 pb-2">
+            <Clock className="w-4 h-4 text-gray-400" />
+            <span className="text-sm text-gray-600">Not contacted in:</span>
+            <Select value={followUpDays.toString()} onValueChange={(v) => setFollowUpDays(parseInt(v))}>
+              <SelectTrigger className="w-28 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FOLLOW_UP_DAYS_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value.toString()}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* Search */}
@@ -663,7 +698,13 @@ export default function BrokerOutreach() {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <EditableCell broker={broker} field="last_contact" type="date" />
+                  <TableCell className="text-gray-600">
+                    {broker.last_contact ? (
+                      <span>{new Date(broker.last_contact).toLocaleDateString()}</span>
+                    ) : (
+                      <span className="text-gray-400">Never</span>
+                    )}
+                  </TableCell>
                   <EditableCell broker={broker} field="next_action" />
                   <TableCell>
                     {editingCell?.brokerId === broker.id && editingCell?.field === "linkedin_url" ? (
@@ -781,17 +822,8 @@ export default function BrokerOutreach() {
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="p-1">
-                  <Input
-                    type="date"
-                    value={inlineCreate.last_contact}
-                    onChange={(e) => setInlineCreate({ ...inlineCreate, last_contact: e.target.value })}
-                    className="h-8 text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleInlineCreate();
-                      if (e.key === "Escape") setShowInlineCreate(false);
-                    }}
-                  />
+                <TableCell className="text-gray-400 text-sm">
+                  —
                 </TableCell>
                 <TableCell className="p-1">
                   <Input
@@ -1028,33 +1060,23 @@ export default function BrokerOutreach() {
                 placeholder="john@example.com"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Last Contact</Label>
-                <Input
-                  type="date"
-                  value={formData.last_contact}
-                  onChange={(e) => setFormData({ ...formData, last_contact: e.target.value })}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setFormData({ ...formData, status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>LinkedIn URL</Label>
