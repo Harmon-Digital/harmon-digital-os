@@ -3,7 +3,7 @@ import { TeamMember } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Mail, UserCheck, UserX, Users, Search, Send, Loader2, Trash2, Shield, ShieldCheck } from "lucide-react";
+import { Plus, Edit, Mail, UserCheck, UserX, Users, Search, Send, Loader2, Trash2, Shield, ShieldCheck, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -481,43 +481,55 @@ export default function Team() {
                           </TableCell>
                           <TableCell>
                             {linkedUser ? (
-                              isAdmin && linkedUser.id !== authUser?.id ? (
-                                <Select
-                                  value={linkedUser.role}
-                                  onValueChange={(value) => handleChangePortalRole(linkedUser.id, value)}
-                                >
-                                  <SelectTrigger className="w-[130px] h-8">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="admin">
-                                      <div className="flex items-center gap-2">
-                                        <ShieldCheck className="w-3 h-3 text-amber-600" />
-                                        Admin
-                                      </div>
-                                    </SelectItem>
-                                    <SelectItem value="member">
-                                      <div className="flex items-center gap-2">
-                                        <UserCheck className="w-3 h-3 text-green-600" />
-                                        Member
-                                      </div>
-                                    </SelectItem>
-                                    <SelectItem value="viewer">
-                                      <div className="flex items-center gap-2">
-                                        <Shield className="w-3 h-3 text-gray-500" />
-                                        Viewer
-                                      </div>
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
+                              // User has an account - check if they've signed in
+                              linkedUser.last_sign_in_at ? (
+                                // Active user - show role dropdown
+                                isAdmin && linkedUser.id !== authUser?.id ? (
+                                  <Select
+                                    value={linkedUser.role}
+                                    onValueChange={(value) => handleChangePortalRole(linkedUser.id, value)}
+                                  >
+                                    <SelectTrigger className="w-[130px] h-8">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="admin">
+                                        <div className="flex items-center gap-2">
+                                          <ShieldCheck className="w-3 h-3 text-amber-600" />
+                                          Admin
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="member">
+                                        <div className="flex items-center gap-2">
+                                          <UserCheck className="w-3 h-3 text-green-600" />
+                                          Member
+                                        </div>
+                                      </SelectItem>
+                                      <SelectItem value="viewer">
+                                        <div className="flex items-center gap-2">
+                                          <Shield className="w-3 h-3 text-gray-500" />
+                                          Viewer
+                                        </div>
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <div className="flex items-center gap-1">
+                                    {linkedUser.role === 'admin' ? (
+                                      <ShieldCheck className="w-4 h-4 text-amber-600" />
+                                    ) : (
+                                      <UserCheck className="w-4 h-4 text-green-600" />
+                                    )}
+                                    <span className="text-sm capitalize">{linkedUser.role}</span>
+                                  </div>
+                                )
                               ) : (
-                                <div className="flex items-center gap-1">
-                                  {linkedUser.role === 'admin' ? (
-                                    <ShieldCheck className="w-4 h-4 text-amber-600" />
-                                  ) : (
-                                    <UserCheck className="w-4 h-4 text-green-600" />
-                                  )}
-                                  <span className="text-sm capitalize">{linkedUser.role}</span>
+                                // Invited but hasn't signed in yet
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    Pending
+                                  </Badge>
                                 </div>
                               )
                             ) : isAdmin ? (

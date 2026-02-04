@@ -78,6 +78,15 @@ export function AuthProvider({ children }) {
       password,
     });
     if (error) throw error;
+
+    // Update last_sign_in_at
+    if (data.user) {
+      await supabase
+        .from('user_profiles')
+        .update({ last_sign_in_at: new Date().toISOString() })
+        .eq('id', data.user.id);
+    }
+
     return data;
   };
 
