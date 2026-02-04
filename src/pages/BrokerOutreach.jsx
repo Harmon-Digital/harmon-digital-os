@@ -53,7 +53,21 @@ import {
   MessageSquare,
   Clock,
   Filter,
+  HelpCircle,
+  Info,
+  Copy,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const STATUS_OPTIONS = [
   { value: "new", label: "New", color: "bg-gray-100 text-gray-700" },
@@ -487,12 +501,53 @@ export default function BrokerOutreach() {
     return activities.filter(a => a.broker_id === brokerId).slice(0, 3);
   };
 
+  const partnerPortalUrl = `${window.location.origin}/partner/signup`;
+
+  const copyPortalLink = () => {
+    navigator.clipboard.writeText(partnerPortalUrl);
+    alert("Partner portal link copied!");
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Broker Outreach</h1>
-          <p className="text-gray-500 text-sm mt-1">Track and manage broker relationships</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Broker Outreach</h1>
+            <p className="text-gray-500 text-sm mt-1">Track and manage broker relationships</p>
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <HelpCircle className="w-5 h-5 text-gray-400" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="start">
+              <div className="space-y-3">
+                <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <Info className="w-4 h-4 text-indigo-600" />
+                  How Partner Outreach Works
+                </h4>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <p><strong>1. Reach Out</strong> — Contact brokers via call, email, or LinkedIn and log your reach outs.</p>
+                  <p><strong>2. They Sign Up</strong> — Interested brokers sign up at our partner portal to become referral partners.</p>
+                  <p><strong>3. Submit Referrals</strong> — Partners can log in and submit client referrals through their portal.</p>
+                  <p><strong>4. Earn Commissions</strong> — When referrals convert, partners earn commissions tracked in the Partners page.</p>
+                </div>
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-gray-500 mb-2">Partner Sign Up Link:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs bg-gray-100 px-2 py-1 rounded truncate">
+                      {partnerPortalUrl}
+                    </code>
+                    <Button variant="outline" size="sm" className="h-7 px-2" onClick={copyPortalLink}>
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
         <Button onClick={() => setShowAddDialog(true)}>
           <Plus className="w-4 h-4 mr-2" />
