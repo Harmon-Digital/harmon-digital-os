@@ -140,19 +140,31 @@ export default function Team() {
         return;
       }
 
-      // Create team member record linked to the new user
+      // Create or update team member record linked to the new user
       if (result.user_id) {
-        await TeamMember.create({
-          user_id: result.user_id,
-          full_name: inviteData.full_name,
-          email: inviteData.email,
-          role: "developer",
-          employment_type: "full_time",
-          status: "active",
-          hourly_rate: 0,
-          skills: [],
-          bio: ""
-        });
+        // Check if team member with this email already exists
+        const existingMember = teamMembers.find(tm => tm.email === inviteData.email);
+
+        if (existingMember) {
+          // Just link the existing team member to the new user
+          await TeamMember.update(existingMember.id, {
+            ...existingMember,
+            user_id: result.user_id,
+          });
+        } else {
+          // Create new team member
+          await TeamMember.create({
+            user_id: result.user_id,
+            full_name: inviteData.full_name,
+            email: inviteData.email,
+            role: "developer",
+            employment_type: "full_time",
+            status: "active",
+            hourly_rate: 0,
+            skills: [],
+            bio: ""
+          });
+        }
       }
 
       setShowInviteDialog(false);
