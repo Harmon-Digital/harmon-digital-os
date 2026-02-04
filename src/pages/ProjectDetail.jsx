@@ -153,7 +153,6 @@ export default function ProjectDetail() {
       setTasks(tasksData);
       setTimeEntries(timeData);
       setContacts(contactsData.filter(c => c.account_id === currentProject.account_id));
-      setUsers(usersData);
       setTeamMembers(teamMembersData);
       // Filter invoices that are linked to this project directly or through its time entries
       setInvoices(invoicesData.filter(inv =>
@@ -292,7 +291,7 @@ export default function ProjectDetail() {
       if (editingTimeEntry) {
         await TimeEntry.update(editingTimeEntry.id, timeData);
       } else {
-        await TimeEntry.create({ ...timeData, project_id: projectId, user_id: authUser?.id });
+        await TimeEntry.create({ ...timeData, project_id: projectId });
       }
       setShowTimeDrawer(false);
       setEditingTimeEntry(null);
@@ -364,6 +363,7 @@ export default function ProjectDetail() {
 
   const isAdmin = userProfile?.role === "admin";
   const currentTeamMember = teamMembers.find(tm => tm.user_id === authUser?.id);
+  const isInternalProject = project.is_internal || project.billing_type === 'internal';
 
   // Calculate current month hours for retainer projects
   const getCurrentMonthHours = () => {
@@ -438,7 +438,7 @@ export default function ProjectDetail() {
   const billableHours = timeEntries.filter(te => te.billable).reduce((sum, entry) => sum + (entry.hours || 0), 0);
 
   if (project.billing_type === "retainer") {
-    expectedRevenue = project.retainer_monthly || 0;
+    expectedRevenue = project.monthly_retainer || 0;
   } else if (project.billing_type === "hourly") {
     expectedRevenue = billableHours * (project.hourly_rate || account?.hourly_rate || 0);
   } else if (project.billing_type === "fixed") {
@@ -617,7 +617,7 @@ export default function ProjectDetail() {
 
       {/* Key Metrics */}
       <div className="flex flex-wrap gap-4 mb-6">
-        {isAdmin && (
+        {isAdmin && !isInternalProject && (
           <>
             <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
               <TrendingUp className="w-4 h-4 text-blue-500" />
@@ -647,12 +647,12 @@ export default function ProjectDetail() {
             </div>
           </>
         )}
-        {!isAdmin && (
+        {(!isAdmin || isInternalProject) && (
           <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
             <Clock className="w-4 h-4 text-gray-500" />
             <span className="text-sm text-gray-500">Hours</span>
             <span className="font-semibold">{totalHours.toFixed(1)}h</span>
-            <span className="text-xs text-gray-400">({billableHours.toFixed(1)}h billable)</span>
+            {!isInternalProject && <span className="text-xs text-gray-400">({billableHours.toFixed(1)}h billable)</span>}
           </div>
         )}
         <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
@@ -667,8 +667,8 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      {/* Additional Metrics for Retainer - Admin Only */}
-      {isAdmin && project.billing_type === "retainer" && project.retainer_monthly && (
+      {/* Additional Metrics for Retainer - Admin Only (not for internal projects) */}
+      {isAdmin && !isInternalProject && project.billing_type === "retainer" && project.monthly_retainer && (
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Retainer Analysis</CardTitle>
@@ -677,7 +677,7 @@ export default function ProjectDetail() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Monthly Retainer</p>
-                <p className="text-2xl font-bold text-gray-900">${project.retainer_monthly.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">${project.monthly_retainer.toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600 mb-1">Labor Cost (This Month)</p>
@@ -685,11 +685,11 @@ export default function ProjectDetail() {
               </div>
               <div>
                 <p className="text-sm text-gray-600 mb-1">Retainer Value</p>
-                <p className={`text-2xl font-bold ${laborCost <= project.retainer_monthly ? 'text-green-600' : 'text-red-600'}`}>
-                  {laborCost <= project.retainer_monthly ? 'Under' : 'Over'} Budget
+                <p className={`text-2xl font-bold ${laborCost <= project.monthly_retainer ? 'text-green-600' : 'text-red-600'}`}>
+                  {laborCost <= project.monthly_retainer ? 'Under' : 'Over'} Budget
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  ${Math.abs(project.retainer_monthly - laborCost).toLocaleString()} {laborCost <= project.retainer_monthly ? 'remaining' : 'over'}
+                  ${Math.abs(project.monthly_retainer - laborCost).toLocaleString()} {laborCost <= project.monthly_retainer ? 'remaining' : 'over'}
                 </p>
               </div>
             </div>
@@ -704,15 +704,15 @@ export default function ProjectDetail() {
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
           <TabsTrigger value="time">Time</TabsTrigger>
           {isAdmin && <TabsTrigger value="reports">Reports</TabsTrigger>}
-          <TabsTrigger value="contacts">Contacts</TabsTrigger>
-          <TabsTrigger value="billing">Billing</TabsTrigger>
+          {!isInternalProject && <TabsTrigger value="contacts">Contacts</TabsTrigger>}
+          {!isInternalProject && <TabsTrigger value="billing">Billing</TabsTrigger>}
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="api">API</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="space-y-6">
-          {/* Billing Type Overview - Compact inline stats */}
-          {project.billing_type === 'exit' && (
+          {/* Billing Type Overview - Compact inline stats (not for internal projects) */}
+          {!isInternalProject && project.billing_type === 'exit' && (
             <div className="flex flex-wrap gap-3 p-3 bg-white rounded-lg border">
               <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
                 <TrendingUp className="w-4 h-4" /> Exit
@@ -724,7 +724,7 @@ export default function ProjectDetail() {
             </div>
           )}
 
-          {project.billing_type === 'retainer' && (
+          {!isInternalProject && project.billing_type === 'retainer' && (
             <div className="flex flex-wrap gap-3 p-3 bg-white rounded-lg border">
               <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
                 <Users className="w-4 h-4" /> Retainer
@@ -738,7 +738,7 @@ export default function ProjectDetail() {
             </div>
           )}
 
-          {project.billing_type === 'hourly' && (
+          {!isInternalProject && project.billing_type === 'hourly' && (
             <div className="flex flex-wrap gap-3 p-3 bg-white rounded-lg border">
               <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
                 <Clock className="w-4 h-4" /> Hourly
@@ -757,7 +757,7 @@ export default function ProjectDetail() {
               <CardTitle>Project Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className={`grid grid-cols-1 ${!isInternalProject ? 'md:grid-cols-2' : ''} gap-6`}>
                 <div className="space-y-2">
                   <Label>Project Name</Label>
                   <Input
@@ -765,24 +765,26 @@ export default function ProjectDetail() {
                     onChange={(e) => handleProjectFieldChange('name', e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Account</Label>
-                  <Select
-                    value={editedProject?.account_id}
-                    onValueChange={(value) => handleProjectFieldChange('account_id', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allAccounts.map(acc => (
-                        <SelectItem key={acc.id} value={acc.id}>
-                          {acc.company_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {!isInternalProject && (
+                  <div className="space-y-2">
+                    <Label>Account</Label>
+                    <Select
+                      value={editedProject?.account_id}
+                      onValueChange={(value) => handleProjectFieldChange('account_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allAccounts.map(acc => (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {acc.company_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -855,146 +857,153 @@ export default function ProjectDetail() {
               {isAdmin && (
                 <>
                   <div className="border-t pt-6">
-                    <h3 className="text-lg font-semibold mb-4">Budget & Billing</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label>Billing Type</Label>
-                        <Select
-                          value={editedProject?.billing_type}
-                          onValueChange={(value) => handleProjectFieldChange('billing_type', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="hourly">Hourly</SelectItem>
-                            <SelectItem value="retainer">Retainer</SelectItem>
-                            <SelectItem value="exit">Exit (Retainer + Success Fee)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {editedProject?.billing_type === 'hourly' && (
-                        <div className="space-y-2">
-                          <Label>Hourly Rate ($)</Label>
-                          <Input
-                            type="number"
-                            value={editedProject?.hourly_rate || ''}
-                            onChange={(e) => handleProjectFieldChange('hourly_rate', parseFloat(e.target.value) || 0)}
-                            placeholder="150.00"
-                          />
-                        </div>
-                      )}
-                    </div>
+                    <h3 className="text-lg font-semibold mb-4">{isInternalProject ? 'Budget' : 'Budget & Billing'}</h3>
 
-                    {/* Retainer-specific fields */}
-                    {editedProject?.billing_type === 'retainer' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                        <div className="space-y-2">
-                          <Label>Monthly Retainer ($)</Label>
-                          <Input
-                            type="number"
-                            value={editedProject?.monthly_retainer || ''}
-                            onChange={(e) => handleProjectFieldChange('monthly_retainer', parseFloat(e.target.value) || 0)}
-                            placeholder="2500.00"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Hours Included (per month)</Label>
-                          <Input
-                            type="number"
-                            value={editedProject?.retainer_hours_included || ''}
-                            onChange={(e) => handleProjectFieldChange('retainer_hours_included', parseFloat(e.target.value) || 0)}
-                            placeholder="20"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Exit-specific fields */}
-                    {editedProject?.billing_type === 'exit' && (
+                    {/* Billing fields - only for client projects */}
+                    {!isInternalProject && (
                       <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                            <Label>Monthly Retainer ($)</Label>
-                            <Input
-                              type="number"
-                              value={editedProject?.monthly_retainer || ''}
-                              onChange={(e) => handleProjectFieldChange('monthly_retainer', parseFloat(e.target.value) || 0)}
-                              placeholder="2500.00"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Success Fee (%)</Label>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={editedProject?.valuation_percentage || ''}
-                              onChange={(e) => handleProjectFieldChange('valuation_percentage', parseFloat(e.target.value) || 0)}
-                              placeholder="8"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                          <div className="space-y-2">
-                            <Label>Baseline Valuation ($)</Label>
-                            <Input
-                              type="number"
-                              value={editedProject?.baseline_valuation || ''}
-                              onChange={(e) => handleProjectFieldChange('baseline_valuation', parseFloat(e.target.value) || 0)}
-                              placeholder="2000000"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Engagement Length (months)</Label>
+                            <Label>Billing Type</Label>
                             <Select
-                              value={String(editedProject?.engagement_months || 3)}
-                              onValueChange={(value) => handleProjectFieldChange('engagement_months', parseInt(value))}
+                              value={editedProject?.billing_type}
+                              onValueChange={(value) => handleProjectFieldChange('billing_type', value)}
                             >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="1">1 month</SelectItem>
-                                <SelectItem value="2">2 months</SelectItem>
-                                <SelectItem value="3">3 months</SelectItem>
-                                <SelectItem value="6">6 months</SelectItem>
-                                <SelectItem value="12">12 months</SelectItem>
+                                <SelectItem value="hourly">Hourly</SelectItem>
+                                <SelectItem value="retainer">Retainer</SelectItem>
+                                <SelectItem value="exit">Exit (Retainer + Success Fee)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
+                          {editedProject?.billing_type === 'hourly' && (
+                            <div className="space-y-2">
+                              <Label>Hourly Rate ($)</Label>
+                              <Input
+                                type="number"
+                                value={editedProject?.hourly_rate || ''}
+                                onChange={(e) => handleProjectFieldChange('hourly_rate', parseFloat(e.target.value) || 0)}
+                                placeholder="150.00"
+                              />
+                            </div>
+                          )}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                          <div className="space-y-2">
-                            <Label>Exit Target Date</Label>
-                            <Input
-                              type="date"
-                              value={editedProject?.exit_target_date || ''}
-                              onChange={(e) => handleProjectFieldChange('exit_target_date', e.target.value)}
-                            />
+
+                        {/* Retainer-specific fields */}
+                        {editedProject?.billing_type === 'retainer' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                            <div className="space-y-2">
+                              <Label>Monthly Retainer ($)</Label>
+                              <Input
+                                type="number"
+                                value={editedProject?.monthly_retainer || ''}
+                                onChange={(e) => handleProjectFieldChange('monthly_retainer', parseFloat(e.target.value) || 0)}
+                                placeholder="2500.00"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Hours Included (per month)</Label>
+                              <Input
+                                type="number"
+                                value={editedProject?.retainer_hours_included || ''}
+                                onChange={(e) => handleProjectFieldChange('retainer_hours_included', parseFloat(e.target.value) || 0)}
+                                placeholder="20"
+                              />
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <Label>Success Fee Status</Label>
-                            <Select
-                              value={editedProject?.success_fee_status || 'pending'}
-                              onValueChange={(value) => handleProjectFieldChange('success_fee_status', value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="paid">Paid</SelectItem>
-                                <SelectItem value="waived">Waived (Guarantee)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
+                        )}
+
+                        {/* Exit-specific fields */}
+                        {editedProject?.billing_type === 'exit' && (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                              <div className="space-y-2">
+                                <Label>Monthly Retainer ($)</Label>
+                                <Input
+                                  type="number"
+                                  value={editedProject?.monthly_retainer || ''}
+                                  onChange={(e) => handleProjectFieldChange('monthly_retainer', parseFloat(e.target.value) || 0)}
+                                  placeholder="2500.00"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Success Fee (%)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  value={editedProject?.valuation_percentage || ''}
+                                  onChange={(e) => handleProjectFieldChange('valuation_percentage', parseFloat(e.target.value) || 0)}
+                                  placeholder="8"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                              <div className="space-y-2">
+                                <Label>Baseline Valuation ($)</Label>
+                                <Input
+                                  type="number"
+                                  value={editedProject?.baseline_valuation || ''}
+                                  onChange={(e) => handleProjectFieldChange('baseline_valuation', parseFloat(e.target.value) || 0)}
+                                  placeholder="2000000"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Engagement Length (months)</Label>
+                                <Select
+                                  value={String(editedProject?.engagement_months || 3)}
+                                  onValueChange={(value) => handleProjectFieldChange('engagement_months', parseInt(value))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="1">1 month</SelectItem>
+                                    <SelectItem value="2">2 months</SelectItem>
+                                    <SelectItem value="3">3 months</SelectItem>
+                                    <SelectItem value="6">6 months</SelectItem>
+                                    <SelectItem value="12">12 months</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                              <div className="space-y-2">
+                                <Label>Exit Target Date</Label>
+                                <Input
+                                  type="date"
+                                  value={editedProject?.exit_target_date || ''}
+                                  onChange={(e) => handleProjectFieldChange('exit_target_date', e.target.value)}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Success Fee Status</Label>
+                                <Select
+                                  value={editedProject?.success_fee_status || 'pending'}
+                                  onValueChange={(value) => handleProjectFieldChange('success_fee_status', value)}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="paid">Paid</SelectItem>
+                                    <SelectItem value="waived">Waived (Guarantee)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    {/* Budget fields - for all projects */}
+                    <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${!isInternalProject ? 'mt-4' : ''}`}>
                       <div className="space-y-2">
-                        <Label>Budget Hours {editedProject?.billing_type === 'retainer' ? '(Monthly)' : ''}</Label>
+                        <Label>Budget Hours {!isInternalProject && editedProject?.billing_type === 'retainer' ? '(Monthly)' : ''}</Label>
                         <Input
                           type="number"
                           value={editedProject?.budget_hours || ''}
@@ -1002,8 +1011,6 @@ export default function ProjectDetail() {
                           placeholder="100"
                         />
                       </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                       <div className="space-y-2">
                         <Label>Weekly Hour Minimum</Label>
                         <Input
@@ -1266,7 +1273,14 @@ export default function ProjectDetail() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setDeleteConfirmDialog({ open: true, type: 'time', id: entry.id })}
+                              onClick={() => {
+                                const canDelete = isAdmin || entry.team_member_id === currentTeamMember?.id;
+                                if (canDelete) {
+                                  setDeleteConfirmDialog({ open: true, type: 'time', id: entry.id });
+                                } else {
+                                  alert("You can only delete your own time entries. Ask an admin to delete this entry.");
+                                }
+                              }}
                             >
                               <Trash2 className="w-4 h-4 text-red-600" />
                             </Button>

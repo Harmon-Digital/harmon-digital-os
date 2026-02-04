@@ -12,8 +12,8 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, onEdi
     return new Date(today.setDate(diff));
   });
 
-  // Time slots from 6 AM to 10 PM (more reasonable work hours)
-  const timeSlots = Array.from({ length: 17 }, (_, i) => i + 6); // 6 AM to 10 PM
+  // Time slots from 6 AM to 11 PM
+  const timeSlots = Array.from({ length: 18 }, (_, i) => i + 6); // 6 AM to 11 PM
 
   const getWeekDays = (startDate) => {
     const days = [];
@@ -92,26 +92,35 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, onEdi
     return `${hour} AM`;
   };
 
-  // Helper to extract time from ISO string or HH:mm format
-  const extractTimeFromISO = (isoString) => {
-    if (!isoString) return null;
-    try {
-      const date = new Date(isoString);
-      return date.getHours() + date.getMinutes() / 60;
-    } catch (e) {
-      // If it's in HH:mm format
-      if (isoString.includes(':')) {
-        const [hours, minutes] = isoString.split(':').map(Number);
-        return hours + minutes / 60;
+  // Helper to extract time from HH:MM:SS or HH:MM format
+  const extractTimeFromString = (timeStr) => {
+    if (!timeStr) return null;
+
+    // Handle HH:MM:SS or HH:MM format
+    if (typeof timeStr === 'string' && timeStr.includes(':')) {
+      const parts = timeStr.split(':').map(Number);
+      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        return parts[0] + parts[1] / 60;
       }
-      return null;
     }
+
+    // Try parsing as ISO date (legacy)
+    try {
+      const date = new Date(timeStr);
+      if (!isNaN(date.getTime())) {
+        return date.getHours() + date.getMinutes() / 60;
+      }
+    } catch (e) {
+      // Ignore
+    }
+
+    return null;
   };
 
   // Calculate position for time entries based on actual start/end times
   const getTimeBlockStyle = (entry, dayEntries) => {
-    let startHour = extractTimeFromISO(entry.start_time);
-    let endHour = extractTimeFromISO(entry.end_time);
+    let startHour = extractTimeFromString(entry.start_time);
+    let endHour = extractTimeFromString(entry.end_time);
     
     // Fallback: if no start_time, position entries evenly throughout the day
     if (startHour === null) {

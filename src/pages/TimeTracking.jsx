@@ -1,11 +1,21 @@
-
 import React, { useState, useEffect } from "react";
 import { TimeEntry, Project, Task, TeamMember } from "@/api/entities";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Plus, Calendar as CalendarIcon, Edit, Trash2, Search } from "lucide-react";
+import {
+  Plus,
+  Calendar as CalendarIcon,
+  Edit,
+  Trash2,
+  Search,
+  Clock,
+  TrendingUp,
+  DollarSign,
+  FileText,
+  ChevronLeft,
+  ChevronRight
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -38,7 +48,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import TimeEntryForm from "../components/time/TimeEntryForm";
 import WeeklyCalendarView from "../components/time/WeeklyCalendarView";
 
@@ -56,11 +65,11 @@ export default function TimeTracking() {
   const [deleteDialog, setDeleteDialog] = useState({ open: false, entryId: null });
 
   // Filters
+  const [dateRange, setDateRange] = useState("week");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [projectFilter, setProjectFilter] = useState("all");
   const [teamMemberFilter, setTeamMemberFilter] = useState("me");
-  const [billableFilter, setBillableFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -70,19 +79,52 @@ export default function TimeTracking() {
   }, [authUser]);
 
   useEffect(() => {
-    // Set default to this week
-    const today = new Date();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // Adjust for Sunday (0) being the first day
-    monday.setHours(0, 0, 0, 0);
-    
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    sunday.setHours(23, 59, 59, 999);
-    
-    setStartDate(monday.toISOString().split('T')[0]);
-    setEndDate(sunday.toISOString().split('T')[0]);
+    setDateRangePreset("week");
   }, []);
+
+  const setDateRangePreset = (preset) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let start, end;
+
+    switch (preset) {
+      case "today":
+        start = today;
+        end = today;
+        break;
+      case "week":
+        start = new Date(today);
+        start.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        break;
+      case "month":
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        break;
+      case "last-month":
+        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        end = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+      default:
+        return;
+    }
+
+    setDateRange(preset);
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
+  };
+
+  const navigateWeek = (direction) => {
+    const current = new Date(startDate);
+    current.setDate(current.getDate() + (direction * 7));
+    const end = new Date(current);
+    end.setDate(current.getDate() + 6);
+
+    setDateRange("custom");
+    setStartDate(current.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -153,44 +195,43 @@ export default function TimeTracking() {
 
   const getBillingDisplay = (entry) => {
     const project = getProject(entry.project_id);
-    if (!project) return { label: "Unknown", color: "bg-gray-100 text-gray-800" };
+    if (!project) return { label: "Unknown", color: "bg-gray-100 text-gray-700" };
 
     if (project.billing_type === 'retainer' || project.billing_type === 'exit') {
-      return { label: "Retainer", color: "bg-purple-100 text-purple-800" };
+      return { label: "Retainer", color: "bg-purple-100 text-purple-700" };
     }
 
     if (entry.billable) {
-      return { label: "Billable", color: "bg-green-100 text-green-800" };
+      return { label: "Billable", color: "bg-emerald-100 text-emerald-700" };
     }
-    return { label: "Non-billable", color: "bg-gray-100 text-gray-800" };
+    return { label: "Internal", color: "bg-gray-100 text-gray-600" };
   };
 
   const getStatusDisplay = (entry) => {
     const project = getProject(entry.project_id);
-    if (!project) return { label: "Unknown", color: "bg-gray-100 text-gray-800" };
+    if (!project) return { label: "Unknown", color: "bg-gray-100 text-gray-700" };
 
     if (project.billing_type === 'retainer' || project.billing_type === 'exit') {
-      return { label: "Tracked", color: "bg-blue-100 text-blue-800" };
+      return { label: "Tracked", color: "bg-blue-100 text-blue-700" };
     }
 
     if (entry.client_billed) {
-      return { label: "Billed", color: "bg-blue-100 text-blue-800" };
+      return { label: "Billed", color: "bg-blue-100 text-blue-700" };
     }
     if (entry.billable) {
-      return { label: "Unbilled", color: "bg-orange-100 text-orange-800" };
+      return { label: "Unbilled", color: "bg-amber-100 text-amber-700" };
     }
-    return { label: "N/A", color: "bg-gray-100 text-gray-800" };
+    return { label: "N/A", color: "bg-gray-100 text-gray-600" };
   };
 
   const isAdmin = userProfile?.role === "admin";
 
   // Filter entries
   const filteredEntries = timeEntries.filter(entry => {
-    // Date filter
     if (startDate || endDate) {
       const entryDate = new Date(entry.date);
-      entryDate.setHours(0, 0, 0, 0); // Normalize to start of day for comparison
-      
+      entryDate.setHours(0, 0, 0, 0);
+
       if (startDate) {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
@@ -198,33 +239,25 @@ export default function TimeTracking() {
       }
       if (endDate) {
         const end = new Date(endDate);
-        // Set end date to end of day for inclusive range
-        end.setHours(23, 59, 59, 999); 
+        end.setHours(23, 59, 59, 999);
         if (entryDate > end) return false;
       }
     }
 
-    // Team member filter
     if (teamMemberFilter === "me" && currentTeamMember) {
       if (entry.team_member_id !== currentTeamMember.id) return false;
     } else if (teamMemberFilter !== "all" && teamMemberFilter !== "me") {
       if (entry.team_member_id !== teamMemberFilter) return false;
     }
 
-    // Project filter
     if (projectFilter !== "all" && entry.project_id !== projectFilter) return false;
 
-    // Billable filter
-    if (billableFilter === "billable" && !entry.billable) return false;
-    if (billableFilter === "non-billable" && entry.billable) return false;
-
-    // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const projectName = getProjectName(entry.project_id).toLowerCase();
       const taskTitle = getTaskTitle(entry.task_id).toLowerCase();
       const description = (entry.description || "").toLowerCase();
-      
+
       if (!projectName.includes(query) && !taskTitle.includes(query) && !description.includes(query)) {
         return false;
       }
@@ -234,50 +267,40 @@ export default function TimeTracking() {
   });
 
   const totalHours = filteredEntries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
-
-  // Hours on hourly projects that are billable
   const hourlyBillableHours = filteredEntries.filter(e => {
     const project = getProject(e.project_id);
     return project?.billing_type === 'hourly' && e.billable;
   }).reduce((sum, entry) => sum + (entry.hours || 0), 0);
-
-  // Hours on retainer/exit projects
   const retainerHours = filteredEntries.filter(e => {
     const project = getProject(e.project_id);
     return project?.billing_type === 'retainer' || project?.billing_type === 'exit';
   }).reduce((sum, entry) => sum + (entry.hours || 0), 0);
-
-  // Unbilled hours (only for hourly projects)
   const unbilledHours = filteredEntries.filter(e => {
     const project = getProject(e.project_id);
     return project?.billing_type === 'hourly' && e.billable && !e.client_billed;
   }).reduce((sum, entry) => sum + (entry.hours || 0), 0);
 
-  const resetFilters = () => {
-    const today = new Date();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
-    monday.setHours(0, 0, 0, 0);
-    
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    
-    setStartDate(monday.toISOString().split('T')[0]);
-    setEndDate(sunday.toISOString().split('T')[0]);
-    setProjectFilter("all");
-    setTeamMemberFilter("me");
-    setBillableFilter("all");
-    setSearchQuery("");
+  const formatDateRange = () => {
+    if (!startDate || !endDate) return "";
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const opts = { month: 'short', day: 'numeric' };
+
+    if (start.getMonth() === end.getMonth()) {
+      return `${start.toLocaleDateString('en-US', opts)} - ${end.getDate()}`;
+    }
+    return `${start.toLocaleDateString('en-US', opts)} - ${end.toLocaleDateString('en-US', opts)}`;
   };
 
   return (
-    <div className="p-6 lg:p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-6 lg:p-8 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Time Tracking</h1>
-          <p className="text-gray-500 mt-1">Track hours worked on projects</p>
+          <h1 className="text-2xl font-bold text-gray-900">Time Tracking</h1>
+          <p className="text-gray-500 text-sm mt-0.5">Track and manage your work hours</p>
         </div>
-        <Button 
+        <Button
           onClick={() => {
             setEditingEntry(null);
             setShowDrawer(true);
@@ -289,244 +312,259 @@ export default function TimeTracking() {
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card className="mb-8">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Filters</CardTitle>
-            <Button variant="outline" size="sm" onClick={resetFilters}>
-              Reset to This Week
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Date Range */}
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold">Date Range</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs text-gray-500">Start Date</Label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-gray-500">End Date</Label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-              </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <Clock className="w-5 h-5 text-indigo-600" />
             </div>
+            <div>
+              <p className="text-sm text-gray-500">Total Hours</p>
+              <p className="text-2xl font-bold text-gray-900">{totalHours.toFixed(1)}</p>
+            </div>
+          </div>
+        </div>
 
-            {/* Other Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-              <div className="space-y-2">
-                <Label>Search</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search entries..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
+        <div className="bg-white rounded-xl border p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <TrendingUp className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Retainer</p>
+              <p className="text-2xl font-bold text-purple-600">{retainerHours.toFixed(1)}</p>
+            </div>
+          </div>
+        </div>
 
-              <div className="space-y-2">
-                <Label>Project</Label>
-                <Select value={projectFilter} onValueChange={setProjectFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Project"/>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Projects</SelectItem>
-                    {projects.map(project => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {isAdmin && (
-                <div className="space-y-2">
-                  <Label>Team Member</Label>
-                  <Select value={teamMemberFilter} onValueChange={setTeamMemberFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Team Member"/>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Team</SelectItem>
-                      <SelectItem value="me">My Time</SelectItem>
-                      {teamMembers.filter(tm => tm.status === 'active').map(tm => (
-                        <SelectItem key={tm.id} value={tm.id}>
-                          {tm.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        <div className="bg-white rounded-xl border p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-100 rounded-lg">
+              <DollarSign className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Billable</p>
+              <p className="text-2xl font-bold text-emerald-600">{hourlyBillableHours.toFixed(1)}</p>
+              {unbilledHours > 0 && (
+                <p className="text-xs text-amber-600">{unbilledHours.toFixed(1)}h unbilled</p>
               )}
-
-              <div className="space-y-2">
-                <Label>Billable</Label>
-                <Select value={billableFilter} onValueChange={setBillableFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Billable Status"/>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="billable">Billable</SelectItem>
-                    <SelectItem value="non-billable">Non-billable</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </div>
+        </div>
 
-          <div className="mt-4 pt-4 border-t text-sm text-gray-600">
-            Showing {filteredEntries.length} of {timeEntries.length} time entries
-            {(startDate || endDate) && (
-              <span className="ml-2 text-indigo-600 font-medium">
-                {startDate && `from ${new Date(startDate).toLocaleDateString()}`}
-                {startDate && endDate && ' '}
-                {endDate && `to ${new Date(endDate).toLocaleDateString()}`}
-              </span>
-            )}
+        <div className="bg-white rounded-xl border p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <FileText className="w-5 h-5 text-gray-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Entries</p>
+              <p className="text-2xl font-bold text-gray-900">{filteredEntries.length}</p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Hours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{totalHours.toFixed(1)}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Retainer Hours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-600">{retainerHours.toFixed(1)}</div>
-            <p className="text-xs text-gray-500 mt-1">Covered by retainer</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Hourly Billable</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">{hourlyBillableHours.toFixed(1)}</div>
-            <p className="text-xs text-gray-500 mt-1">{unbilledHours.toFixed(1)}h unbilled</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Entries</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-indigo-600">{filteredEntries.length}</div>
-          </CardContent>
-        </Card>
+        </div>
       </div>
 
-      <Tabs value={viewMode} onValueChange={setViewMode} className="mb-6">
-        <TabsList>
-          <TabsTrigger value="list">List View</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Filters Bar */}
+      <div className="bg-white rounded-xl border p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          {/* Date Range Presets */}
+          <div className="flex items-center gap-2">
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              {[
+                { key: "today", label: "Today" },
+                { key: "week", label: "Week" },
+                { key: "month", label: "Month" },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setDateRangePreset(key)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    dateRange === key
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
-      {viewMode === "list" ? (
-        <div className="bg-white rounded-lg border shadow-sm">
+            {/* Week Navigation */}
+            <div className="flex items-center gap-1 border-l pl-2 ml-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => navigateWeek(-1)}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-sm font-medium text-gray-700 min-w-[120px] text-center">
+                {formatDateRange()}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => navigateWeek(1)}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="hidden lg:block w-px h-8 bg-gray-200" />
+
+          {/* Other Filters */}
+          <div className="flex flex-1 flex-col sm:flex-row gap-3">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+
+            <Select value={projectFilter} onValueChange={setProjectFilter}>
+              <SelectTrigger className="w-[160px] h-9">
+                <SelectValue placeholder="All Projects" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Projects</SelectItem>
+                {projects.filter(p => p.status === 'active').map(project => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {isAdmin && (
+              <Select value={teamMemberFilter} onValueChange={setTeamMemberFilter}>
+                <SelectTrigger className="w-[140px] h-9">
+                  <SelectValue placeholder="Team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="me">My Time</SelectItem>
+                  <SelectItem value="all">All Team</SelectItem>
+                  {teamMembers.filter(tm => tm.status === 'active').map(tm => (
+                    <SelectItem key={tm.id} value={tm.id}>
+                      {tm.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* View Toggle + Table */}
+      <div className="bg-white rounded-xl border overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50/50">
+          <Tabs value={viewMode} onValueChange={setViewMode}>
+            <TabsList className="h-8">
+              <TabsTrigger value="list" className="text-xs px-3">List</TabsTrigger>
+              <TabsTrigger value="calendar" className="text-xs px-3">Calendar</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <span className="text-sm text-gray-500">
+            {filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}
+          </span>
+        </div>
+
+        {viewMode === "list" ? (
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Project</TableHead>
-                <TableHead>Task</TableHead>
-                {isAdmin && <TableHead>Team Member</TableHead>}
-                <TableHead>Hours</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Billable</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+              <TableRow className="bg-gray-50/50">
+                <TableHead className="font-semibold">Date</TableHead>
+                <TableHead className="font-semibold">Project</TableHead>
+                <TableHead className="font-semibold">Task</TableHead>
+                {isAdmin && <TableHead className="font-semibold">Team Member</TableHead>}
+                <TableHead className="font-semibold">Hours</TableHead>
+                <TableHead className="font-semibold">Description</TableHead>
+                <TableHead className="font-semibold">Type</TableHead>
+                <TableHead className="font-semibold">Status</TableHead>
+                <TableHead className="text-right font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-8 text-gray-500">
-                    Loading...
+                  <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-12 text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                      Loading...
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : filteredEntries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-8 text-gray-500">
-                    No time entries found. Click "Log Time" to get started or adjust filters.
+                  <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-12">
+                    <div className="text-gray-500">
+                      <Clock className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                      <p>No time entries found</p>
+                      <p className="text-sm">Click "Log Time" to get started</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredEntries.map((entry) => (
-                  <TableRow key={entry.id} className="hover:bg-gray-50">
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <CalendarIcon className="w-4 h-4 text-gray-400" />
-                        {new Date(entry.date).toLocaleDateString()}
-                      </div>
+                  <TableRow key={entry.id} className="hover:bg-gray-50/50">
+                    <TableCell className="font-medium">
+                      {new Date(entry.date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
                     </TableCell>
-                    <TableCell className="font-medium">{getProjectName(entry.project_id)}</TableCell>
-                    <TableCell className="text-sm text-gray-600">
+                    <TableCell>
+                      <span className="font-medium text-gray-900">{getProjectName(entry.project_id)}</span>
+                    </TableCell>
+                    <TableCell className="text-gray-600">
                       {entry.task_id ? getTaskTitle(entry.task_id) : "—"}
                     </TableCell>
                     {isAdmin && (
-                      <TableCell className="text-sm">{getTeamMemberName(entry.team_member_id)}</TableCell>
+                      <TableCell className="text-gray-600">{getTeamMemberName(entry.team_member_id)}</TableCell>
                     )}
-                    <TableCell className="font-semibold text-indigo-600">{entry.hours}h</TableCell>
-                    <TableCell className="text-sm text-gray-600 max-w-xs truncate">
+                    <TableCell>
+                      <span className="font-semibold text-indigo-600">{entry.hours}h</span>
+                    </TableCell>
+                    <TableCell className="text-gray-600 max-w-[200px] truncate">
                       {entry.description || "—"}
                     </TableCell>
                     <TableCell>
                       {(() => {
                         const billing = getBillingDisplay(entry);
-                        return <Badge className={billing.color}>{billing.label}</Badge>;
+                        return <Badge className={`${billing.color} font-medium`}>{billing.label}</Badge>;
                       })()}
                     </TableCell>
                     <TableCell>
                       {(() => {
                         const status = getStatusDisplay(entry);
-                        return <Badge className={status.color}>{status.label}</Badge>;
+                        return <Badge className={`${status.color} font-medium`}>{status.label}</Badge>;
                       })()}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-8 w-8 p-0"
                           onClick={() => handleEdit(entry)}
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-4 h-4 text-gray-500" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                           onClick={() => setDeleteDialog({ open: true, entryId: entry.id })}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -537,20 +575,22 @@ export default function TimeTracking() {
               )}
             </TableBody>
           </Table>
-        </div>
-      ) : (
-        <WeeklyCalendarView
-          timeEntries={filteredEntries}
-          projects={projects}
-          tasks={tasks}
-          teamMembers={teamMembers}
-          onEditEntry={handleEdit}
-          onAddEntry={() => {
-            setEditingEntry(null);
-            setShowDrawer(true);
-          }}
-        />
-      )}
+        ) : (
+          <div className="p-4">
+            <WeeklyCalendarView
+              timeEntries={filteredEntries}
+              projects={projects}
+              tasks={tasks}
+              teamMembers={teamMembers}
+              onEditEntry={handleEdit}
+              onAddEntry={() => {
+                setEditingEntry(null);
+                setShowDrawer(true);
+              }}
+            />
+          </div>
+        )}
+      </div>
 
       <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">

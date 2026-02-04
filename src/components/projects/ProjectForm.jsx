@@ -4,9 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, Clock, TrendingUp, Building2 } from "lucide-react";
+import { DollarSign, Clock, TrendingUp, Building2, Plus, X, Loader2 } from "lucide-react";
+import { Account } from "@/api/entities";
 
-export default function ProjectForm({ project, accounts, onSubmit, onCancel }) {
+export default function ProjectForm({ project, accounts: initialAccounts, onSubmit, onCancel }) {
+  const [accounts, setAccounts] = useState(initialAccounts || []);
   const [formData, setFormData] = useState(project || {
     name: "",
     account_id: "",
@@ -30,11 +32,43 @@ export default function ProjectForm({ project, accounts, onSubmit, onCancel }) {
     project_type: "consulting",
   });
 
+  // New account creation state
+  const [showNewAccountForm, setShowNewAccountForm] = useState(false);
+  const [newAccountData, setNewAccountData] = useState({ company_name: "", website: "" });
+  const [creatingAccount, setCreatingAccount] = useState(false);
+
+  const handleCreateAccount = async () => {
+    if (!newAccountData.company_name.trim()) return;
+
+    setCreatingAccount(true);
+    try {
+      const newAccount = await Account.create({
+        company_name: newAccountData.company_name,
+        website: newAccountData.website || null,
+        status: "active"
+      });
+
+      // Add to local accounts list and select it
+      setAccounts([...accounts, newAccount]);
+      setFormData({ ...formData, account_id: newAccount.id, is_internal: false });
+
+      // Reset and close form
+      setNewAccountData({ company_name: "", website: "" });
+      setShowNewAccountForm(false);
+    } catch (error) {
+      console.error("Error creating account:", error);
+    } finally {
+      setCreatingAccount(false);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    const isInternal = !formData.account_id;
     const cleanedData = {
       ...formData,
       account_id: formData.account_id || null,
+      is_internal: isInternal,
       start_date: formData.start_date || null,
       end_date: formData.end_date || null,
       exit_target_date: formData.exit_target_date || null,
@@ -66,54 +100,123 @@ export default function ProjectForm({ project, accounts, onSubmit, onCancel }) {
       {/* Account */}
       <div className="space-y-2">
         <Label htmlFor="account_id">Client Account</Label>
-        <Select
-          value={formData.account_id || "none"}
-          onValueChange={(value) => setFormData({...formData, account_id: value === "none" ? "" : value})}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select client" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No Account (Internal)</SelectItem>
-            {accounts.map(account => (
-              <SelectItem key={account.id} value={account.id}>
-                {account.company_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Billing Type - Visual Cards */}
-      <div className="space-y-2">
-        <Label>Billing Type</Label>
-        <div className="grid grid-cols-3 gap-3">
-          {billingOptions.map((option) => {
-            const Icon = option.icon;
-            const isSelected = formData.billing_type === option.value;
-            return (
-              <button
-                key={option.value}
+        {!showNewAccountForm ? (
+          <div className="flex gap-2">
+            <Select
+              value={formData.account_id || "none"}
+              onValueChange={(value) => setFormData({
+                ...formData,
+                account_id: value === "none" ? "" : value,
+                is_internal: value === "none"
+              })}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select client" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Account (Internal)</SelectItem>
+                {accounts.map(account => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.company_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setShowNewAccountForm(true)}
+              title="Create new account"
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="p-3 border rounded-lg bg-gray-50 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">New Client Account</span>
+              <Button
                 type="button"
-                onClick={() => setFormData({...formData, billing_type: option.value})}
-                className={`p-4 rounded-lg border-2 text-left transition-all ${
-                  isSelected
-                    ? "border-indigo-600 bg-indigo-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowNewAccountForm(false);
+                  setNewAccountData({ company_name: "", website: "" });
+                }}
               >
-                <Icon className={`w-5 h-5 mb-2 ${isSelected ? "text-indigo-600" : "text-gray-400"}`} />
-                <div className={`font-medium ${isSelected ? "text-indigo-900" : "text-gray-900"}`}>
-                  {option.label}
-                </div>
-                <div className="text-xs text-gray-500">{option.description}</div>
-              </button>
-            );
-          })}
-        </div>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <Input
+                placeholder="Company name *"
+                value={newAccountData.company_name}
+                onChange={(e) => setNewAccountData({ ...newAccountData, company_name: e.target.value })}
+                autoFocus
+              />
+              <Input
+                placeholder="Website (optional)"
+                value={newAccountData.website}
+                onChange={(e) => setNewAccountData({ ...newAccountData, website: e.target.value })}
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleCreateAccount}
+              disabled={!newAccountData.company_name.trim() || creatingAccount}
+              className="w-full bg-indigo-600 hover:bg-indigo-700"
+            >
+              {creatingAccount ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Account
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Billing Type Specific Fields */}
+      {/* Billing Type - Visual Cards (only for client projects) */}
+      {formData.account_id && (
+        <div className="space-y-2">
+          <Label>Billing Type</Label>
+          <div className="grid grid-cols-3 gap-3">
+            {billingOptions.map((option) => {
+              const Icon = option.icon;
+              const isSelected = formData.billing_type === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setFormData({...formData, billing_type: option.value})}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${
+                    isSelected
+                      ? "border-indigo-600 bg-indigo-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 mb-2 ${isSelected ? "text-indigo-600" : "text-gray-400"}`} />
+                  <div className={`font-medium ${isSelected ? "text-indigo-900" : "text-gray-900"}`}>
+                    {option.label}
+                  </div>
+                  <div className="text-xs text-gray-500">{option.description}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Billing Type Specific Fields (only for client projects) */}
+      {formData.account_id && (
       <div className="p-4 bg-gray-50 rounded-lg space-y-4">
         {formData.billing_type === "hourly" && (
           <div className="space-y-2">
@@ -249,6 +352,7 @@ export default function ProjectForm({ project, accounts, onSubmit, onCancel }) {
           </>
         )}
       </div>
+      )}
 
       {/* Project Type */}
       <div className="space-y-2">

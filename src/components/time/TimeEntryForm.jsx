@@ -14,25 +14,36 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Info } from "lucide-react";
 
-// Helper function to convert ISO datetime string to HH:mm format
-const extractTimeFromISO = (isoString) => {
-  if (!isoString) return "";
-  try {
-    const date = new Date(isoString);
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
-  } catch (e) {
-    return isoString; // Return as-is if it's already in HH:mm format
+// Helper function to convert time string to HH:mm format for input
+const extractTimeForInput = (timeStr) => {
+  if (!timeStr) return "";
+
+  // If it's already in HH:MM or HH:MM:SS format, extract HH:MM
+  if (typeof timeStr === 'string' && /^\d{2}:\d{2}/.test(timeStr)) {
+    return timeStr.substring(0, 5); // Return first 5 chars (HH:MM)
   }
+
+  // Try parsing as ISO date (legacy data)
+  try {
+    const date = new Date(timeStr);
+    if (!isNaN(date.getTime())) {
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+  } catch (e) {
+    // Ignore parsing errors
+  }
+
+  return "";
 };
 
 export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers, currentTeamMember, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(
     timeEntry ? {
       ...timeEntry,
-      start_time: extractTimeFromISO(timeEntry.start_time),
-      end_time: extractTimeFromISO(timeEntry.end_time),
+      start_time: extractTimeForInput(timeEntry.start_time),
+      end_time: extractTimeForInput(timeEntry.end_time),
     } : {
       project_id: "",
       task_id: "",
