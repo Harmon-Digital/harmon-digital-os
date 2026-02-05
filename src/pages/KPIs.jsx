@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -11,9 +10,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   RefreshCw,
   Target,
   Pencil,
@@ -22,30 +29,28 @@ import {
   ArrowDown,
   Minus,
   Zap,
-  DollarSign,
-  Users,
-  Share2,
-  Settings,
+  Trophy,
+  TrendingUp,
+  CheckCircle2,
+  Check,
 } from "lucide-react";
 import {
   KPI_DEFINITIONS,
-  getHeroKpis,
   formatKpiValue,
   toWeekStart,
   formatWeekLabel,
 } from "@/config/kpiConfig";
 import { calculateAllAutoKpis, saveEntries, fetchEntriesForRange } from "@/api/kpiCalculations";
 import { TeamMember } from "@/api/supabaseEntities";
-import KpiScorecard from "@/components/kpis/KpiScorecard";
 import KpiTrendChart from "@/components/kpis/KpiTrendChart";
 import KpiTargetSheet from "@/components/kpis/KpiTargetSheet";
 import KpiEntryDialog from "@/components/kpis/KpiEntryDialog";
 
-const CATEGORY_META = {
-  revenue: { label: "Revenue", icon: DollarSign, color: "text-green-600", bg: "bg-green-50", border: "border-green-200" },
-  leads: { label: "Leads", icon: Target, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200" },
-  social: { label: "Social Media", icon: Share2, color: "text-pink-600", bg: "bg-pink-50", border: "border-pink-200" },
-  operations: { label: "Operations", icon: Settings, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
+const CATEGORY_LABELS = {
+  revenue: "Revenue",
+  leads: "Leads",
+  social: "Social Media",
+  operations: "Operations",
 };
 
 export default function KPIs() {
@@ -60,6 +65,11 @@ export default function KPIs() {
   const [showTargetSheet, setShowTargetSheet] = useState(false);
   const [editingKpi, setEditingKpi] = useState(null);
   const [expandedKpi, setExpandedKpi] = useState(null);
+  // Inline editing
+  const [inlineEditSlug, setInlineEditSlug] = useState(null);
+  const [inlineTarget, setInlineTarget] = useState("");
+  const [inlineBonus, setInlineBonus] = useState("");
+  const [inlineSaving, setInlineSaving] = useState(false);
   const [teamMembers, setTeamMembers] = useState([]);
   const [selectedTeamMember, setSelectedTeamMember] = useState(null);
 
@@ -71,17 +81,6 @@ export default function KPIs() {
   const visibleKpis = selectedTeamMember
     ? KPI_DEFINITIONS.filter((k) => k.perMember)
     : KPI_DEFINITIONS;
-
-  const visibleHeroKpis = selectedTeamMember
-    ? getHeroKpis().filter((k) => k.perMember)
-    : getHeroKpis();
-
-  // Group visible KPIs by category
-  const grouped = {};
-  visibleKpis.forEach((kpi) => {
-    if (!grouped[kpi.category]) grouped[kpi.category] = [];
-    grouped[kpi.category].push(kpi);
-  });
 
   function getPreviousWeek(weekStr) {
     const d = new Date(weekStr + "T00:00:00Z");
@@ -182,6 +181,42 @@ export default function KPIs() {
     await loadData();
   };
 
+  const startInlineEdit = (kpi) => {
+    const entry = currentEntries.find((e) => e.slug === kpi.slug);
+    setInlineEditSlug(kpi.slug);
+    setInlineTarget(entry?.target_value ?? "");
+    setInlineBonus(entry?.bonus_amount ?? "");
+  };
+
+  const saveInlineEdit = async () => {
+    if (!inlineEditSlug) return;
+    setInlineSaving(true);
+    try {
+      const existing = currentEntries.find((e) => e.slug === inlineEditSlug);
+      const targetVal = inlineTarget === "" ? null : Number(inlineTarget);
+      const bonusVal = inlineBonus === "" ? null : Number(inlineBonus);
+
+      await saveEntries([{
+        slug: inlineEditSlug,
+        month: selectedWeek,
+        actual_value: existing?.actual_value || 0,
+        target_value: targetVal,
+        bonus_amount: bonusVal,
+        team_member_id: selectedTeamMember || null,
+      }]);
+      await loadData();
+    } catch (err) {
+      console.error("Error saving inline edit:", err);
+    } finally {
+      setInlineSaving(false);
+      setInlineEditSlug(null);
+    }
+  };
+
+  const cancelInlineEdit = () => {
+    setInlineEditSlug(null);
+  };
+
   const navigateWeek = (direction) => {
     const d = new Date(selectedWeek + "T00:00:00Z");
     d.setUTCDate(d.getUTCDate() + direction * 7);
@@ -205,6 +240,33 @@ export default function KPIs() {
     ? teamMembers.find((m) => m.id === selectedTeamMember)?.full_name
     : null;
 
+  // Summary stats for top cards
+  const summaryStats = useMemo(() => {
+    let withTargets = 0;
+    let goalsHit = 0;
+    let totalBonusEarned = 0;
+    let totalBonusPotential = 0;
+
+    visibleKpis.forEach((kpi) => {
+      const entry = currentEntries.find((e) => e.slug === kpi.slug);
+      if (!entry) return;
+      const target = entry.target_value;
+      const actual = entry.actual_value || 0;
+      const bonus = entry.bonus_amount || 0;
+
+      if (target) {
+        withTargets++;
+        if (actual >= target) goalsHit++;
+      }
+      if (bonus > 0) {
+        totalBonusPotential += bonus;
+        if (target && actual >= target) totalBonusEarned += bonus;
+      }
+    });
+
+    return { withTargets, goalsHit, totalBonusEarned, totalBonusPotential };
+  }, [visibleKpis, currentEntries]);
+
   if (!isAdmin) {
     return (
       <div className="p-6 lg:p-8">
@@ -217,124 +279,160 @@ export default function KPIs() {
   }
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-6 lg:p-8 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">KPIs</h1>
-          <p className="text-gray-500 mt-1">
-            {selectedMemberName
-              ? `${selectedMemberName} — Individual KPIs`
-              : "Track your weekly business metrics"}
+          <h1 className="text-2xl font-bold text-gray-900">KPIs</h1>
+          <p className="text-gray-500 text-sm">
+            {selectedMemberName || "Weekly business metrics"}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Team member selector */}
           <Select
             value={selectedTeamMember || "company"}
             onValueChange={(v) => setSelectedTeamMember(v === "company" ? null : v)}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[170px] h-8 text-sm">
               <SelectValue placeholder="Company" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="company">Company (All)</SelectItem>
               {teamMembers.map((tm) => (
-                <SelectItem key={tm.id} value={tm.id}>
-                  {tm.full_name}
-                </SelectItem>
+                <SelectItem key={tm.id} value={tm.id}>{tm.full_name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          {/* Week navigation */}
-          <div className="flex items-center gap-1 bg-white border rounded-lg px-2 py-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigateWeek(-1)}>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navigateWeek(-1)}>
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <span className="text-sm font-medium px-2 min-w-[160px] text-center">
+            <span className="text-sm font-medium min-w-[160px] text-center">
               {formatWeekLabel(selectedWeek)}
             </span>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigateWeek(1)} disabled={!canGoForward}>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => navigateWeek(1)} disabled={!canGoForward}>
               <ChevronRight className="w-4 h-4" />
             </Button>
+            {selectedWeek !== currentWeekStr && (
+              <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => setSelectedWeek(currentWeekStr)}>
+                This Week
+              </Button>
+            )}
           </div>
 
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-            {refreshing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+          <Button variant="outline" size="sm" className="h-8" onClick={handleRefresh} disabled={refreshing}>
+            {refreshing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
             Refresh
           </Button>
-          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700" onClick={() => setShowTargetSheet(true)}>
-            <Target className="w-4 h-4 mr-2" />
+          <Button size="sm" className="h-8 bg-indigo-600 hover:bg-indigo-700" onClick={() => setShowTargetSheet(true)}>
+            <Target className="w-3.5 h-3.5 mr-1.5" />
             Set Targets
           </Button>
         </div>
       </div>
 
       {loading ? (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg border p-4 animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-24 mb-3" />
-                <div className="h-8 bg-gray-200 rounded w-20 mb-2" />
-                <div className="h-2 bg-gray-200 rounded w-full" />
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg border p-6 animate-pulse">
-                <div className="h-5 bg-gray-200 rounded w-28 mb-4" />
-                <div className="space-y-3">
-                  <div className="h-10 bg-gray-100 rounded" />
-                  <div className="h-10 bg-gray-100 rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="flex items-center justify-center py-16">
+          <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
         </div>
       ) : (
         <>
-          {/* Hero Scorecards */}
-          {visibleHeroKpis.length > 0 && (
-            <div className={`grid grid-cols-2 md:grid-cols-3 ${visibleHeroKpis.length <= 3 ? "lg:grid-cols-3" : "lg:grid-cols-5"} gap-4 mb-6`}>
-              {visibleHeroKpis.map((kpi) => (
-                <KpiScorecard
-                  key={kpi.slug}
-                  kpiDef={kpi}
-                  actual={Number(getEntryValue(kpi.slug, "actual_value")) || 0}
-                  target={getEntryValue(kpi.slug, "target_value") !== null ? Number(getEntryValue(kpi.slug, "target_value")) : null}
-                  previousActual={getPreviousValue(kpi.slug)}
-                  bonusAmount={Number(getEntryValue(kpi.slug, "bonus_amount")) || 0}
-                />
-              ))}
-            </div>
-          )}
+          {/* Summary Cards */}
+          <div className="grid grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-gray-500 mb-1">Goals Tracked</p>
+                <p className="text-2xl font-bold text-gray-900">{summaryStats.withTargets}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{visibleKpis.length} total KPIs</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-gray-500 mb-1">Goals Hit</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {summaryStats.goalsHit}
+                  <span className="text-base font-normal text-gray-400"> / {summaryStats.withTargets}</span>
+                </p>
+                {summaryStats.withTargets > 0 && (
+                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mt-2">
+                    <div
+                      className={`h-full rounded-full ${
+                        summaryStats.goalsHit === summaryStats.withTargets ? "bg-green-500" :
+                        summaryStats.goalsHit > 0 ? "bg-amber-500" : "bg-red-400"
+                      }`}
+                      style={{ width: `${summaryStats.withTargets > 0 ? (summaryStats.goalsHit / summaryStats.withTargets) * 100 : 0}%` }}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-gray-500 mb-1">Bonus Earned</p>
+                <p className={`text-2xl font-bold ${summaryStats.totalBonusEarned > 0 ? "text-green-600" : "text-gray-400"}`}>
+                  ${summaryStats.totalBonusEarned.toLocaleString()}
+                </p>
+                {summaryStats.totalBonusPotential > 0 && (
+                  <p className="text-xs text-gray-400 mt-0.5">${summaryStats.totalBonusPotential.toLocaleString()} potential</p>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-gray-500 mb-1">Overall Progress</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {summaryStats.withTargets > 0
+                    ? `${Math.round((summaryStats.goalsHit / summaryStats.withTargets) * 100)}%`
+                    : "--"
+                  }
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">goal completion rate</p>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* Category Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {Object.entries(grouped).map(([category, kpis]) => {
-              const meta = CATEGORY_META[category];
-              if (!meta) return null;
-              const CatIcon = meta.icon;
+          {/* KPI Table */}
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>KPI</TableHead>
+                  <TableHead className="text-right">Actual</TableHead>
+                  <TableHead className="text-right">Target</TableHead>
+                  <TableHead className="text-center">Progress</TableHead>
+                  <TableHead className="text-right">Bonus</TableHead>
+                  <TableHead className="text-center">vs Last Week</TableHead>
+                  <TableHead className="w-10"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(() => {
+                  const categories = [...new Set(visibleKpis.map((k) => k.category))];
+                  const rows = [];
 
-              return (
-                <Card key={category} className="overflow-hidden">
-                  <CardHeader className={`py-3 px-4 ${meta.bg} border-b ${meta.border}`}>
-                    <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                      <CatIcon className={`w-4 h-4 ${meta.color}`} />
-                      {meta.label}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    {kpis.map((kpi, idx) => {
+                  categories.forEach((category) => {
+                    const catKpis = visibleKpis.filter((k) => k.category === category);
+
+                    // Category header row
+                    rows.push(
+                      <TableRow key={`cat-${category}`} className="bg-gray-50/80 hover:bg-gray-50/80">
+                        <TableCell colSpan={7} className="py-2">
+                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            {CATEGORY_LABELS[category] || category}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+
+                    catKpis.forEach((kpi) => {
                       const Icon = kpi.icon;
                       const actual = Number(getEntryValue(kpi.slug, "actual_value")) || 0;
                       const target = getEntryValue(kpi.slug, "target_value");
                       const targetNum = target !== null && target !== undefined ? Number(target) : null;
                       const pct = targetNum ? Math.round((actual / targetNum) * 100) : null;
                       const prevActual = getPreviousValue(kpi.slug);
+                      const bonusAmt = Number(getEntryValue(kpi.slug, "bonus_amount")) || 0;
                       let delta = null;
                       if (prevActual !== null && prevActual !== 0) {
                         delta = ((actual - prevActual) / prevActual) * 100;
@@ -343,99 +441,132 @@ export default function KPIs() {
                       }
                       const isExpanded = expandedKpi === kpi.slug;
 
-                      return (
-                        <div key={kpi.slug} className={idx < kpis.length - 1 ? "border-b" : ""}>
-                          <div
-                            className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                      rows.push(
+                        <React.Fragment key={kpi.slug}>
+                          <TableRow
+                            className={`cursor-pointer transition-colors ${isExpanded ? "bg-gray-50" : "hover:bg-gray-50/50"}`}
                             onClick={() => setExpandedKpi(isExpanded ? null : kpi.slug)}
                           >
-                            {/* KPI name + type */}
-                            <Icon className="w-4 h-4 text-gray-400 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-sm font-medium text-gray-900 truncate">{kpi.name}</span>
-                                {kpi.calcType === "auto" && (
-                                  <Zap className="w-3 h-3 text-amber-400 shrink-0" />
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Icon className="w-4 h-4 text-gray-400 shrink-0" />
+                                <span className="text-sm font-medium text-gray-900">{kpi.name}</span>
+                                {kpi.calcType === "auto" && <Zap className="w-3 h-3 text-amber-400 shrink-0" />}
+                                {kpi.calcType === "manual" && (
+                                  <button
+                                    className="p-0.5 rounded hover:bg-gray-200 transition-colors"
+                                    onClick={(e) => { e.stopPropagation(); setEditingKpi(kpi); }}
+                                  >
+                                    <Pencil className="w-3 h-3 text-gray-400" />
+                                  </button>
                                 )}
                               </div>
-                            </div>
-
-                            {/* Value / Target */}
-                            <span className="text-sm font-semibold tabular-nums shrink-0">
-                              <span className="text-gray-900">{formatKpiValue(actual, kpi.unit)}</span>
-                              {targetNum !== null && (
-                                <span className="text-gray-400 font-normal"> / {formatKpiValue(targetNum, kpi.unit)}</span>
-                              )}
-                            </span>
-
-                            {/* Progress bar */}
-                            {targetNum !== null && (
-                              <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden shrink-0">
-                                <div
-                                  className={`h-full rounded-full transition-all ${
-                                    pct >= 100 ? "bg-green-500" : pct >= 70 ? "bg-amber-500" : "bg-red-400"
-                                  }`}
-                                  style={{ width: `${Math.min(pct, 100)}%` }}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold tabular-nums">
+                              {formatKpiValue(actual, kpi.unit)}
+                            </TableCell>
+                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                              {inlineEditSlug === kpi.slug ? (
+                                <Input
+                                  type="number"
+                                  className="w-24 h-7 text-sm text-right ml-auto tabular-nums"
+                                  value={inlineTarget}
+                                  onChange={(e) => setInlineTarget(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") saveInlineEdit();
+                                    if (e.key === "Escape") cancelInlineEdit();
+                                  }}
+                                  autoFocus
+                                  placeholder="Target"
                                 />
-                              </div>
-                            )}
-
-                            {/* Target progress */}
-                            {pct !== null ? (
-                              <span className={`text-xs font-medium w-10 text-right tabular-nums ${
-                                pct >= 100 ? "text-green-600" : pct >= 70 ? "text-amber-600" : "text-red-500"
-                              }`}>
-                                {pct}%
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-300 w-10 text-right">--</span>
-                            )}
-
-                            {/* Bonus badge */}
-                            {(() => {
-                              const bonusAmt = Number(getEntryValue(kpi.slug, "bonus_amount")) || 0;
-                              if (bonusAmt <= 0) return null;
-                              return (
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${
-                                  pct >= 100 ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                                }`}>
-                                  ${bonusAmt}
-                                </span>
-                              );
-                            })()}
-
-                            {/* WoW delta */}
-                            {delta !== null ? (
-                              <span className={`flex items-center gap-0.5 text-xs font-medium w-14 justify-end ${delta >= 0 ? "text-green-600" : "text-red-500"}`}>
-                                {delta >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-                                {delta >= 0 ? "+" : ""}{delta.toFixed(0)}%
-                              </span>
-                            ) : (
-                              <span className="w-14 flex justify-end">
-                                <Minus className="w-3 h-3 text-gray-300" />
-                              </span>
-                            )}
-
-                            {/* Actions */}
-                            <div className="flex items-center gap-1 shrink-0">
-                              {kpi.calcType === "manual" && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={(e) => { e.stopPropagation(); setEditingKpi(kpi); }}
+                              ) : (
+                                <span
+                                  className="text-gray-500 tabular-nums cursor-pointer hover:text-indigo-600 hover:underline decoration-dashed underline-offset-2 transition-colors"
+                                  onClick={() => startInlineEdit(kpi)}
                                 >
-                                  <Pencil className="w-3.5 h-3.5 text-gray-400" />
-                                </Button>
+                                  {targetNum !== null ? formatKpiValue(targetNum, kpi.unit) : <span className="text-gray-300 italic">set</span>}
+                                </span>
                               )}
-                              <ChevronDown className={`w-4 h-4 text-gray-300 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                            </div>
-                          </div>
+                            </TableCell>
+                            <TableCell>
+                              {pct !== null ? (
+                                <div className="flex items-center gap-2 justify-center">
+                                  <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full transition-all ${
+                                        pct >= 100 ? "bg-green-500" : pct >= 50 ? "bg-amber-500" : "bg-red-400"
+                                      }`}
+                                      style={{ width: `${Math.min(pct, 100)}%` }}
+                                    />
+                                  </div>
+                                  <span className={`text-xs font-medium tabular-nums ${
+                                    pct >= 100 ? "text-green-600" : pct >= 50 ? "text-amber-600" : "text-red-500"
+                                  }`}>
+                                    {pct}%
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-gray-300 text-center block">--</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums" onClick={(e) => e.stopPropagation()}>
+                              {inlineEditSlug === kpi.slug ? (
+                                <div className="flex items-center gap-1 justify-end">
+                                  <Input
+                                    type="number"
+                                    className="w-20 h-7 text-sm text-right tabular-nums"
+                                    value={inlineBonus}
+                                    onChange={(e) => setInlineBonus(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") saveInlineEdit();
+                                      if (e.key === "Escape") cancelInlineEdit();
+                                    }}
+                                    placeholder="$0"
+                                  />
+                                  <button
+                                    onClick={saveInlineEdit}
+                                    disabled={inlineSaving}
+                                    className="p-1 rounded hover:bg-green-100 text-green-600 transition-colors"
+                                  >
+                                    {inlineSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                  </button>
+                                </div>
+                              ) : (
+                                <span
+                                  className="cursor-pointer hover:text-indigo-600 transition-colors"
+                                  onClick={() => startInlineEdit(kpi)}
+                                >
+                                  {bonusAmt > 0 ? (
+                                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                                      pct >= 100 ? "bg-green-100 text-green-700 font-medium" : "bg-gray-100 text-gray-500"
+                                    }`}>
+                                      ${bonusAmt.toLocaleString()}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-300 italic text-xs">set</span>
+                                  )}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {delta !== null ? (
+                                <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${delta >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                  {delta >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                                  {delta >= 0 ? "+" : ""}{delta.toFixed(0)}%
+                                </span>
+                              ) : (
+                                <Minus className="w-3 h-3 text-gray-300 mx-auto" />
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {pct >= 100 && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                            </TableCell>
+                          </TableRow>
 
-                          {/* Expanded chart */}
+                          {/* Expanded trend chart */}
                           {isExpanded && (
-                            <div className="px-4 pb-4 border-t bg-gray-50/50">
-                              <div className="pt-2">
+                            <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
+                              <TableCell colSpan={7} className="py-2 px-4">
                                 <KpiTrendChart
                                   kpiDef={kpi}
                                   data={getWeekRange(selectedWeek, 8).map((w) => {
@@ -447,25 +578,37 @@ export default function KPIs() {
                                     };
                                   })}
                                 />
-                              </div>
-                            </div>
+                              </TableCell>
+                            </TableRow>
                           )}
-                        </div>
+                        </React.Fragment>
                       );
-                    })}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                    });
+                  });
+
+                  return rows;
+                })()}
+
+                {visibleKpis.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      No KPIs to display.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Card>
 
           {/* Empty state */}
           {!selectedTeamMember && currentEntries.length === 0 && (
-            <div className="text-center py-6 text-gray-500 bg-white rounded-lg border mt-4">
-              <RefreshCw className="w-6 h-6 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm font-medium">No data for {formatWeekLabel(selectedWeek)}</p>
-              <p className="text-xs mt-1">Click "Refresh" to pull metrics from your data.</p>
-            </div>
+            <Card>
+              <CardContent className="py-12 text-center">
+                <RefreshCw className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm font-medium">No data for {formatWeekLabel(selectedWeek)}</p>
+                <p className="text-gray-400 text-xs mt-1">Click "Refresh" to pull metrics from your data.</p>
+              </CardContent>
+            </Card>
           )}
         </>
       )}
