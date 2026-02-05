@@ -33,6 +33,7 @@ import PersonalSettings from "./PersonalSettings";
 import BrokerOutreach from "./BrokerOutreach";
 import Partners from "./Partners";
 import ReferralPayouts from "./ReferralPayouts";
+import KPIs from "./KPIs";
 
 // Partner portal pages
 import PartnerLogin from "./partner/PartnerLogin";
@@ -66,6 +67,7 @@ const PAGES = {
   BrokerOutreach,
   Partners,
   ReferralPayouts,
+  KPIs,
 };
 
 function _getCurrentPage(url) {
@@ -280,6 +282,14 @@ function PagesContent() {
         <ProtectedRoute>
           <Layout currentPageName={currentPage}>
             <ReferralPayouts />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/KPIs" element={
+        <ProtectedRoute>
+          <Layout currentPageName={currentPage}>
+            <KPIs />
           </Layout>
         </ProtectedRoute>
       } />

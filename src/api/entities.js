@@ -21,6 +21,7 @@ export {
   SOP,
   User,
   UserProfile,
+  KpiEntry,
   supabase
 } from './supabaseEntities';
 

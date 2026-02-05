@@ -124,6 +124,7 @@ export const SOP = createEntity('sops');
 export const Notification = createEntity('notifications');
 export const BrandingSettings = createEntity('branding_settings');
 export const UserProfile = createEntity('user_profiles');
+export const KpiEntry = createEntity('kpi_entries');
 
 // Client is an alias for Account
 export const Client = Account;

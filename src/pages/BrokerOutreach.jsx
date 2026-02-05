@@ -68,6 +68,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { toWeekStart } from "@/config/kpiConfig";
+import { saveEntries } from "@/api/kpiCalculations";
 
 const STATUS_OPTIONS = [
   { value: "new", label: "New", color: "bg-gray-100 text-gray-700" },
@@ -108,6 +110,7 @@ export default function BrokerOutreach() {
   const [brokers, setBrokers] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [kpiEntries, setKpiEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeView, setActiveView] = useState("all");
@@ -151,47 +154,63 @@ export default function BrokerOutreach() {
 
   const loadData = async () => {
     setLoading(true);
-    const [brokersRes, teamRes, activitiesRes] = await Promise.all([
+    const currentWeekStart = toWeekStart(new Date());
+    const [brokersRes, teamRes, activitiesRes, kpiRes] = await Promise.all([
       supabase.from("brokers").select("*").order("created_at", { ascending: false }),
       supabase.from("team_members").select("*").eq("status", "active"),
       supabase.from("broker_activities").select("*, team_members(full_name)").order("created_at", { ascending: false }),
+      supabase.from("kpi_entries").select("*").eq("slug", "brokers_contacted").eq("month", currentWeekStart).not("team_member_id", "is", null),
     ]);
 
     setBrokers(brokersRes.data || []);
     setTeamMembers(teamRes.data || []);
     setActivities(activitiesRes.data || []);
+    setKpiEntries(kpiRes.data || []);
     setLoading(false);
   };
 
-  // Calculate KPI stats for each team member
+  // Calculate KPI stats for each team member (sourced from kpi_entries)
   const kpiStats = useMemo(() => {
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
-    startOfWeek.setHours(0, 0, 0, 0);
+    // Monday-based week start to match KPI system
+    const weekStartStr = toWeekStart(today);
+    const startOfWeek = new Date(weekStartStr + "T00:00:00");
 
     return teamMembers
-      .filter(tm => tm.outreach_daily_goal > 0 || tm.outreach_weekly_goal > 0)
       .map(member => {
+        const kpiEntry = kpiEntries.find(e => e.team_member_id === member.id);
+        const weeklyGoal = kpiEntry ? Number(kpiEntry.target_value) || 0 : 0;
+        const bonusAmount = kpiEntry ? Number(kpiEntry.bonus_amount) || 0 : 0;
+
+        if (weeklyGoal <= 0) return null;
+
+        const dailyGoal = Math.ceil(weeklyGoal / 5);
         const memberActivities = activities.filter(a => a.team_member_id === member.id);
         const todayCount = memberActivities.filter(a => new Date(a.created_at) >= startOfDay).length;
         const weekCount = memberActivities.filter(a => new Date(a.created_at) >= startOfWeek).length;
 
-        const dailyProgress = member.outreach_daily_goal > 0 ? (todayCount / member.outreach_daily_goal) * 100 : 0;
-        const weeklyProgress = member.outreach_weekly_goal > 0 ? (weekCount / member.outreach_weekly_goal) * 100 : 0;
-        const onTrackForBonus = weeklyProgress >= 100 || (dailyProgress >= 100 && weeklyProgress >= (today.getDay() / 7) * 100);
+        const dailyProgress = dailyGoal > 0 ? (todayCount / dailyGoal) * 100 : 0;
+        const weeklyProgress = weeklyGoal > 0 ? (weekCount / weeklyGoal) * 100 : 0;
+        const dayOfWeek = today.getDay();
+        const workingDaysPassed = dayOfWeek === 0 ? 5 : Math.min(dayOfWeek, 5);
+        const expectedProgress = (workingDaysPassed / 5) * 100;
+        const onTrackForBonus = weeklyProgress >= 100 || weeklyProgress >= expectedProgress;
 
         return {
           ...member,
           todayCount,
           weekCount,
+          dailyGoal,
+          weeklyGoal,
+          bonusAmount,
           dailyProgress: Math.min(dailyProgress, 100),
           weeklyProgress: Math.min(weeklyProgress, 100),
           onTrackForBonus,
         };
-      });
-  }, [teamMembers, activities]);
+      })
+      .filter(Boolean);
+  }, [teamMembers, activities, kpiEntries]);
 
   const handleLogReachOut = async () => {
     if (!reachOutBroker || !reachOutBy) return;
@@ -232,11 +251,17 @@ export default function BrokerOutreach() {
   const handleSaveKpi = async () => {
     if (!kpiMember) return;
 
-    await supabase.from("team_members").update({
-      outreach_daily_goal: kpiDailyGoal,
-      outreach_weekly_goal: kpiWeeklyGoal,
-      outreach_bonus_amount: kpiBonus,
-    }).eq("id", kpiMember.id);
+    const currentWeekStart = toWeekStart(new Date());
+    const existingStat = kpiStats.find(s => s.id === kpiMember.id);
+
+    await saveEntries([{
+      slug: "brokers_contacted",
+      month: currentWeekStart,
+      actual_value: existingStat?.weekCount || 0,
+      target_value: kpiWeeklyGoal,
+      bonus_amount: kpiBonus || null,
+      team_member_id: kpiMember.id,
+    }]);
 
     setShowKpiSettings(false);
     setKpiMember(null);
@@ -245,9 +270,11 @@ export default function BrokerOutreach() {
 
   const openKpiSettings = (member) => {
     setKpiMember(member);
-    setKpiDailyGoal(member.outreach_daily_goal || 0);
-    setKpiWeeklyGoal(member.outreach_weekly_goal || 0);
-    setKpiBonus(member.outreach_bonus_amount || 0);
+    const kpiEntry = kpiEntries.find(e => e.team_member_id === member.id);
+    const weeklyGoal = kpiEntry ? Number(kpiEntry.target_value) || 0 : 0;
+    setKpiDailyGoal(Math.ceil(weeklyGoal / 5));
+    setKpiWeeklyGoal(weeklyGoal);
+    setKpiBonus(kpiEntry ? Number(kpiEntry.bonus_amount) || 0 : 0);
     setShowKpiSettings(true);
   };
 
@@ -584,7 +611,7 @@ export default function BrokerOutreach() {
                   <div className="mb-3">
                     <div className="flex items-center justify-between text-sm mb-1">
                       <span className="text-gray-600">Today</span>
-                      <span className="font-medium">{member.todayCount} / {member.outreach_daily_goal}</span>
+                      <span className="font-medium">{member.todayCount} / {member.dailyGoal}</span>
                     </div>
                     <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
@@ -598,7 +625,7 @@ export default function BrokerOutreach() {
                   <div className="mb-3">
                     <div className="flex items-center justify-between text-sm mb-1">
                       <span className="text-gray-600">This Week</span>
-                      <span className="font-medium">{member.weekCount} / {member.outreach_weekly_goal}</span>
+                      <span className="font-medium">{member.weekCount} / {member.weeklyGoal}</span>
                     </div>
                     <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
@@ -609,9 +636,9 @@ export default function BrokerOutreach() {
                   </div>
 
                   {/* Bonus Info */}
-                  {member.outreach_bonus_amount > 0 && (
+                  {member.bonusAmount > 0 && (
                     <div className={`text-xs px-2 py-1 rounded-full text-center ${member.onTrackForBonus ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {member.onTrackForBonus ? '✓ On track for' : 'Goal:'} ${member.outreach_bonus_amount} bonus
+                      {member.onTrackForBonus ? '\u2713 On track for' : 'Goal:'} ${member.bonusAmount} bonus
                     </div>
                   )}
                 </CardContent>
@@ -620,7 +647,7 @@ export default function BrokerOutreach() {
 
             {/* Add KPI Card */}
             <Card className="border-dashed border-2 border-gray-200 hover:border-gray-300 cursor-pointer" onClick={() => {
-              const membersWithoutKpi = teamMembers.filter(tm => !tm.outreach_daily_goal && !tm.outreach_weekly_goal);
+              const membersWithoutKpi = teamMembers.filter(tm => !kpiEntries.find(e => e.team_member_id === tm.id));
               if (membersWithoutKpi.length > 0) {
                 openKpiSettings(membersWithoutKpi[0]);
               }
@@ -1031,9 +1058,11 @@ export default function BrokerOutreach() {
                 const member = teamMembers.find(m => m.id === id);
                 if (member) {
                   setKpiMember(member);
-                  setKpiDailyGoal(member.outreach_daily_goal || 0);
-                  setKpiWeeklyGoal(member.outreach_weekly_goal || 0);
-                  setKpiBonus(member.outreach_bonus_amount || 0);
+                  const entry = kpiEntries.find(e => e.team_member_id === id);
+                  const wg = entry ? Number(entry.target_value) || 0 : 0;
+                  setKpiDailyGoal(Math.ceil(wg / 5));
+                  setKpiWeeklyGoal(wg);
+                  setKpiBonus(entry ? Number(entry.bonus_amount) || 0 : 0);
                 }
               }}>
                 <SelectTrigger>
@@ -1050,23 +1079,20 @@ export default function BrokerOutreach() {
             </div>
 
             <div className="space-y-2">
-              <Label>Daily Goal (reach outs per day)</Label>
-              <Input
-                type="number"
-                value={kpiDailyGoal}
-                onChange={(e) => setKpiDailyGoal(parseInt(e.target.value) || 0)}
-                placeholder="e.g., 5"
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label>Weekly Goal (reach outs per week)</Label>
               <Input
                 type="number"
                 value={kpiWeeklyGoal}
-                onChange={(e) => setKpiWeeklyGoal(parseInt(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 0;
+                  setKpiWeeklyGoal(val);
+                  setKpiDailyGoal(Math.ceil(val / 5));
+                }}
                 placeholder="e.g., 25"
               />
+              <p className="text-xs text-gray-500">
+                Daily target: {kpiWeeklyGoal > 0 ? Math.ceil(kpiWeeklyGoal / 5) : 0} per day (weekly / 5)
+              </p>
             </div>
 
             <div className="space-y-2">

@@ -140,6 +140,7 @@ function getSidebarContent(activeSection, user) {
             { icon: <UsersRound className="w-4 h-4 text-neutral-50" />, label: "Team", path: "Team" },
             { icon: <DollarSign className="w-4 h-4 text-neutral-50" />, label: "Accounting", path: "AccountingDashboard" },
             { icon: <BarChart3 className="w-4 h-4 text-neutral-50" />, label: "Reports", path: "Reports" },
+            { icon: <TrendingUp className="w-4 h-4 text-neutral-50" />, label: "KPIs", path: "KPIs" },
             { icon: <Handshake className="w-4 h-4 text-neutral-50" />, label: "Partners", path: "Partners" },
             { icon: <Receipt className="w-4 h-4 text-neutral-50" />, label: "Referral Payouts", path: "ReferralPayouts" },
           ],
@@ -438,7 +439,7 @@ export function ModernSidebar({ children }) {
   useEffect(() => {
     const path = location.pathname.toLowerCase();
     // Check admin paths first (more specific)
-    if (path.includes('team') || path.includes('admindashboard') || path.includes('accountingdashboard') || path.includes('reports') || path.includes('partners') || path.includes('referralpayouts')) {
+    if (path.includes('team') || path.includes('admindashboard') || path.includes('accountingdashboard') || path.includes('reports') || path.includes('kpis') || path.includes('partners') || path.includes('referralpayouts')) {
       setActiveSection('admin');
     } else if (path.includes('crm') || path.includes('brokeroutreach') || path.includes('accounts') || path.includes('contacts') || path.includes('socialmedia')) {
       setActiveSection('sales');
