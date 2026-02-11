@@ -354,7 +354,7 @@ export default function Tasks() {
     : ["completed"];
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="border-b bg-white shadow-sm">
         <div className="p-6 lg:p-8">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
@@ -546,7 +546,7 @@ export default function Tasks() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden min-h-0">
         {viewMode === "board" && (
           <DragDropContext onDragEnd={handleDragEnd}>
             <div className="h-full overflow-x-auto">
@@ -671,7 +671,7 @@ export default function Tasks() {
         )}
 
         {viewMode === "grouped" && (
-          <div className="p-6 lg:p-8 space-y-6 overflow-y-auto">
+          <div className="p-6 lg:p-8 space-y-6 overflow-y-auto h-full">
             {Object.entries(groupedTasks).map(([groupName, groupTasks]) => (
               <Card key={groupName}>
                 <CardHeader className="pb-3">
@@ -742,7 +742,7 @@ export default function Tasks() {
         )}
 
         {viewMode === "list" && (
-          <div className="p-6 lg:p-8 overflow-y-auto">
+          <div className="p-6 lg:p-8 overflow-y-auto h-full">
             <div className="bg-white rounded-lg border shadow-sm">
               <Table>
                 <TableHeader>
