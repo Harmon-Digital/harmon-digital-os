@@ -47,6 +47,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import TaskForm from "../components/tasks/TaskForm";
 import { api } from "@/api/legacyClient";
+import { sendNotification } from "@/api/functions";
 
 export default function Tasks() {
   const { user: authUser, userProfile } = useAuth();
@@ -133,24 +134,24 @@ export default function Tasks() {
       await Task.create(taskData);
     }
     
-    if (isNewTask && taskData.assigned_to) {
-      try {
-        const assignedTeamMember = teamMembersMap[taskData.assigned_to];
-        const project = projectsMap[taskData.project_id];
-
-        if (assignedTeamMember?.user_id) {
-          await api.functions.invoke('sendNotification', {
-            userId: assignedTeamMember.user_id,
-            title: 'New Task Assigned',
-            message: `You've been assigned to "${taskData.title}"${project ? ` on project "${project.name}"` : ''}.`,
+    // Send notification on new task assignment or reassignment
+    if (taskData.assigned_to) {
+      const assignedTM = teamMembersMap[taskData.assigned_to];
+      const wasReassigned = editingTask && editingTask.assigned_to !== taskData.assigned_to;
+      
+      if ((isNewTask || wasReassigned) && assignedTM?.user_id) {
+        try {
+          const project = projectsMap[taskData.project_id];
+          await sendNotification({
+            userId: assignedTM.user_id,
             type: 'info',
-            link: '/Tasks',
-            sendEmail: true,
-            userEmail: assignedUser?.email
+            title: isNewTask ? 'New Task Assigned' : 'Task Reassigned to You',
+            message: `"${taskData.title}"${project ? ` on ${project.name}` : ''}`,
+            link: '/Tasks'
           });
+        } catch (error) {
+          console.error('Error sending task notification:', error);
         }
-      } catch (error) {
-        console.error('Error sending task notification:', error);
       }
     }
     
@@ -169,6 +170,21 @@ export default function Tasks() {
       const task = tasks.find(t => t.id === taskId);
       await Task.update(taskId, { ...task, [field]: value });
       
+      // Send notification on reassignment
+      if (field === 'assigned_to' && value !== task.assigned_to) {
+        const assignedTM = teamMembersMap[value];
+        if (assignedTM?.user_id) {
+          const project = projectsMap[task.project_id];
+          await sendNotification({
+            userId: assignedTM.user_id,
+            type: 'info',
+            title: 'Task Assigned to You',
+            message: `"${task.title}"${project ? ` on ${project.name}` : ''}`,
+            link: '/Tasks'
+          });
+        }
+      }
+
       setTasks(prevTasks => 
         prevTasks.map(t => t.id === taskId ? { ...t, [field]: value } : t)
       );
