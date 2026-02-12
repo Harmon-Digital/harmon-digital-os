@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Harmon Digital OS <notifications@harmon-digital.com>",
+        from: "Harmon Digital OS <notifications@notifications.harmon-digital.com>",
         to: [to],
         subject,
         html: htmlBody,
