@@ -110,7 +110,6 @@ function getSidebarContent(activeSection, user) {
             { icon: <Clock className="w-4 h-4 text-neutral-50" />, label: "Time Tracking", path: "TimeTracking" },
             { icon: <FileText className="w-4 h-4 text-neutral-50" />, label: "SOPs", path: "SOPs" },
             { icon: <Building2 className="w-4 h-4 text-neutral-50" />, label: "Branding", path: "Branding" },
-            { icon: <MessageSquare className="w-4 h-4 text-neutral-50" />, label: "Harmon Bot", path: "BotChannel" },
           ],
         },
       ],
@@ -126,6 +125,17 @@ function getSidebarContent(activeSection, user) {
             { icon: <Building2 className="w-4 h-4 text-neutral-50" />, label: "Accounts", path: "Accounts" },
             { icon: <UserCircle className="w-4 h-4 text-neutral-50" />, label: "Contacts", path: "Contacts" },
             { icon: <Calendar className="w-4 h-4 text-neutral-50" />, label: "Social Media", path: "SocialMedia" },
+          ],
+        },
+      ],
+    },
+    bot: {
+      title: "Harmon Bot",
+      sections: [
+        {
+          title: "Assistant",
+          items: [
+            { icon: <MessageSquare className="w-4 h-4 text-neutral-50" />, label: "Bot Channel", path: "BotChannel" },
           ],
         },
       ],
@@ -178,7 +188,8 @@ function IconNavigation({ activeSection, onSectionChange, user, onLogout, onSett
   
   const navItems = [
     { id: "operations", icon: <Briefcase className="w-4 h-4" />, label: "Operations" },
-    { id: "sales", icon: <TrendingUp className="w-4 h-4" />, label: "Sales" }, // Icon changed to TrendingUp
+    { id: "sales", icon: <TrendingUp className="w-4 h-4" />, label: "Sales" },
+    { id: "bot", icon: <MessageSquare className="w-4 h-4" />, label: "Harmon Bot" },
   ];
 
   if (isAdmin) {
@@ -445,6 +456,8 @@ export function ModernSidebar({ children }) {
     // Check admin paths first (more specific)
     if (path.includes('team') || path.includes('admindashboard') || path.includes('accountingdashboard') || path.includes('reports') || path.includes('kpis') || path.includes('partners') || path.includes('referralpayouts') || path.includes('mcpapikeys')) {
       setActiveSection('admin');
+    } else if (path.includes('botchannel')) {
+      setActiveSection('bot');
     } else if (path.includes('crm') || path.includes('brokeroutreach') || path.includes('accounts') || path.includes('contacts') || path.includes('socialmedia')) {
       setActiveSection('sales');
     } else {
