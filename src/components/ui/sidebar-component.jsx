@@ -2,8 +2,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import AgentChatPanel from "@/components/chat/AgentChatPanel";
+import { supabase } from "@/api/supabaseClient";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -11,11 +13,9 @@ import {
   FileText,
   Target,
   Calendar,
-  Wallet,
   BarChart3,
   CheckSquare,
   UsersRound,
-  CreditCard,
   Building2,
   UserCircle,
   Briefcase,
@@ -30,6 +30,7 @@ import {
   Handshake,
   KeyRound,
   MessageSquare,
+  MessageSquareDot,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -183,13 +184,12 @@ function IconNavButton({ children, label, isActive = false, onClick }) {
   );
 }
 
-function IconNavigation({ activeSection, onSectionChange, user, onLogout, onSettings }) {
+function IconNavigation({ activeSection, onSectionChange, user, onLogout, onSettings, chatOpen, onChatToggle }) {
   const isAdmin = user?.role === "admin";
   
   const navItems = [
     { id: "operations", icon: <Briefcase className="w-4 h-4" />, label: "Operations" },
     { id: "sales", icon: <TrendingUp className="w-4 h-4" />, label: "Sales" },
-    { id: "bot", icon: <MessageSquare className="w-4 h-4" />, label: "Harmon Bot" },
   ];
 
   if (isAdmin) {
@@ -221,8 +221,20 @@ function IconNavigation({ activeSection, onSectionChange, user, onLogout, onSett
 
       <div className="flex-1" />
 
-      {/* Bottom section - Notifications & User */}
+      {/* Bottom section */}
       <div className="flex flex-col gap-2 w-full items-center">
+        {/* Chat Panel Toggle — Cmd+\ shortcut */}
+        <IconNavButton
+          label="Agent Chat (Cmd+\\)"
+          isActive={chatOpen}
+          onClick={onChatToggle}
+        >
+          {chatOpen
+            ? <MessageSquareDot className="w-4 h-4" />
+            : <MessageSquare className="w-4 h-4" />
+          }
+        </IconNavButton>
+
         {/* Notification Bell */}
         <NotificationBell />
         
@@ -448,12 +460,34 @@ export function ModernSidebar({ children }) {
     const savedWidth = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return savedWidth ? parseInt(savedWidth, 10) : DEFAULT_SIDEBAR_WIDTH;
   });
+  const [chatOpen, setChatOpen] = useState(false);
+  const [accounts, setAccounts] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Load accounts for agent list
+  useEffect(() => {
+    supabase
+      .from("accounts")
+      .select("id,company_name")
+      .order("company_name", { ascending: true })
+      .then(({ data }) => setAccounts(data || []));
+  }, []);
+
+  // Keyboard shortcut: Cmd+\ or Ctrl+\ to toggle chat panel
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
+        e.preventDefault();
+        setChatOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   useEffect(() => {
     const path = location.pathname.toLowerCase();
-    // Check admin paths first (more specific)
     if (path.includes('team') || path.includes('admindashboard') || path.includes('accountingdashboard') || path.includes('reports') || path.includes('kpis') || path.includes('partners') || path.includes('referralpayouts') || path.includes('mcpapikeys')) {
       setActiveSection('admin');
     } else if (path.includes('botchannel')) {
@@ -484,13 +518,15 @@ export function ModernSidebar({ children }) {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-blue-50 overflow-hidden">
       <IconNavigation
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
         user={userProfile}
         onLogout={handleLogout}
         onSettings={handleSettings}
+        chatOpen={chatOpen}
+        onChatToggle={() => setChatOpen((o) => !o)}
       />
       <DetailSidebar
         activeSection={activeSection}
@@ -498,9 +534,14 @@ export function ModernSidebar({ children }) {
         sidebarWidth={sidebarWidth}
         onWidthChange={handleWidthChange}
       />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto min-w-0">
         {children}
       </main>
+      <AgentChatPanel
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+        accounts={accounts}
+      />
     </div>
   );
 }
