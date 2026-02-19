@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Lock, Save, Loader2, Upload, Camera } from "lucide-react";
+import { User, Lock, Save, Loader2, Upload, Camera, Bell } from "lucide-react";
 
 export default function PersonalSettings() {
   const { user, userProfile, refreshProfile } = useAuth();
@@ -28,6 +29,18 @@ export default function PersonalSettings() {
     confirmPassword: ""
   });
 
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    email_enabled: true,
+    social_kpi_enabled: true,
+    task_enabled: true,
+    crm_enabled: true,
+    referral_enabled: true,
+    finance_enabled: true,
+    system_enabled: true,
+    daily_digest_enabled: false,
+  });
+  const [savingNotifications, setSavingNotifications] = useState(false);
+
   useEffect(() => {
     if (userProfile) {
       setProfileData(prev => ({
@@ -35,6 +48,7 @@ export default function PersonalSettings() {
         full_name: userProfile.full_name || ""
       }));
       loadTeamMember();
+      loadNotificationPreferences();
     }
   }, [userProfile]);
 
@@ -55,6 +69,51 @@ export default function PersonalSettings() {
         bio: data.bio || "",
         profile_image_url: data.profile_image_url || ""
       }));
+    }
+  };
+
+  const loadNotificationPreferences = async () => {
+    if (!user?.id) return;
+
+    const { data, error } = await supabase
+      .from("notification_preferences")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error loading notification preferences:", error);
+      return;
+    }
+
+    if (data) {
+      setNotificationPrefs(prev => ({ ...prev, ...data }));
+    }
+  };
+
+  const saveNotificationPreferences = async () => {
+    if (!user?.id) return;
+    setSavingNotifications(true);
+    setMessage({ type: "", text: "" });
+
+    try {
+      const payload = {
+        user_id: user.id,
+        ...notificationPrefs,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from("notification_preferences")
+        .upsert(payload, { onConflict: "user_id" });
+
+      if (error) throw error;
+      setMessage({ type: "success", text: "Notification preferences updated." });
+    } catch (error) {
+      console.error("Error saving notification preferences:", error);
+      setMessage({ type: "error", text: error.message || "Failed to save notification preferences" });
+    } finally {
+      setSavingNotifications(false);
     }
   };
 
@@ -345,6 +404,75 @@ export default function PersonalSettings() {
                 )}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        {/* Notification Preferences */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="w-5 h-5" />
+              Notification Preferences
+            </CardTitle>
+            <CardDescription>
+              Control which events notify you in-app and by email.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="font-medium text-sm">Email notifications</p>
+                <p className="text-xs text-gray-500">Master switch for all notification emails</p>
+              </div>
+              <Switch
+                checked={notificationPrefs.email_enabled}
+                onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, email_enabled: checked }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                ["task_enabled", "Tasks"],
+                ["crm_enabled", "CRM"],
+                ["social_kpi_enabled", "Social + KPI"],
+                ["referral_enabled", "Referrals"],
+                ["finance_enabled", "Finance"],
+                ["system_enabled", "System / Integrations"],
+              ].map(([key, label]) => (
+                <div key={key} className="flex items-center justify-between rounded-lg border p-3">
+                  <p className="text-sm font-medium">{label}</p>
+                  <Switch
+                    checked={!!notificationPrefs[key]}
+                    onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, [key]: checked }))}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="font-medium text-sm">Daily digest (non-urgent)</p>
+                <p className="text-xs text-gray-500">Use digest mode for lower-noise notifications</p>
+              </div>
+              <Switch
+                checked={notificationPrefs.daily_digest_enabled}
+                onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, daily_digest_enabled: checked }))}
+              />
+            </div>
+
+            <Button onClick={saveNotificationPreferences} disabled={savingNotifications} className="bg-indigo-600 hover:bg-indigo-700">
+              {savingNotifications ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Notification Preferences
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
 

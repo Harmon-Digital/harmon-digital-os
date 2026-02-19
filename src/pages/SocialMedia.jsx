@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { Account, TeamMember } from "@/api/entities";
+import { sendNotification } from "@/api/functions";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Edit, Search, Trash2, ChevronLeft, ChevronRight, Check, Target, Trophy, Settings } from "lucide-react";
@@ -44,6 +46,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SocialPostForm from "../components/social/SocialPostForm";
 
 export default function SocialMedia() {
+  const { user } = useAuth();
   const [socialPosts, setSocialPosts] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
@@ -161,11 +164,45 @@ export default function SocialMedia() {
     setShowKpiSettings(true);
   };
 
+  const notifyAdmins = async ({ title, message, link = "/SocialMedia", priority = "normal", source = "social.update" }) => {
+    const { data: admins } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .eq("role", "admin");
+
+    if (!admins?.length) return;
+
+    await Promise.all(
+      admins
+        .filter(a => a.id !== user?.id)
+        .map((admin) => sendNotification({
+          userId: admin.id,
+          type: "info",
+          category: "social",
+          priority,
+          source,
+          title,
+          message,
+          link,
+        }))
+    );
+  };
+
   const handleSubmit = async (postData) => {
     if (editingPost) {
       await supabase.from("social_posts").update(postData).eq("id", editingPost.id);
+      await notifyAdmins({
+        title: "Social post updated",
+        message: `Post updated: ${postData.title || "Untitled"}`,
+        source: "social.post_updated",
+      });
     } else {
       await supabase.from("social_posts").insert(postData);
+      await notifyAdmins({
+        title: "New social post created",
+        message: `${postData.title || "Untitled"} scheduled for ${postData.scheduled_date || "TBD"}`,
+        source: "social.post_created",
+      });
     }
     setShowDrawer(false);
     setEditingPost(null);
@@ -187,6 +224,16 @@ export default function SocialMedia() {
 
   const handleStatusChange = async (postId, newStatus) => {
     await supabase.from("social_posts").update({ status: newStatus }).eq("id", postId);
+    const post = socialPosts.find(p => p.id === postId);
+
+    if (newStatus === "published") {
+      await notifyAdmins({
+        title: "Social post published",
+        message: `Published: ${post?.title || "Untitled"}`,
+        source: "social.post_published",
+      });
+    }
+
     setSocialPosts(prev => prev.map(p => p.id === postId ? { ...p, status: newStatus } : p));
   };
 

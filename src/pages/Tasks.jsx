@@ -145,6 +145,9 @@ export default function Tasks() {
           await sendNotification({
             userId: assignedTM.user_id,
             type: 'info',
+            category: 'tasks',
+            priority: 'high',
+            source: 'tasks.assignment',
             title: isNewTask ? 'New Task Assigned' : 'Task Reassigned to You',
             message: `"${taskData.title}"${project ? ` on ${project.name}` : ''}`,
             link: '/Tasks'
@@ -178,6 +181,9 @@ export default function Tasks() {
           await sendNotification({
             userId: assignedTM.user_id,
             type: 'info',
+            category: 'tasks',
+            priority: 'high',
+            source: 'tasks.reassignment',
             title: 'Task Assigned to You',
             message: `"${task.title}"${project ? ` on ${project.name}` : ''}`,
             link: '/Tasks'

@@ -122,6 +122,7 @@ export const StripeSubscription = createEntity('stripe_subscriptions');
 export const SocialPost = createEntity('social_posts');
 export const SOP = createEntity('sops');
 export const Notification = createEntity('notifications');
+export const NotificationPreference = createEntity('notification_preferences');
 export const BrandingSettings = createEntity('branding_settings');
 export const UserProfile = createEntity('user_profiles');
 export const KpiEntry = createEntity('kpi_entries');

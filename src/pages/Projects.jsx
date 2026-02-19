@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Project, Account } from "@/api/entities";
+import { sendNotification } from "@/api/functions";
+import { supabase } from "@/api/supabaseClient";
 import { createPageUrl } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -52,7 +54,7 @@ export default function Projects() {
   const [editingProject, setEditingProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   
   // Filter states
   const [activeTab, setActiveTab] = useState("client");
@@ -84,13 +86,62 @@ export default function Projects() {
     }
   };
 
+  const notifyAdmins = async ({ title, message, link = "/Projects", priority = "normal", source = "projects.update" }) => {
+    const { data: admins } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .eq("role", "admin");
+
+    if (!admins?.length) return;
+
+    await Promise.all(
+      admins
+        .filter(a => a.id !== user?.id)
+        .map((admin) => sendNotification({
+          userId: admin.id,
+          type: "info",
+          category: "projects",
+          priority,
+          source,
+          title,
+          message,
+          link,
+        }))
+    );
+  };
+
   const handleSubmit = async (projectData) => {
     try {
+      const wasRiskRaised = editingProject && (editingProject.risk_level !== "high" && projectData.risk_level === "high");
+
       if (editingProject) {
         await Project.update(editingProject.id, projectData);
       } else {
         await Project.create(projectData);
+        await notifyAdmins({
+          title: "New project created",
+          message: `Project created: ${projectData.name || "Untitled Project"}`,
+          source: "projects.created",
+        });
       }
+
+      if (wasRiskRaised) {
+        await notifyAdmins({
+          title: "Project risk escalated",
+          message: `${projectData.name || editingProject.name} is now marked high risk`,
+          priority: "high",
+          source: "projects.risk_high",
+        });
+      }
+
+      if (editingProject && editingProject.status !== "completed" && projectData.status === "completed") {
+        await notifyAdmins({
+          title: "Project completed",
+          message: `${projectData.name || editingProject.name} was marked completed`,
+          source: "projects.completed",
+        });
+      }
+
       setShowDrawer(false);
       setEditingProject(null);
       loadData();

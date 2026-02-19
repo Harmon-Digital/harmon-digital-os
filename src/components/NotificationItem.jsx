@@ -1,7 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle, Info, AlertTriangle, XCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { CheckCircle, Info, AlertTriangle, XCircle, Briefcase, Target, Megaphone, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function NotificationItem({ notification, onMarkAsRead, onClose }) {
@@ -40,7 +39,21 @@ export default function NotificationItem({ notification, onMarkAsRead, onClose }
     }
   };
 
-  const config = typeConfig[notification.type] || typeConfig.info;
+  const categoryIcon = {
+    tasks: <Briefcase className="w-5 h-5 text-indigo-500" />,
+    projects: <Briefcase className="w-5 h-5 text-slate-600" />,
+    crm: <Target className="w-5 h-5 text-blue-500" />,
+    social: <Megaphone className="w-5 h-5 text-fuchsia-500" />,
+    kpi: <DollarSign className="w-5 h-5 text-emerald-500" />,
+    referrals: <Target className="w-5 h-5 text-violet-500" />,
+    finance: <DollarSign className="w-5 h-5 text-emerald-600" />,
+    system: <Info className="w-5 h-5 text-gray-500" />,
+  };
+
+  const config = typeConfig[notification.type] || {
+    ...typeConfig.info,
+    icon: categoryIcon[notification.category] || typeConfig.info.icon,
+  };
   const timeAgo = getTimeAgo(new Date(notification.created_at));
 
   return (

@@ -16,6 +16,7 @@ export default function NotificationBell() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     loadNotifications();
@@ -67,6 +68,12 @@ export default function NotificationBell() {
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const categories = Array.from(new Set(notifications.map(n => n.category).filter(Boolean)));
+  const filteredNotifications = notifications.filter((n) => {
+    if (filter === "unread") return !n.read;
+    if (filter === "all") return true;
+    return n.category === filter;
+  });
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -87,32 +94,49 @@ export default function NotificationBell() {
         align="end"
         side="right"
       >
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="font-semibold text-lg">Notifications</h3>
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleMarkAllAsRead}
-              className="text-xs"
-            >
-              Mark all as read
-            </Button>
-          )}
+        <div className="p-4 border-b space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-lg">Notifications</h3>
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleMarkAllAsRead}
+                className="text-xs"
+              >
+                Mark all as read
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button size="sm" variant={filter === "all" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setFilter("all")}>All</Button>
+            <Button size="sm" variant={filter === "unread" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setFilter("unread")}>Unread</Button>
+            {categories.map((category) => (
+              <Button
+                key={category}
+                size="sm"
+                variant={filter === category ? "default" : "outline"}
+                className="h-7 text-xs capitalize"
+                onClick={() => setFilter(category)}
+              >
+                {category}
+              </Button>
+            ))}
+          </div>
         </div>
         <ScrollArea className="h-[400px]">
           {loading ? (
             <div className="p-8 text-center text-gray-500">
               Loading...
             </div>
-          ) : notifications.length === 0 ? (
+          ) : filteredNotifications.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               <Bell className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>No notifications yet</p>
+              <p>No notifications for this filter</p>
             </div>
           ) : (
             <div className="divide-y">
-              {notifications.map((notification) => (
+              {filteredNotifications.map((notification) => (
                 <NotificationItem
                   key={notification.id}
                   notification={notification}

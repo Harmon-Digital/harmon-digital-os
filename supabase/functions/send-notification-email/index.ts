@@ -2,28 +2,162 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
+const escapeHtml = (value: string = "") =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+type Branding = {
+  company_name?: string;
+  primary_color?: string;
+  secondary_color?: string;
+  accent_color?: string;
+  logo_url?: string;
+};
+
+function buildEmailTemplate(params: {
+  type: "error" | "warning" | "info";
+  title: string;
+  message: string;
+  link?: string;
+  brand?: Branding;
+}) {
+  const { type, title, message, link, brand } = params;
+
+  const companyName = brand?.company_name || "Harmon Digital";
+  const primary = brand?.primary_color || "#4F46E5";
+  const secondary = brand?.secondary_color || "#3B82F6";
+  const accent = brand?.accent_color || "#10B981";
+  const logo = brand?.logo_url || "https://os.harmon-digital.com/logo.png";
+
+  const palette = {
+    error: {
+      label: "Error",
+      color: "#DC2626",
+      softBg: "#FEF2F2",
+      border: "#FCA5A5",
+      icon: "🔴",
+    },
+    warning: {
+      label: "Warning",
+      color: "#D97706",
+      softBg: "#FFFBEB",
+      border: "#FCD34D",
+      icon: "⚠️",
+    },
+    info: {
+      label: "Notification",
+      color: primary,
+      softBg: "#EEF2FF",
+      border: "#C7D2FE",
+      icon: "ℹ️",
+    },
+  }[type];
+
+  const safeTitle = escapeHtml(title);
+  const safeMessage = escapeHtml(message).replace(/\n/g, "<br/>");
+  const ctaHref = link ? `https://os.harmon-digital.com${link}` : "";
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${safeTitle}</title>
+</head>
+<body style="margin:0; padding:0; background:#F8FAFC; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color:#111827;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC; padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px; background:#FFFFFF; border:1px solid #E5E7EB; border-radius:14px; overflow:hidden;">
+          <tr>
+            <td style="background:#000000; padding:18px 24px; border-bottom:3px solid ${primary};">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <img src="${logo}" alt="${escapeHtml(companyName)}" width="24" height="24" style="display:inline-block; vertical-align:middle; border:0; border-radius:4px; margin-right:8px;" />
+                    <span style="font-size:16px; font-weight:700; color:#FFFFFF; vertical-align:middle;">${escapeHtml(companyName)} OS</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${palette.softBg}; border:1px solid ${palette.border}; border-radius:12px;">
+                <tr>
+                  <td style="padding:18px 18px 16px 18px;">
+                    <p style="margin:0 0 8px 0; font-size:12px; letter-spacing:0.06em; text-transform:uppercase; font-weight:700; color:${palette.color};">${palette.icon} ${palette.label}</p>
+                    <h1 style="margin:0 0 10px 0; font-size:22px; line-height:1.25; color:#111827;">${safeTitle}</h1>
+                    <p style="margin:0; font-size:15px; line-height:1.65; color:#374151;">${safeMessage}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          ${link ? `
+          <tr>
+            <td style="padding:0 24px 24px 24px;">
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:${primary}; border-radius:10px;">
+                    <a href="${ctaHref}" style="display:inline-block; padding:12px 18px; font-size:14px; font-weight:600; color:#FFFFFF; text-decoration:none;">Open in Harmon OS →</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          ` : ""}
+
+          <tr>
+            <td style="padding:18px 24px 24px 24px; border-top:1px solid #E5E7EB;">
+              <p style="margin:0; text-align:center; font-size:12px; line-height:1.5; color:#6B7280;">
+                <a href="https://os.harmon-digital.com" style="color:${secondary}; text-decoration:none; font-weight:600;">os.harmon-digital.com</a>
+                <span style="margin:0 8px; color:#9CA3AF;">•</span>
+                <a href="https://harmon-digital.com" style="color:#6B7280; text-decoration:none;">harmon-digital.com</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 Deno.serve(async (req) => {
   try {
-    const { record } = await req.json();
+    const payload = await req.json().catch(() => ({}));
+    const record = payload?.record;
 
-    // If called via webhook/trigger, record is the notification row
-    // If called directly, expect { to, subject, message }
     let to: string;
     let subject: string;
     let htmlBody: string;
 
     if (record) {
-      // Called from DB webhook — look up team member email
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
 
-      const { data: teamMember } = await supabase
-        .from("team_members")
-        .select("email, full_name")
-        .eq("user_id", record.user_id)
-        .single();
+      const [{ data: teamMember }, { data: branding }] = await Promise.all([
+        supabase
+          .from("team_members")
+          .select("email, full_name")
+          .eq("user_id", record.user_id)
+          .single(),
+        supabase
+          .from("branding_settings")
+          .select("company_name, primary_color, secondary_color, accent_color, logo_url")
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
       if (!teamMember?.email) {
         return new Response(
@@ -34,83 +168,30 @@ Deno.serve(async (req) => {
 
       to = teamMember.email;
       subject = record.title;
-      const typeEmoji =
+
+      const type: "error" | "warning" | "info" =
         record.type === "error"
-          ? "🔴"
+          ? "error"
           : record.type === "warning"
-          ? "⚠️"
-          : "ℹ️";
+          ? "warning"
+          : "info";
 
-      const accentColor = record.type === "error" ? "#ef4444" : record.type === "warning" ? "#f59e0b" : "#6366f1";
-      const accentBg = record.type === "error" ? "#fef2f2" : record.type === "warning" ? "#fffbeb" : "#eef2ff";
-
-      htmlBody = `
-        <!DOCTYPE html>
-        <html>
-        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f1f5f9; padding: 40px 20px;">
-            <tr><td align="center">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
-                <!-- Header -->
-                <tr>
-                  <td style="background: linear-gradient(135deg, #1e1b4b, #312e81); padding: 28px 32px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td>
-                          <span style="font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px;">Harmon Digital</span>
-                          <span style="font-size: 13px; color: #a5b4fc; margin-left: 8px; font-weight: 500;">OS</span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-                <!-- Accent bar -->
-                <tr><td style="height: 3px; background: ${accentColor};"></td></tr>
-                <!-- Body -->
-                <tr>
-                  <td style="padding: 32px;">
-                    <div style="background: ${accentBg}; border-radius: 10px; padding: 20px 24px; margin-bottom: 24px;">
-                      <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: ${accentColor};">${record.type === "error" ? "Error" : record.type === "warning" ? "Warning" : "Notification"}</p>
-                      <h2 style="margin: 0 0 10px 0; font-size: 20px; font-weight: 700; color: #1e1b4b; line-height: 1.3;">${record.title}</h2>
-                      <p style="margin: 0; font-size: 15px; color: #4b5563; line-height: 1.6;">${record.message}</p>
-                    </div>
-                    ${record.link ? `
-                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
-                      <tr>
-                        <td style="background: #4f46e5; border-radius: 8px;">
-                          <a href="https://os.harmon-digital.com${record.link}" style="display: inline-block; padding: 12px 28px; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; letter-spacing: 0.2px;">View in Harmon OS →</a>
-                        </td>
-                      </tr>
-                    </table>
-                    ` : ""}
-                  </td>
-                </tr>
-                <!-- Footer -->
-                <tr>
-                  <td style="padding: 0 32px 28px 32px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                      <tr><td style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
-                        <p style="margin: 0; font-size: 12px; color: #9ca3af; text-align: center;">
-                          <a href="https://os.harmon-digital.com" style="color: #6366f1; text-decoration: none; font-weight: 500;">os.harmon-digital.com</a>
-                          <span style="margin: 0 8px;">•</span>
-                          <a href="https://harmon-digital.com" style="color: #9ca3af; text-decoration: none;">harmon-digital.com</a>
-                        </p>
-                      </td></tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td></tr>
-          </table>
-        </body>
-        </html>
-      `;
+      htmlBody = buildEmailTemplate({
+        type,
+        title: record.title,
+        message: record.message,
+        link: record.link,
+        brand: branding || undefined,
+      });
     } else {
-      const body = await req.json().catch(() => ({}));
-      to = body.to;
-      subject = body.subject;
-      htmlBody = `<p>${body.message}</p>`;
+      to = payload.to;
+      subject = payload.subject;
+      const message = payload.message || "";
+      htmlBody = buildEmailTemplate({
+        type: "info",
+        title: subject || "Notification",
+        message,
+      });
     }
 
     if (!RESEND_API_KEY) {

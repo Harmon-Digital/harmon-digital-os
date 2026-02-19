@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/api/supabaseClient";
+import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Check, Send } from "lucide-react";
@@ -91,15 +92,19 @@ export default function PartnerSubmitReferral() {
         .eq("role", "admin");
 
       if (admins?.length) {
-        await supabase.from("notifications").insert(
-          admins.map((admin) => ({
-            user_id: admin.id,
-            type: "referral",
-            title: "New Referral Submitted",
-            message: `${partner.contact_name} submitted a referral for ${formData.client_name}`,
-            link: "/Partners",
-            read: false,
-          }))
+        await Promise.all(
+          admins.map((admin) =>
+            sendNotification({
+              userId: admin.id,
+              type: "info",
+              category: "referrals",
+              priority: "high",
+              source: "partners.referral_submitted",
+              title: "New Referral Submitted",
+              message: `${partner.contact_name} submitted a referral for ${formData.client_name}`,
+              link: "/Partners",
+            })
+          )
         );
       }
 

@@ -37,14 +37,30 @@ export const sendNotificationEmail = (params) => invokeFunction('send-notificati
 export const testEmail = (params) => invokeFunction('test-email', params);
 
 // Notification functions - direct database operations
-export const sendNotification = async ({ userId, type, title, message, link }) => {
+export const sendNotification = async ({
+  userId,
+  type = 'info',
+  title,
+  message,
+  link,
+  category = 'general',
+  priority = 'normal',
+  emailEnabled = true,
+  source = null,
+  metadata = null,
+}) => {
   return Notification.create({
     user_id: userId,
     type,
     title,
     message,
     link,
-    read: false
+    category,
+    priority,
+    email_enabled: emailEnabled,
+    source,
+    metadata,
+    read: false,
   });
 };
 

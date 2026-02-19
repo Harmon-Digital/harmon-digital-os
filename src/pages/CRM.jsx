@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { Lead, TeamMember } from "@/api/entities";
+import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -209,15 +210,21 @@ export default function CRM() {
 
       if (admins?.length) {
         const activityLabel = ACTIVITY_TYPES.find(a => a.value === activityType)?.label || activityType;
-        await supabase.from("notifications").insert(
-          admins.filter(a => a.id !== user?.id).map((admin) => ({
-            user_id: admin.id,
-            type: "crm_activity",
-            title: `${activityLabel} logged`,
-            message: `${activityLabel} logged for ${selectedLead.company_name}: ${activityDescription.substring(0, 50)}${activityDescription.length > 50 ? "..." : ""}`,
-            link: "/CRM",
-            read: false,
-          }))
+        await Promise.all(
+          admins
+            .filter(a => a.id !== user?.id)
+            .map((admin) =>
+              sendNotification({
+                userId: admin.id,
+                type: "info",
+                category: "crm",
+                priority: "normal",
+                source: "crm.activity_logged",
+                title: `${activityLabel} logged`,
+                message: `${activityLabel} logged for ${selectedLead.company_name}: ${activityDescription.substring(0, 50)}${activityDescription.length > 50 ? "..." : ""}`,
+                link: "/CRM",
+              })
+            )
         );
       }
 
