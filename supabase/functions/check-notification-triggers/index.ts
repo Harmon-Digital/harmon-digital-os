@@ -7,17 +7,20 @@ Deno.serve(async () => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data, error } = await supabase.rpc("run_notification_checks");
+    const [{ data: notificationsData, error: notificationsError }, { data: recurringData, error: recurringError }] = await Promise.all([
+      supabase.rpc("run_notification_checks"),
+      supabase.rpc("generate_scheduled_recurring_tasks"),
+    ]);
 
-    if (error) {
-      console.error("run_notification_checks error:", error);
-      return new Response(JSON.stringify({ success: false, error }), {
+    if (notificationsError || recurringError) {
+      console.error("trigger checks error:", { notificationsError, recurringError });
+      return new Response(JSON.stringify({ success: false, notificationsError, recurringError }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ success: true, data }), {
+    return new Response(JSON.stringify({ success: true, notifications: notificationsData, recurring: recurringData }), {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
