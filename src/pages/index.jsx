@@ -34,6 +34,7 @@ import BrokerOutreach from "./BrokerOutreach";
 import Partners from "./Partners";
 import ReferralPayouts from "./ReferralPayouts";
 import KPIs from "./KPIs";
+import BotChannel from "./BotChannel";
 import McpApiKeys from "./McpApiKeys";
 
 // Partner portal pages
@@ -69,6 +70,7 @@ const PAGES = {
   Partners,
   ReferralPayouts,
   KPIs,
+  BotChannel,
   McpApiKeys,
 };
 
@@ -292,6 +294,14 @@ function PagesContent() {
         <ProtectedRoute>
           <Layout currentPageName={currentPage}>
             <KPIs />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/BotChannel" element={
+        <ProtectedRoute>
+          <Layout currentPageName={currentPage}>
+            <BotChannel />
           </Layout>
         </ProtectedRoute>
       } />

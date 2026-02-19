@@ -29,6 +29,7 @@ import {
   DollarSign,
   Handshake,
   KeyRound,
+  MessageSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -109,6 +110,7 @@ function getSidebarContent(activeSection, user) {
             { icon: <Clock className="w-4 h-4 text-neutral-50" />, label: "Time Tracking", path: "TimeTracking" },
             { icon: <FileText className="w-4 h-4 text-neutral-50" />, label: "SOPs", path: "SOPs" },
             { icon: <Building2 className="w-4 h-4 text-neutral-50" />, label: "Branding", path: "Branding" },
+            { icon: <MessageSquare className="w-4 h-4 text-neutral-50" />, label: "Harmon Bot", path: "BotChannel" },
           ],
         },
       ],
