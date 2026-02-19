@@ -159,7 +159,7 @@ function TypingIndicator() {
 
 // ─── Main Panel ──────────────────────────────────────────────────────────────
 
-export function AgentChatPanel({ isOpen, onClose, accounts = [] }) {
+export function AgentChatPanel({ isOpen, onClose, accounts = [], fullWidth = false }) {
   const { user } = useAuth();
   const [channelId, setChannelId] = useState(null);
   const [selectedAgentId, setSelectedAgentId] = useState(DEFAULT_AGENT.id);
@@ -319,10 +319,10 @@ export function AgentChatPanel({ isOpen, onClose, accounts = [] }) {
 
   return (
     <div
-      className="flex flex-col h-screen bg-white border-l border-gray-200 shrink-0 overflow-hidden"
+      className={`flex flex-col bg-white border-l border-gray-200 shrink-0 overflow-hidden ${fullWidth ? "h-full" : "h-screen"}`}
       style={{
-        width: isOpen ? `${PANEL_WIDTH}px` : "0px",
-        transition: "width 300ms cubic-bezier(0.25, 1.1, 0.4, 1)",
+        width: fullWidth ? "100%" : (isOpen ? `${PANEL_WIDTH}px` : "0px"),
+        transition: fullWidth ? "none" : "width 300ms cubic-bezier(0.25, 1.1, 0.4, 1)",
       }}
     >
       {isOpen && (

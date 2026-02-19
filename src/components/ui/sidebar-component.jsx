@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import AgentChatPanel from "@/components/chat/AgentChatPanel";
@@ -31,6 +30,8 @@ import {
   KeyRound,
   MessageSquare,
   MessageSquareDot,
+  Menu,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -41,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import NotificationBell from "../NotificationBell";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const softSpringEasing = "cubic-bezier(0.25, 1.1, 0.4, 1)";
 
@@ -167,7 +169,181 @@ function getSidebarContent(activeSection, user) {
   return contentMap[activeSection] || contentMap.operations;
 }
 
-/* ---------------------------- Left Icon Nav Rail -------------------------- */
+/* ========================= MOBILE COMPONENTS ========================= */
+
+function MobileTopBar({ user, onMenuClick, onLogout, onSettings }) {
+  return (
+    <header className="bg-black border-b border-neutral-800 flex items-center justify-between px-4 h-14 shrink-0 z-40">
+      <button
+        type="button"
+        onClick={onMenuClick}
+        className="flex items-center justify-center size-10 rounded-lg text-neutral-400 hover:text-neutral-50 hover:bg-neutral-800 transition-colors"
+        aria-label="Open menu"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      <div className="flex items-center gap-2">
+        <InterfacesLogoSquare />
+        <span className="font-medium text-sm text-neutral-50">Harmon Digital OS</span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <NotificationBell />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="size-8 hover:opacity-80 transition-opacity cursor-pointer">
+              <AvatarCircle user={user} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-2 py-1.5">
+              <p className="text-sm font-medium">{user?.full_name}</p>
+              <p className="text-xs text-gray-500">{user?.email}</p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onSettings} className="cursor-pointer">
+              <UserIcon className="w-4 h-4 mr-2" />
+              Personal Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-red-600 focus:text-red-600">
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </header>
+  );
+}
+
+function MobileDrawer({ isOpen, onClose, activeSection, onSectionChange, user, onLogout, onSettings, chatOpen, onChatToggle, navigate, location }) {
+  const isAdmin = user?.role === "admin";
+  const content = getSidebarContent(activeSection, user);
+
+  const sections = [
+    { id: "operations", icon: <Briefcase className="w-4 h-4" />, label: "Operations" },
+    { id: "sales", icon: <TrendingUp className="w-4 h-4" />, label: "Sales" },
+    { id: "bot", icon: <MessageSquare className="w-4 h-4" />, label: "Harmon Bot" },
+  ];
+  if (isAdmin) {
+    sections.push({ id: "admin", icon: <Settings className="w-4 h-4" />, label: "Admin" });
+  }
+
+  const handleNavClick = (path) => {
+    navigate(createPageUrl(path));
+    onClose();
+  };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/60 z-50 transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        onClick={onClose}
+      />
+
+      {/* Drawer */}
+      <div
+        className={`fixed top-0 left-0 h-full w-72 bg-black z-50 flex flex-col transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+        style={{ transitionTimingFunction: softSpringEasing }}
+      >
+        {/* Drawer Header */}
+        <div className="flex items-center justify-between p-4 border-b border-neutral-800">
+          <div className="flex items-center gap-2">
+            <InterfacesLogoSquare />
+            <span className="font-medium text-sm text-neutral-50">Harmon Digital OS</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center justify-center size-8 rounded-lg text-neutral-400 hover:text-neutral-50 hover:bg-neutral-800 transition-colors"
+            aria-label="Close menu"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Section Tabs */}
+        <div className="flex gap-1 p-3 border-b border-neutral-800 flex-wrap">
+          {sections.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => onSectionChange(s.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                activeSection === s.id
+                  ? "bg-neutral-800 text-neutral-50"
+                  : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-300"
+              }`}
+            >
+              {s.icon}
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Nav Items */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-1">
+          {content.sections.map((section, si) =>
+            section.items.map((item, ii) => {
+              const itemPath = createPageUrl(item.path);
+              const isActive = location.pathname === itemPath;
+              return (
+                <button
+                  key={`${si}-${ii}`}
+                  type="button"
+                  onClick={() => handleNavClick(item.path)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    isActive
+                      ? "bg-neutral-800 text-neutral-50"
+                      : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-300"
+                  }`}
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Bottom actions */}
+        <div className="p-3 border-t border-neutral-800 space-y-1">
+          <button
+            type="button"
+            onClick={() => { onChatToggle(); onClose(); }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              chatOpen ? "bg-neutral-800 text-neutral-50" : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-300"
+            }`}
+          >
+            {chatOpen ? <MessageSquareDot className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
+            Agent Chat
+          </button>
+          <button
+            type="button"
+            onClick={() => { onSettings(); onClose(); }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-neutral-400 hover:bg-neutral-900 hover:text-neutral-300 transition-colors"
+          >
+            <UserIcon className="w-4 h-4 text-neutral-50" />
+            Personal Settings
+          </button>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-neutral-900 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ========================= DESKTOP COMPONENTS ========================= */
 
 function IconNavButton({ children, label, isActive = false, onClick }) {
   return (
@@ -451,7 +627,7 @@ function MenuSection({ section, isCollapsed, navigate, currentPath }) {
   );
 }
 
-/* --------------------------------- Layout -------------------------------- */
+/* ================================ Layout ================================= */
 
 export function ModernSidebar({ children }) {
   const [activeSection, setActiveSection] = useState("operations");
@@ -461,9 +637,11 @@ export function ModernSidebar({ children }) {
     return savedWidth ? parseInt(savedWidth, 10) : DEFAULT_SIDEBAR_WIDTH;
   });
   const [chatOpen, setChatOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accounts, setAccounts] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const CHAT_PANEL_WIDTH = 380;
 
   // Load accounts for agent list
@@ -475,7 +653,7 @@ export function ModernSidebar({ children }) {
       .then(({ data }) => setAccounts(data || []));
   }, []);
 
-  // Keyboard shortcut: Cmd+\ or Ctrl+\ to toggle chat panel
+  // Keyboard shortcut: Cmd+\ or Ctrl+\ to toggle chat panel (desktop only)
   useEffect(() => {
     const handler = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
@@ -491,9 +669,14 @@ export function ModernSidebar({ children }) {
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--qa-right",
-      chatOpen ? `${CHAT_PANEL_WIDTH + 24}px` : "24px"
+      chatOpen && !isMobile ? `${CHAT_PANEL_WIDTH + 24}px` : "24px"
     );
-  }, [chatOpen]);
+  }, [chatOpen, isMobile]);
+
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const path = location.pathname.toLowerCase();
@@ -526,6 +709,64 @@ export function ModernSidebar({ children }) {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, newWidth.toString());
   };
 
+  /* ---- Mobile layout ---- */
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-[100dvh] bg-gradient-to-br from-gray-50 to-blue-50 overflow-hidden">
+        <MobileTopBar
+          user={userProfile}
+          onMenuClick={() => setMobileMenuOpen(true)}
+          onLogout={handleLogout}
+          onSettings={handleSettings}
+        />
+
+        <MobileDrawer
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          activeSection={activeSection}
+          onSectionChange={handleSectionChange}
+          user={userProfile}
+          onLogout={handleLogout}
+          onSettings={handleSettings}
+          chatOpen={chatOpen}
+          onChatToggle={() => setChatOpen((o) => !o)}
+          navigate={navigate}
+          location={location}
+        />
+
+        <main className="flex-1 overflow-auto min-w-0">
+          {children}
+        </main>
+
+        {/* Mobile chat panel — full width overlay */}
+        {chatOpen && (
+          <div className="fixed inset-0 z-40 flex flex-col bg-white">
+            <div className="flex items-center justify-between px-4 h-14 border-b border-gray-200 bg-white shrink-0">
+              <span className="font-semibold text-gray-900">Agent Chat</span>
+              <button
+                type="button"
+                onClick={() => setChatOpen(false)}
+                className="flex items-center justify-center size-9 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                aria-label="Close chat"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <AgentChatPanel
+                isOpen={true}
+                onClose={() => setChatOpen(false)}
+                accounts={accounts}
+                fullWidth
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ---- Desktop layout ---- */
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 to-blue-50 overflow-hidden">
       <IconNavigation

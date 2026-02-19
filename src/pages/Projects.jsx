@@ -359,7 +359,7 @@ export default function Projects() {
             )}
           </div>
 
-          <div className="bg-white rounded-lg border shadow-sm">
+          <div className="bg-white rounded-lg border shadow-sm overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Task, Project, Account, TeamMember } from "@/api/entities";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3 } from "lucide-react";
@@ -69,8 +70,14 @@ export default function Tasks() {
   const [viewFilter, setViewFilter] = useState("all");
   const [completedFilter, setCompletedFilter] = useState("active");
 
+  const isMobile = useIsMobile();
   const [viewMode, setViewMode] = useState("list");
   const [groupBy, setGroupBy] = useState("status");
+
+  // Default to board view on mobile
+  useEffect(() => {
+    if (isMobile) setViewMode("board");
+  }, [isMobile]);
 
   const [selectedTasks, setSelectedTasks] = useState([]);
 
@@ -396,8 +403,8 @@ export default function Tasks() {
             </Button>
           </div>
 
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div className="flex flex-wrap items-center gap-3">
               <Tabs value={completedFilter} onValueChange={setCompletedFilter}>
                 <TabsList>
                   <TabsTrigger value="active">Active Tasks</TabsTrigger>
@@ -765,7 +772,7 @@ export default function Tasks() {
 
         {viewMode === "list" && (
           <div className="p-6 lg:p-8 overflow-y-auto h-full">
-            <div className="bg-white rounded-lg border shadow-sm">
+            <div className="bg-white rounded-lg border shadow-sm overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
