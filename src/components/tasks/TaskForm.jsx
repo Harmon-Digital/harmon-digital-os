@@ -14,7 +14,12 @@ export default function TaskForm({ task, projects, teamMembers = [], onSubmit, o
     status: "todo",
     priority: "medium",
     estimated_hours: 0,
-    due_date: ""
+    due_date: "",
+    recurrence_enabled: false,
+    recurrence_frequency: "weekly",
+    recurrence_interval: 1,
+    recurrence_end_date: "",
+    recurrence_count: "",
   });
 
   const handleSubmit = (e) => {
@@ -25,6 +30,11 @@ export default function TaskForm({ task, projects, teamMembers = [], onSubmit, o
       project_id: formData.project_id || null,
       assigned_to: formData.assigned_to || null,
       due_date: formData.due_date || null,
+      recurrence_enabled: !!formData.recurrence_enabled,
+      recurrence_frequency: formData.recurrence_enabled ? formData.recurrence_frequency : null,
+      recurrence_interval: formData.recurrence_enabled ? Math.max(1, parseInt(formData.recurrence_interval || 1, 10)) : 1,
+      recurrence_end_date: formData.recurrence_enabled && formData.recurrence_end_date ? formData.recurrence_end_date : null,
+      recurrence_count: formData.recurrence_enabled && formData.recurrence_count ? Math.max(1, parseInt(formData.recurrence_count, 10)) : null,
     };
     onSubmit(cleanedData);
   };
@@ -129,10 +139,81 @@ export default function TaskForm({ task, projects, teamMembers = [], onSubmit, o
             <Input
               id="due_date"
               type="date"
-              value={formData.due_date}
+              value={formData.due_date || ""}
               onChange={(e) => setFormData({...formData, due_date: e.target.value})}
             />
           </div>
+        </div>
+
+        <div className="space-y-3 rounded-lg border p-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="recurrence_enabled" className="text-sm font-medium">Recurring Task</Label>
+            <input
+              id="recurrence_enabled"
+              type="checkbox"
+              checked={!!formData.recurrence_enabled}
+              onChange={(e) => setFormData({ ...formData, recurrence_enabled: e.target.checked })}
+              className="h-4 w-4"
+            />
+          </div>
+
+          {formData.recurrence_enabled && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Frequency</Label>
+                  <Select
+                    value={formData.recurrence_frequency || "weekly"}
+                    onValueChange={(value) => setFormData({ ...formData, recurrence_frequency: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="quarterly">Quarterly</SelectItem>
+                      <SelectItem value="yearly">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Every</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={formData.recurrence_interval || 1}
+                    onChange={(e) => setFormData({ ...formData, recurrence_interval: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>End Date (optional)</Label>
+                  <Input
+                    type="date"
+                    value={formData.recurrence_end_date || ""}
+                    onChange={(e) => setFormData({ ...formData, recurrence_end_date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Max Occurrences (optional)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={formData.recurrence_count || ""}
+                    onChange={(e) => setFormData({ ...formData, recurrence_count: e.target.value })}
+                    placeholder="e.g. 12"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500">
+                Next task is auto-created when this one is marked complete.
+              </p>
+            </>
+          )}
         </div>
       </div>
       <div className="flex justify-end gap-3 pt-4 border-t">
