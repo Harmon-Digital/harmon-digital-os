@@ -34,6 +34,7 @@ import BrokerOutreach from "./BrokerOutreach";
 import Partners from "./Partners";
 import ReferralPayouts from "./ReferralPayouts";
 import KPIs from "./KPIs";
+import McpApiKeys from "./McpApiKeys";
 
 // Partner portal pages
 import PartnerLogin from "./partner/PartnerLogin";
@@ -68,6 +69,7 @@ const PAGES = {
   Partners,
   ReferralPayouts,
   KPIs,
+  McpApiKeys,
 };
 
 function _getCurrentPage(url) {
@@ -290,6 +292,14 @@ function PagesContent() {
         <ProtectedRoute>
           <Layout currentPageName={currentPage}>
             <KPIs />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/McpApiKeys" element={
+        <ProtectedRoute>
+          <Layout currentPageName={currentPage}>
+            <McpApiKeys />
           </Layout>
         </ProtectedRoute>
       } />

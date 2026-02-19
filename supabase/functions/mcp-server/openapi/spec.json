@@ -1,0 +1,238 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Harmon Digital OS — MCP Server",
+    "version": "1.0.0",
+    "description": "MCP (Model Context Protocol) server for Harmon Digital OS. Provides programmatic access to tasks, projects, time entries, KPIs, leads, invoices, and more via JSON-RPC 2.0 over HTTP."
+  },
+  "servers": [
+    {
+      "url": "https://ctfichbfoligaiabudjv.supabase.co/functions/v1/mcp-server",
+      "description": "Production (Supabase Edge Function)"
+    }
+  ],
+  "security": [
+    { "apiKey": [] },
+    { "bearerAuth": [] }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "healthCheck",
+        "summary": "Health check and server info",
+        "responses": {
+          "200": {
+            "description": "Server info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "version": { "type": "string" },
+                    "protocol": { "type": "string" },
+                    "tools": { "type": "integer" },
+                    "resources": { "type": "integer" },
+                    "prompts": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenApiSpec",
+        "summary": "Serve the OpenAPI specification",
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 specification",
+            "content": { "application/json": {} }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcpRequest",
+        "summary": "MCP JSON-RPC 2.0 endpoint",
+        "description": "Send MCP protocol messages. Supports: initialize, tools/list, tools/call, resources/list, resources/read, prompts/list, prompts/get, ping.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/JsonRpcRequest" },
+              "examples": {
+                "initialize": {
+                  "summary": "Initialize MCP session",
+                  "value": {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                      "protocolVersion": "2024-11-05",
+                      "capabilities": {},
+                      "clientInfo": { "name": "example-client", "version": "1.0.0" }
+                    }
+                  }
+                },
+                "toolsList": {
+                  "summary": "List available tools",
+                  "value": { "jsonrpc": "2.0", "id": 2, "method": "tools/list" }
+                },
+                "toolsCall": {
+                  "summary": "Call a tool",
+                  "value": {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {
+                      "name": "list_tasks",
+                      "arguments": { "limit": 10, "order_by": "-created_at" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC 2.0 response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JsonRpcResponse" }
+              }
+            }
+          },
+          "401": { "description": "Authentication failed" }
+        }
+      },
+      "get": {
+        "operationId": "mcpSse",
+        "summary": "MCP SSE stream (Streamable HTTP transport)",
+        "description": "Establishes a Server-Sent Events stream for the MCP Streamable HTTP transport.",
+        "responses": {
+          "200": {
+            "description": "SSE stream",
+            "content": { "text/event-stream": {} }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "Service-level API key (bypasses RLS)"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Supabase user JWT (respects RLS)"
+      }
+    },
+    "schemas": {
+      "JsonRpcRequest": {
+        "type": "object",
+        "required": ["jsonrpc", "method"],
+        "properties": {
+          "jsonrpc": { "type": "string", "const": "2.0" },
+          "id": { "oneOf": [{ "type": "string" }, { "type": "integer" }, { "type": "null" }] },
+          "method": {
+            "type": "string",
+            "enum": ["initialize", "initialized", "ping", "tools/list", "tools/call", "resources/list", "resources/read", "prompts/list", "prompts/get"]
+          },
+          "params": { "type": "object" }
+        }
+      },
+      "JsonRpcResponse": {
+        "type": "object",
+        "required": ["jsonrpc", "id"],
+        "properties": {
+          "jsonrpc": { "type": "string", "const": "2.0" },
+          "id": { "oneOf": [{ "type": "string" }, { "type": "integer" }, { "type": "null" }] },
+          "result": {},
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "integer" },
+              "message": { "type": "string" },
+              "data": {}
+            }
+          }
+        }
+      },
+      "ToolCallParams": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "description": "Tool name (e.g. list_tasks, create_projects, calculate_kpi)" },
+          "arguments": { "type": "object", "description": "Tool-specific arguments" }
+        }
+      },
+      "CrudListArgs": {
+        "type": "object",
+        "properties": {
+          "order_by": { "type": "string", "description": "Sort column, prefix - for desc (default: -created_at)" },
+          "limit": { "type": "integer", "description": "Max records (default: 50)" },
+          "offset": { "type": "integer", "description": "Skip N records (default: 0)" }
+        }
+      },
+      "CrudFilterArgs": {
+        "type": "object",
+        "required": ["filters"],
+        "properties": {
+          "filters": { "type": "object", "description": "Key-value pairs for exact match filtering" },
+          "order_by": { "type": "string" },
+          "limit": { "type": "integer" }
+        }
+      },
+      "CrudCreateArgs": {
+        "type": "object",
+        "required": ["record"],
+        "properties": {
+          "record": { "type": "object", "description": "Fields for the new record" }
+        }
+      },
+      "CrudUpdateArgs": {
+        "type": "object",
+        "required": ["id", "updates"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "updates": { "type": "object", "description": "Fields to update" }
+        }
+      },
+      "CrudDeleteArgs": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" }
+        }
+      }
+    }
+  },
+  "x-mcp-tools": {
+    "crud_entities": [
+      "accounts", "contacts", "projects", "team_members", "tasks",
+      "time_entries", "leads", "activities", "payments", "transactions",
+      "expenses", "invoices", "stripe_products", "stripe_subscriptions",
+      "social_posts", "sops", "notifications", "branding_settings",
+      "user_profiles", "kpi_entries", "brokers", "referral_partners",
+      "referrals", "referral_payouts", "broker_activities", "lead_activities",
+      "project_documents"
+    ],
+    "crud_operations": ["list_{table}", "get_{table}", "filter_{table}", "create_{table}", "update_{table}", "delete_{table}"],
+    "specialized_tools": [
+      "calculate_kpi", "calculate_all_kpis", "save_kpi_entries", "get_kpi_report", "list_kpi_definitions",
+      "send_notification", "list_unread_notifications", "mark_notification_read", "mark_all_notifications_read",
+      "revenue_summary", "pipeline_summary", "team_utilization", "project_hours_summary"
+    ]
+  }
+}

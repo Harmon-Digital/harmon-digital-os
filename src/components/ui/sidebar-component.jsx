@@ -28,6 +28,7 @@ import {
   GripVertical,
   DollarSign,
   Handshake,
+  KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -143,6 +144,7 @@ function getSidebarContent(activeSection, user) {
             { icon: <TrendingUp className="w-4 h-4 text-neutral-50" />, label: "KPIs", path: "KPIs" },
             { icon: <Handshake className="w-4 h-4 text-neutral-50" />, label: "Partners", path: "Partners" },
             { icon: <Receipt className="w-4 h-4 text-neutral-50" />, label: "Referral Payouts", path: "ReferralPayouts" },
+            { icon: <KeyRound className="w-4 h-4 text-neutral-50" />, label: "API Keys", path: "McpApiKeys" },
           ],
         },
       ],
@@ -439,7 +441,7 @@ export function ModernSidebar({ children }) {
   useEffect(() => {
     const path = location.pathname.toLowerCase();
     // Check admin paths first (more specific)
-    if (path.includes('team') || path.includes('admindashboard') || path.includes('accountingdashboard') || path.includes('reports') || path.includes('kpis') || path.includes('partners') || path.includes('referralpayouts')) {
+    if (path.includes('team') || path.includes('admindashboard') || path.includes('accountingdashboard') || path.includes('reports') || path.includes('kpis') || path.includes('partners') || path.includes('referralpayouts') || path.includes('mcpapikeys')) {
       setActiveSection('admin');
     } else if (path.includes('crm') || path.includes('brokeroutreach') || path.includes('accounts') || path.includes('contacts') || path.includes('socialmedia')) {
       setActiveSection('sales');
