@@ -464,6 +464,7 @@ export function ModernSidebar({ children }) {
   const [accounts, setAccounts] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
+  const CHAT_PANEL_WIDTH = 380;
 
   // Load accounts for agent list
   useEffect(() => {
@@ -485,6 +486,14 @@ export function ModernSidebar({ children }) {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  // Push QuickActions button left when chat panel is open
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--qa-right",
+      chatOpen ? `${CHAT_PANEL_WIDTH + 24}px` : "24px"
+    );
+  }, [chatOpen]);
 
   useEffect(() => {
     const path = location.pathname.toLowerCase();

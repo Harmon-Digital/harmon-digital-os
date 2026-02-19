@@ -346,7 +346,8 @@ export default function QuickActions() {
       {/* Running Timer Indicator (shown outside popover) */}
       {timerRunning && !isOpen && (
         <div
-          className="fixed bottom-6 right-24 z-50 cursor-pointer"
+          className="fixed bottom-6 z-50 cursor-pointer transition-all duration-300"
+          style={{ right: "calc(var(--qa-right, 24px) + 72px)" }}
           onClick={() => setIsOpen(true)}
         >
           <div className={`flex items-center gap-3 px-4 py-2 rounded-full shadow-lg ${
@@ -359,7 +360,7 @@ export default function QuickActions() {
         </div>
       )}
 
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 z-50 transition-all duration-300" style={{ right: "var(--qa-right, 24px)" }}>
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
             <Button
