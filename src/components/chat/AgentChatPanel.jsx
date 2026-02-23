@@ -9,6 +9,8 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -70,13 +72,49 @@ function MessageBubble({ message }) {
       )}
       <div className={`flex flex-col gap-0.5 max-w-[82%] ${isUser ? "items-end" : "items-start"}`}>
         <div
-          className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm ${
+          className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed break-words shadow-sm ${
             isUser
-              ? "bg-indigo-600 text-white rounded-br-sm"
+              ? "bg-indigo-600 text-white rounded-br-sm whitespace-pre-wrap"
               : "bg-white text-gray-800 rounded-bl-sm border border-gray-100"
           }`}
         >
-          {message.content}
+          {isUser ? (
+            message.content
+          ) : (
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-0.5">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-0.5">{children}</ol>,
+                li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                em: ({ children }) => <em className="italic">{children}</em>,
+                code: ({ inline, children }) =>
+                  inline ? (
+                    <code className="bg-gray-100 text-gray-800 rounded px-1 py-0.5 text-xs font-mono">{children}</code>
+                  ) : (
+                    <pre className="bg-gray-100 rounded-lg p-3 mt-1 mb-2 overflow-x-auto">
+                      <code className="text-xs font-mono text-gray-800">{children}</code>
+                    </pre>
+                  ),
+                a: ({ href, children }) => (
+                  <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline hover:text-indigo-700">
+                    {children}
+                  </a>
+                ),
+                h1: ({ children }) => <h1 className="text-base font-bold mb-1 mt-2 first:mt-0">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-sm font-bold mb-1 mt-2 first:mt-0">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0">{children}</h3>,
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-2 border-gray-300 pl-3 text-gray-600 italic my-2">{children}</blockquote>
+                ),
+                hr: () => <hr className="border-gray-200 my-2" />,
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          )}
         </div>
         <span className="text-[10px] text-gray-400 px-1">
           {formatTime(message.created_at)}
