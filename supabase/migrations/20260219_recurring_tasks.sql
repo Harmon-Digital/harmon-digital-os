@@ -2,6 +2,7 @@
 
 ALTER TABLE public.tasks
   ADD COLUMN IF NOT EXISTS recurrence_enabled boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS recurrence_mode text NOT NULL DEFAULT 'on_complete',
   ADD COLUMN IF NOT EXISTS recurrence_frequency text,
   ADD COLUMN IF NOT EXISTS recurrence_interval integer NOT NULL DEFAULT 1,
   ADD COLUMN IF NOT EXISTS recurrence_end_date date,
