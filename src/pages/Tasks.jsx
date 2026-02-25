@@ -5,6 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3 } from "lucide-react";
+import { stripHtml } from "@/components/ui/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -287,7 +288,7 @@ export default function Tasks() {
       
       const matchesSearch = !searchQuery || 
         task.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        stripHtml(task.description)?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         getProjectName(task.project_id).toLowerCase().includes(searchQuery.toLowerCase()) ||
         task.ticket_number?.toString().includes(searchQuery) ||
         task.requester_name?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -645,8 +646,8 @@ export default function Tasks() {
                                                   {task.priority}
                                                 </Badge>
                                               </div>
-                                              {task.description && (
-                                                <p className="text-sm text-gray-600 mt-2 line-clamp-2">{task.description}</p>
+                                              {task.description && stripHtml(task.description) && (
+                                                <p className="text-sm text-gray-600 mt-2 line-clamp-2">{stripHtml(task.description)}</p>
                                               )}
                                               {task.requester_name && (
                                                 <p className="text-xs text-gray-500 mt-2">

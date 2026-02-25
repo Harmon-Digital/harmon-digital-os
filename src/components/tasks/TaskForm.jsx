@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import RichTextEditor from "@/components/ui/RichTextEditor";
 
 export default function TaskForm({ task, projects, teamMembers = [], onSubmit, onCancel }) {
   const [formData, setFormData] = useState(task || {
@@ -54,12 +54,10 @@ export default function TaskForm({ task, projects, teamMembers = [], onSubmit, o
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
+          <Label>Description</Label>
+          <RichTextEditor
             value={formData.description}
-            onChange={(e) => setFormData({...formData, description: e.target.value})}
-            rows={3}
+            onChange={(content) => setFormData({ ...formData, description: content })}
           />
         </div>
         <div className="space-y-2">
