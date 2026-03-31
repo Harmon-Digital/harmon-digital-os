@@ -59,7 +59,8 @@ function buildEmailTemplate(params: {
 
   const safeTitle = escapeHtml(title);
   const safeMessage = escapeHtml(message).replace(/\n/g, "<br/>");
-  const ctaHref = link ? `https://os.harmon-digital.com${link}` : "";
+  const safeLink = link ? escapeHtml(link) : "";
+  const ctaHref = safeLink ? `https://os.harmon-digital.com${safeLink}` : "";
 
   return `<!DOCTYPE html>
 <html>
@@ -132,6 +133,18 @@ function buildEmailTemplate(params: {
 }
 
 Deno.serve(async (req) => {
+  // Auth: require Authorization header with service role key for direct calls
+  const authHeader = req.headers.get("authorization");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  if (!bearerToken || bearerToken !== serviceKey) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const payload = await req.json().catch(() => ({}));
     const record = payload?.record;
@@ -186,6 +199,16 @@ Deno.serve(async (req) => {
     } else {
       to = payload.to;
       subject = payload.subject;
+      if (!to || typeof to !== "string" || !to.includes("@")) {
+        return new Response(JSON.stringify({ error: "Valid 'to' email address required" }), {
+          status: 400, headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (!subject || typeof subject !== "string") {
+        return new Response(JSON.stringify({ error: "'subject' is required" }), {
+          status: 400, headers: { "Content-Type": "application/json" },
+        });
+      }
       const message = payload.message || "";
       htmlBody = buildEmailTemplate({
         type: "info",
@@ -231,7 +254,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

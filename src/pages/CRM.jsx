@@ -160,7 +160,7 @@ export default function CRM() {
 
     const lead = leads.find(l => l.id === draggableId);
     if (lead && source.droppableId !== destination.droppableId) {
-      await Lead.update(lead.id, { ...lead, status: destination.droppableId });
+      await Lead.update(lead.id, { status: destination.droppableId });
 
       // Auto-approve referral when lead is marked as won
       if (destination.droppableId === "won" && lead.referral_id) {
@@ -240,7 +240,7 @@ export default function CRM() {
   };
 
   const handleUpdatePriority = async (lead, priority) => {
-    await Lead.update(lead.id, { ...lead, priority });
+    await Lead.update(lead.id, { priority });
     if (selectedLead?.id === lead.id) {
       setSelectedLead({ ...lead, priority });
     }
@@ -267,9 +267,9 @@ export default function CRM() {
           return false;
         }
       }
-      if (filters.source && lead.source !== filters.source) return false;
+      if (filters.source && filters.source !== "all" && lead.source !== filters.source) return false;
       if (filters.assignedTo && lead.assigned_to !== filters.assignedTo) return false;
-      if (filters.priority && lead.priority !== filters.priority) return false;
+      if (filters.priority && filters.priority !== "all" && lead.priority !== filters.priority) return false;
       return true;
     });
   }, [leads, searchQuery, filters]);
@@ -460,7 +460,7 @@ export default function CRM() {
               <Select value={filters.source} onValueChange={(value) => setFilters({ ...filters, source: value })}>
                 <SelectTrigger className="w-40"><SelectValue placeholder="Source" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Sources</SelectItem>
+                  <SelectItem value="all">All Sources</SelectItem>
                   <SelectItem value="referral">Referral</SelectItem>
                   <SelectItem value="website">Website</SelectItem>
                   <SelectItem value="linkedin">LinkedIn</SelectItem>
@@ -470,12 +470,12 @@ export default function CRM() {
               <Select value={filters.priority} onValueChange={(value) => setFilters({ ...filters, priority: value })}>
                 <SelectTrigger className="w-40"><SelectValue placeholder="Priority" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Priorities</SelectItem>
+                  <SelectItem value="all">All Priorities</SelectItem>
                   {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {(filters.source || filters.priority) && (
-                <Button variant="ghost" size="sm" onClick={() => setFilters({ source: "", assignedTo: "", priority: "" })}>
+              {(filters.source && filters.source !== "all" || filters.priority && filters.priority !== "all") && (
+                <Button variant="ghost" size="sm" onClick={() => setFilters({ source: "all", assignedTo: "", priority: "all" })}>
                   <X className="w-4 h-4 mr-1" /> Clear
                 </Button>
               )}

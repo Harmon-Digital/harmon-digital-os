@@ -1,6 +1,20 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-Deno.serve(async () => {
+const CRON_SECRET = Deno.env.get("CRON_SECRET");
+
+Deno.serve(async (req) => {
+  // Auth: require Authorization header with cron secret or service role key
+  const authHeader = req.headers.get("authorization");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  if (!bearerToken || (bearerToken !== serviceKey && (!CRON_SECRET || bearerToken !== CRON_SECRET))) {
+    return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -25,7 +39,7 @@ Deno.serve(async () => {
     });
   } catch (error) {
     console.error("check-notification-triggers error:", error);
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: (error as Error).message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

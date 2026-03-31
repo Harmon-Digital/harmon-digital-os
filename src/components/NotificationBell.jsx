@@ -45,8 +45,7 @@ export default function NotificationBell() {
 
   const handleMarkAsRead = async (notificationId) => {
     try {
-      const notification = notifications.find(n => n.id === notificationId);
-      await api.entities.Notification.update(notificationId, { ...notification, read: true });
+      await api.entities.Notification.update(notificationId, { read: true });
       loadNotifications();
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -58,7 +57,7 @@ export default function NotificationBell() {
       const unreadNotifications = notifications.filter(n => !n.read);
       await Promise.all(
         unreadNotifications.map(n => 
-          api.entities.Notification.update(n.id, { ...n, read: true })
+          api.entities.Notification.update(n.id, { read: true })
         )
       );
       loadNotifications();

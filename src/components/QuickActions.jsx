@@ -34,6 +34,7 @@ export default function QuickActions() {
   const [actualStartTime, setActualStartTime] = useState(null);
   const [startTime, setStartTime] = useState(null);
   const [pausedDuration, setPausedDuration] = useState(0);
+  const [pauseStartTime, setPauseStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [timerProject, setTimerProject] = useState("");
   const [timerTask, setTimerTask] = useState("");
@@ -162,11 +163,13 @@ export default function QuickActions() {
 
   const handlePauseTimer = () => {
     if (!timerPaused) {
-      setPausedDuration(prev => prev + (Date.now() - startTime));
+      // Record when we paused so we can calculate paused duration on resume
+      setPauseStartTime(Date.now());
       setTimerPaused(true);
       showToast("Timer paused");
     } else {
-      setStartTime(Date.now());
+      // Add the time spent paused to pausedDuration
+      setPausedDuration(prev => prev + (Date.now() - pauseStartTime));
       setTimerPaused(false);
       showToast("Timer resumed");
     }
@@ -179,9 +182,11 @@ export default function QuickActions() {
     }
 
     const now = Date.now();
-    const totalMs = timerPaused
-      ? pausedDuration
-      : (now - startTime + pausedDuration);
+    // Total elapsed minus time spent paused
+    const currentPausedDuration = timerPaused
+      ? pausedDuration + (now - pauseStartTime)
+      : pausedDuration;
+    const totalMs = now - startTime - currentPausedDuration;
     const hours = Math.round((totalMs / (1000 * 60 * 60)) * 100) / 100;
 
     if (hours < 0.01) {

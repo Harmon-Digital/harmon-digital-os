@@ -2,7 +2,7 @@
  * chat-relay — Harmon Digital OS → OpenClaw bridge
  *
  * POST /functions/v1/chat-relay
- * Body: { message, agent_id, channel_id, user_id, agent_type, account_id? }
+ * Body: { message, agent_id, channel_id, agent_type, account_id? }
  *
  * Flow:
  *   1. Validate request
@@ -41,8 +41,31 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Authenticate: verify JWT from Authorization header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ ok: false, error: "Missing Authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const jwt = authHeader.slice(7);
+    const authClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: `Bearer ${jwt}` } },
+    });
+    const { data: { user: authUser }, error: authError } = await authClient.auth.getUser();
+    if (authError || !authUser) {
+      return new Response(JSON.stringify({ ok: false, error: "Invalid or expired token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json();
-    const { message, agent_id, channel_id, user_id, agent_type, account_id } = body;
+    const { message, agent_id, channel_id, agent_type, account_id } = body;
+    // Use authenticated user's ID instead of trusting client-supplied user_id
+    const user_id = authUser.id;
 
     // Validate required fields
     if (!message?.trim()) {
