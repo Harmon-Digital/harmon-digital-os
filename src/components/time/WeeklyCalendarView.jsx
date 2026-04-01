@@ -8,8 +8,10 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, onEdi
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const today = new Date();
     const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
-    return new Date(today.setDate(diff));
+    const diff = day === 0 ? -6 : 1 - day; // Adjust to Monday
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diff);
+    return monday;
   });
 
   // Time slots from 6 AM to 11 PM
@@ -40,8 +42,10 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, onEdi
   const thisWeek = () => {
     const today = new Date();
     const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-    setCurrentWeekStart(new Date(today.setDate(diff)));
+    const diff = day === 0 ? -6 : 1 - day;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diff);
+    setCurrentWeekStart(monday);
   };
 
   const weekDays = getWeekDays(currentWeekStart);

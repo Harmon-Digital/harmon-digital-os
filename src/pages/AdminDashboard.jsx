@@ -55,8 +55,8 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadAdminData();
-  }, []);
+    if (userProfile) loadAdminData();
+  }, [userProfile]);
 
   const loadAdminData = async () => {
     setLoading(true);

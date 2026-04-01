@@ -29,8 +29,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (authUser) loadDashboardData();
+  }, [authUser]);
 
   const loadDashboardData = async () => {
     setLoading(true);

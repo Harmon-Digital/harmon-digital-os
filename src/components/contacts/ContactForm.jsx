@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { api } from "@/api/legacyClient";
+import { linkStripeCustomer } from "@/api/functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,7 +56,7 @@ export default function ContactForm({ contact, accounts, onSubmit, onCancel }) {
   const loadStripeCustomers = async () => {
     setLoadingCustomers(true);
     try {
-      const response = await api.functions.invoke('listStripeCustomers', {});
+      const response = await api.functions.invoke('list-stripe-customers', {});
       if (response.data?.success) {
         setStripeCustomers(response.data.customers);
       }
@@ -91,7 +92,7 @@ export default function ContactForm({ contact, accounts, onSubmit, onCancel }) {
 
     setProcessing(true);
     try {
-      const response = await api.functions.invoke('createStripeCustomer', {
+      const response = await api.functions.invoke('create-stripe-customer', {
         email: formData.email,
         name: `${formData.first_name} ${formData.last_name}`,
         contactId: contact?.id,
@@ -123,7 +124,7 @@ export default function ContactForm({ contact, accounts, onSubmit, onCancel }) {
     if (contact?.id) {
       setProcessing(true);
       try {
-        const response = await api.functions.invoke('linkStripeCustomer', {
+        const response = await linkStripeCustomer({
           contactId: contact.id,
           stripeCustomerId: selectedStripeCustomer,
         });

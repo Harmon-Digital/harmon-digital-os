@@ -88,8 +88,8 @@ async function handleMcpRequest(req: Request): Promise<Response> {
 
       case "notifications/initialized":
       case "initialized": {
-        // Client acknowledgment — no response needed for notifications
-        return Response.json(jsonRpcResult(id, {}));
+        // Client acknowledgment — notifications have no id, return 204 No Content
+        return new Response(null, { status: 204 });
       }
 
       case "ping": {
@@ -248,6 +248,11 @@ app.get("/mcp", (c) => {
           clearInterval(interval);
         }
       }, 30000);
+      // Clean up interval when the stream is cancelled (client disconnects)
+      c.req.raw.signal.addEventListener("abort", () => {
+        clearInterval(interval);
+        try { controller.close(); } catch { /* already closed */ }
+      });
     },
   });
 

@@ -91,7 +91,7 @@ export function createReportTools(): ToolDef[] {
 
         const { data: members, error: tmError } = await client
           .from("team_members")
-          .select("id, full_name, role")
+          .select("id, full_name, role, weekly_capacity")
           .eq("status", "active");
         if (tmError) throw tmError;
 

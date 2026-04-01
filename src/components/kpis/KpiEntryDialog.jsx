@@ -47,14 +47,14 @@ export default function KpiEntryDialog({ open, onClose, kpiDef, snapshot, select
   };
 
   if (!kpiDef) return null;
-  const Icon = kpiDef.icon;
+  const Icon = kpiDef.icon || null;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Icon className="w-5 h-5 text-gray-500" />
+            {Icon && <Icon className="w-5 h-5 text-gray-500" />}
             {kpiDef.name}
           </DialogTitle>
           <p className="text-sm text-gray-500">{formatWeekLabel(selectedWeek)}</p>

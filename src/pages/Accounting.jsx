@@ -60,29 +60,50 @@ export default function Accounting() {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
     let isMounted = true;
 
-    if (!isMounted) return;
-
-    try {
+    const loadData = async () => {
       if (userProfile?.role !== "admin") {
-        setLoading(false);
+        if (isMounted) setLoading(false);
         return;
       }
 
+      try {
+        const [transactionsData, expensesData, paymentsData, accountsData] = await Promise.all([
+          Transaction.list("-date"),
+          Expense.list("-date"),
+          Payment.list("-payment_date"),
+          Account.list()
+        ]);
+
+        if (!isMounted) return;
+
+        setTransactions(transactionsData);
+        setExpenses(expensesData);
+        setPayments(paymentsData);
+        setAccounts(accountsData);
+      } catch (error) {
+        console.error("Error loading accounting data:", error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadData();
+    return () => { isMounted = false; };
+  }, [userProfile]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
       const [transactionsData, expensesData, paymentsData, accountsData] = await Promise.all([
         Transaction.list("-date"),
         Expense.list("-date"),
         Payment.list("-payment_date"),
         Account.list()
       ]);
-
-      if (!isMounted) return;
-      
       setTransactions(transactionsData);
       setExpenses(expensesData);
       setPayments(paymentsData);
@@ -90,14 +111,8 @@ export default function Accounting() {
     } catch (error) {
       console.error("Error loading accounting data:", error);
     } finally {
-      if (isMounted) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-
-    return () => {
-      isMounted = false;
-    };
   };
 
   const handleSyncTransactions = async () => {
@@ -141,7 +156,7 @@ export default function Accounting() {
     return account?.company_name || "Unknown";
   };
 
-  if (!loading && currentUser?.role !== "admin") {
+  if (!loading && userProfile?.role !== "admin") {
     return (
       <div className="p-6 lg:p-8">
         <Alert variant="destructive">
@@ -316,17 +331,17 @@ export default function Accounting() {
                         <TableCell className="max-w-xs truncate">{transaction.description}</TableCell>
                         <TableCell className="capitalize">
                           <Badge variant="outline">
-                            {transaction.type.replace('_', ' ')}
+                            {(transaction.type || '').replace('_', ' ')}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-semibold">
-                          ${transaction.amount.toFixed(2)}
+                          ${(transaction.amount ?? 0).toFixed(2)}
                         </TableCell>
                         <TableCell className="text-red-600">
-                          -${transaction.stripe_fee.toFixed(2)}
+                          -${(transaction.stripe_fee ?? 0).toFixed(2)}
                         </TableCell>
                         <TableCell className="font-semibold text-green-600">
-                          ${transaction.net_amount.toFixed(2)}
+                          ${(transaction.net_amount ?? 0).toFixed(2)}
                         </TableCell>
                         <TableCell>
                           <Badge className={statusColors[transaction.status]}>
@@ -382,7 +397,7 @@ export default function Accounting() {
                           </Badge>
                         </TableCell>
                         <TableCell className="font-semibold text-red-600">
-                          ${expense.amount.toFixed(2)}
+                          ${(expense.amount ?? 0).toFixed(2)}
                         </TableCell>
                         <TableCell className="capitalize">
                           {expense.payment_method?.replace('_', ' ') || '—'}

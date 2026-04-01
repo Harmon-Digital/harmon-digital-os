@@ -25,7 +25,7 @@ Deno.serve(async () => {
     });
   } catch (error) {
     console.error("check-notification-triggers error:", error);
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: (error as Error).message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

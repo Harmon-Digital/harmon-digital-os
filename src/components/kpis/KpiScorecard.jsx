@@ -5,18 +5,19 @@ import { formatKpiValue } from "@/config/kpiConfig";
 
 export default function KpiScorecard({ kpiDef, actual, target, previousActual, bonusAmount }) {
   const Icon = kpiDef.icon;
-  const pct = target ? Math.round((actual / target) * 100) : null;
+  const safeActual = actual ?? 0;
+  const pct = target ? Math.round((safeActual / target) * 100) : null;
   const cappedPct = pct !== null ? Math.min(pct, 100) : 0;
 
   // MoM delta
   let delta = null;
   let deltaAbs = null;
   if (previousActual !== null && previousActual !== undefined && previousActual !== 0) {
-    delta = ((actual - previousActual) / previousActual) * 100;
-    deltaAbs = actual - previousActual;
-  } else if (previousActual === 0 && actual > 0) {
+    delta = ((safeActual - previousActual) / previousActual) * 100;
+    deltaAbs = safeActual - previousActual;
+  } else if (previousActual === 0 && safeActual > 0) {
     delta = 100;
-    deltaAbs = actual;
+    deltaAbs = safeActual;
   }
 
   const progressColor =
@@ -28,15 +29,15 @@ export default function KpiScorecard({ kpiDef, actual, target, previousActual, b
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-2">
-          <div className={`p-1.5 rounded bg-${kpiDef.color}-100`}>
-            <Icon className={`w-4 h-4 text-${kpiDef.color}-600`} />
+          <div className="p-1.5 rounded" style={{ backgroundColor: `var(--kpi-bg, #f3f4f6)` }}>
+            {Icon && <Icon className="w-4 h-4 text-gray-600" />}
           </div>
           <span className="text-xs font-medium text-gray-500 truncate">{kpiDef.name}</span>
         </div>
 
         <div className="mb-1">
           <span className="text-2xl font-bold text-gray-900">
-            {formatKpiValue(actual, kpiDef.unit)}
+            {formatKpiValue(safeActual, kpiDef.unit)}
           </span>
           {target !== null && target !== undefined && (
             <span className="text-lg text-gray-400 font-normal"> / {formatKpiValue(target, kpiDef.unit)}</span>

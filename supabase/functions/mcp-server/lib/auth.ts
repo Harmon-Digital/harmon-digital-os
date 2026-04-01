@@ -36,7 +36,8 @@ export async function authenticate(req: Request): Promise<AuthContext> {
         .from("mcp_api_keys")
         .update({ last_used_at: new Date().toISOString() })
         .eq("id", data.id)
-        .then(() => {});
+        .then(() => {})
+        .catch((err) => console.error("Failed to update last_used_at:", err));
       return { client: serviceClient, mode: "apikey" };
     }
 

@@ -61,7 +61,7 @@ export default function QuickActions() {
     if (timerRunning && !timerPaused && startTime) {
       interval = setInterval(() => {
         const now = Date.now();
-        const elapsed = Math.floor((now - startTime - pausedDuration) / 1000);
+        const elapsed = Math.floor((now - startTime) / 1000);
         setElapsedTime(elapsed);
       }, 1000);
     }
@@ -162,11 +162,15 @@ export default function QuickActions() {
 
   const handlePauseTimer = () => {
     if (!timerPaused) {
-      setPausedDuration(prev => prev + (Date.now() - startTime));
+      // Record when we paused so we can calculate paused duration on resume
+      setPausedDuration(Date.now());
       setTimerPaused(true);
       showToast("Timer paused");
     } else {
-      setStartTime(Date.now());
+      // Add the time spent paused to startTime to exclude it from elapsed calculation
+      const pausedMs = Date.now() - pausedDuration;
+      setStartTime(prev => prev + pausedMs);
+      setPausedDuration(0);
       setTimerPaused(false);
       showToast("Timer resumed");
     }
@@ -180,8 +184,8 @@ export default function QuickActions() {
 
     const now = Date.now();
     const totalMs = timerPaused
-      ? pausedDuration
-      : (now - startTime + pausedDuration);
+      ? (pausedDuration - startTime) // pausedDuration holds the timestamp when paused
+      : (now - startTime);
     const hours = Math.round((totalMs / (1000 * 60 * 60)) * 100) / 100;
 
     if (hours < 0.01) {
@@ -201,7 +205,7 @@ export default function QuickActions() {
 
       await TimeEntry.create({
         project_id: timerProject,
-        task_id: timerTask || null,
+        task_id: timerTask && timerTask !== "none" ? timerTask : null,
         team_member_id: currentTeamMember.id,
         date: startDate.toISOString().split('T')[0],
         start_time: formatTime(startDate),
@@ -277,7 +281,7 @@ export default function QuickActions() {
     try {
       await Project.create({
         name: quickProjectData.name,
-        account_id: quickProjectData.account_id || null,
+        account_id: quickProjectData.account_id && quickProjectData.account_id !== "none" ? quickProjectData.account_id : null,
         status: "active",
         billing_type: "hourly",
       });
@@ -484,7 +488,7 @@ export default function QuickActions() {
                         <SelectValue placeholder="Select task (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No task</SelectItem>
+                        <SelectItem value="none">No task</SelectItem>
                         {filteredTasks.map(task => (
                           <SelectItem key={task.id} value={task.id}>
                             {task.title}
@@ -624,7 +628,7 @@ export default function QuickActions() {
                   <SelectValue placeholder="Select account (or leave for internal)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Internal Project</SelectItem>
+                  <SelectItem value="none">Internal Project</SelectItem>
                   {accounts.map(account => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.company_name}

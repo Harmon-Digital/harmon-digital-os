@@ -42,7 +42,7 @@ export default function PaymentForm({ payment, teamMembers, onSubmit, onCancel }
             <SelectContent>
               {teamMembers.filter(tm => tm.status === 'active').map(tm => (
                 <SelectItem key={tm.id} value={tm.id}>
-                  {tm.full_name} - {tm.role.replace('_', ' ')}
+                  {tm.full_name} - {(tm.role || '').replace('_', ' ')}
                 </SelectItem>
               ))}
             </SelectContent>

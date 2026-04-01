@@ -184,6 +184,12 @@ Deno.serve(async (req) => {
         brand: branding || undefined,
       });
     } else {
+      if (!payload.to || !payload.subject) {
+        return new Response(
+          JSON.stringify({ error: "Missing required fields: to, subject" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
       to = payload.to;
       subject = payload.subject;
       const message = payload.message || "";
@@ -231,7 +237,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

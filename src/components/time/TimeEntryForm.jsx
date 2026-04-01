@@ -149,11 +149,12 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
     e.preventDefault();
     
     // Ensure hours is calculated
-    if (!formData.hours && formData.start_time && formData.end_time) {
-      const start = new Date(`${formData.date}T${formData.start_time}`);
-      const end = new Date(`${formData.date}T${formData.end_time}`);
+    let submissionData = { ...formData };
+    if (!submissionData.hours && submissionData.start_time && submissionData.end_time) {
+      const start = new Date(`${submissionData.date}T${submissionData.start_time}`);
+      const end = new Date(`${submissionData.date}T${submissionData.end_time}`);
       if (end > start) {
-        formData.hours = Math.round((end - start) / (1000 * 60 * 60) * 100) / 100;
+        submissionData.hours = Math.round((end - start) / (1000 * 60 * 60) * 100) / 100;
       }
     }
     
@@ -163,28 +164,28 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
         `⚠️ WARNING: This retainer project is already over budget for ${monthlyHoursData.month}!\n\n` +
         `Budget: ${monthlyHoursData.monthlyBudget}h\n` +
         `Already used: ${monthlyHoursData.hoursUsed}h\n` +
-        `Adding: ${formData.hours}h\n` +
-        `New total: ${(monthlyHoursData.hoursUsed + formData.hours).toFixed(1)}h\n\n` +
+        `Adding: ${submissionData.hours}h\n` +
+        `New total: ${(monthlyHoursData.hoursUsed + submissionData.hours).toFixed(1)}h\n\n` +
         `Do you want to continue?`
       );
-      
+
       if (!confirmed) return;
-    } else if (monthlyHoursData && (monthlyHoursData.hoursUsed + formData.hours) > monthlyHoursData.monthlyBudget) {
+    } else if (monthlyHoursData && (monthlyHoursData.hoursUsed + submissionData.hours) > monthlyHoursData.monthlyBudget) {
       const confirmed = confirm(
         `⚠️ WARNING: Adding this time will exceed the monthly budget!\n\n` +
         `Budget: ${monthlyHoursData.monthlyBudget}h\n` +
         `Currently used: ${monthlyHoursData.hoursUsed}h\n` +
-        `Adding: ${formData.hours}h\n` +
-        `New total: ${(monthlyHoursData.hoursUsed + formData.hours).toFixed(1)}h (${((monthlyHoursData.hoursUsed + formData.hours) - monthlyHoursData.monthlyBudget).toFixed(1)}h over)\n\n` +
+        `Adding: ${submissionData.hours}h\n` +
+        `New total: ${(monthlyHoursData.hoursUsed + submissionData.hours).toFixed(1)}h (${((monthlyHoursData.hoursUsed + submissionData.hours) - monthlyHoursData.monthlyBudget).toFixed(1)}h over)\n\n` +
         `Do you want to continue?`
       );
-      
+
       if (!confirmed) return;
     }
-    
+
     // Convert empty strings to null for optional fields
     const cleanedData = {
-      ...formData,
+      ...submissionData,
       task_id: formData.task_id || null,
       description: formData.description || null,
       start_time: formData.start_time || null,
