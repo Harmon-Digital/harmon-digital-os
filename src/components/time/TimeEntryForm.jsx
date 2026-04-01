@@ -98,7 +98,8 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
     try {
       const project = projects.find(p => p.id === projectId);
       
-      if (project?.billing_type === 'retainer' && project.budget_hours) {
+      const retainerBudget = project?.retainer_hours_included || project?.budget_hours;
+      if (project?.billing_type === 'retainer' && retainerBudget) {
         // Get the month from the selected date
         const selectedDate = new Date(date);
         const year = selectedDate.getFullYear();
@@ -127,9 +128,9 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
           project: project,
           month: startOfMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
           hoursUsed: hoursUsed,
-          monthlyBudget: project.budget_hours,
-          hoursRemaining: project.budget_hours - hoursUsed,
-          isOverBudget: hoursUsed >= project.budget_hours
+          monthlyBudget: retainerBudget,
+          hoursRemaining: retainerBudget - hoursUsed,
+          isOverBudget: hoursUsed >= retainerBudget
         });
       } else {
         setMonthlyHoursData(null);
