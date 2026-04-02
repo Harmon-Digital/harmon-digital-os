@@ -251,7 +251,7 @@ app.get("/mcp", (c) => {
       }, 30000);
       // Clean up interval when the stream is cancelled (client disconnects)
       c.req.raw.signal.addEventListener("abort", () => {
-        clearInterval(interval);
+        clearInterval(keepAliveInterval);
         try { controller.close(); } catch { /* already closed */ }
       });
     },
