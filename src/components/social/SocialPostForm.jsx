@@ -22,7 +22,7 @@ const PLATFORMS = [
   { id: "instagram", label: "Instagram", icon: "📷" },
 ];
 
-export default function SocialPostForm({ socialPost, accounts, teamMembers, onSubmit, onCancel }) {
+export default function SocialPostForm({ socialPost, accounts = [], teamMembers = [], onSubmit, onCancel }) {
   const [formData, setFormData] = useState(socialPost || {
     title: "",
     content: "",

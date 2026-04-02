@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 
-export default function TaskForm({ task, projects, teamMembers = [], onSubmit, onCancel }) {
+export default function TaskForm({ task, projects = [], teamMembers = [], onSubmit, onCancel }) {
   const [formData, setFormData] = useState(task || {
     title: "",
     description: "",

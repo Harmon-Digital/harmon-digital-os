@@ -23,7 +23,7 @@ import {
 import { CreditCard, Link as LinkIcon, Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-export default function ContactForm({ contact, accounts, onSubmit, onCancel }) {
+export default function ContactForm({ contact, accounts = [], onSubmit, onCancel }) {
   const [formData, setFormData] = useState(
     contact || {
       first_name: "",

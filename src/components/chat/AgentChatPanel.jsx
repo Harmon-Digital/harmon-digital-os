@@ -90,13 +90,13 @@ function MessageBubble({ message }) {
                 li: ({ children }) => <li className="leading-relaxed">{children}</li>,
                 strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
                 em: ({ children }) => <em className="italic">{children}</em>,
-                code: ({ inline, children }) =>
-                  inline ? (
-                    <code className="bg-gray-100 text-gray-800 rounded px-1 py-0.5 text-xs font-mono">{children}</code>
-                  ) : (
+                code: ({ className, children, ...props }) =>
+                  className?.includes('language-') ? (
                     <pre className="bg-gray-100 rounded-lg p-3 mt-1 mb-2 overflow-x-auto">
                       <code className="text-xs font-mono text-gray-800">{children}</code>
                     </pre>
+                  ) : (
+                    <code className="bg-gray-100 text-gray-800 rounded px-1 py-0.5 text-xs font-mono">{children}</code>
                   ),
                 a: ({ href, children }) => (
                   <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline hover:text-indigo-700">
