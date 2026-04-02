@@ -296,8 +296,8 @@ export default function Contacts() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge className={roleColors[contact.role]}>
-                        {(contact.role || '').replace('_', ' ')}
+                      <Badge className={roleColors[contact.role] || "bg-gray-100 text-gray-800"}>
+                        {(contact.role || '').replace('_', ' ') || '—'}
                       </Badge>
                     </TableCell>
                     <TableCell>

@@ -78,9 +78,10 @@ export default function Dashboard() {
 
   // My Time This Week
   const getWeekStart = () => {
-    const today = new Date();
-    const first = today.getDate() - today.getDay();
-    return new Date(today.setDate(first));
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    return new Date(now.getFullYear(), now.getMonth(), diff);
   };
 
   const weekStart = getWeekStart();

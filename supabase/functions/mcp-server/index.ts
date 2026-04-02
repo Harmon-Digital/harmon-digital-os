@@ -236,16 +236,17 @@ app.post("/mcp", async (c) => {
 app.get("/mcp", (c) => {
   // For Streamable HTTP, GET establishes an SSE stream.
   // Return a simple SSE endpoint that sends a ping and stays open.
+  let keepAliveInterval: number;
   const stream = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder();
       controller.enqueue(encoder.encode(`event: endpoint\ndata: /functions/v1/mcp-server/mcp\n\n`));
       // Keep alive
-      const interval = setInterval(() => {
+      keepAliveInterval = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`: ping\n\n`));
         } catch {
-          clearInterval(interval);
+          clearInterval(keepAliveInterval);
         }
       }, 30000);
       // Clean up interval when the stream is cancelled (client disconnects)
@@ -253,6 +254,9 @@ app.get("/mcp", (c) => {
         clearInterval(interval);
         try { controller.close(); } catch { /* already closed */ }
       });
+    },
+    cancel() {
+      clearInterval(keepAliveInterval);
     },
   });
 

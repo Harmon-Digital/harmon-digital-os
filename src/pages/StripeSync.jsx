@@ -1041,7 +1041,7 @@ function InvoiceForm({ invoice, accounts, projects, onSubmit, onCancel }) {
             <SelectValue placeholder="Select project" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={null}>None</SelectItem> {/* Use empty string for null */}
+            <SelectItem value="">None</SelectItem>
             {projects.map(project => (
               <SelectItem key={project.id} value={project.id}>
                 {project.name}

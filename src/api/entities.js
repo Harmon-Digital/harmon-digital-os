@@ -22,6 +22,7 @@ export {
   User,
   UserProfile,
   KpiEntry,
+  NotificationPreference,
   supabase
 } from './supabaseEntities';
 

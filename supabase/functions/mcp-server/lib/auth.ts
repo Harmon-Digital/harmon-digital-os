@@ -37,7 +37,7 @@ export async function authenticate(req: Request): Promise<AuthContext> {
         .update({ last_used_at: new Date().toISOString() })
         .eq("id", data.id)
         .then(() => {})
-        .catch((err) => console.error("Failed to update last_used_at:", err));
+        .catch((err: unknown) => console.error("Failed to update last_used_at:", err));
       return { client: serviceClient, mode: "apikey" };
     }
 

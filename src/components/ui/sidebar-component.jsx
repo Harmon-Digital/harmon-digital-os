@@ -692,12 +692,16 @@ export function ModernSidebar({ children }) {
   }, [location.pathname]);
 
   const handleLogout = async () => {
-    await signOut();
+    try {
+      await signOut();
+    } catch (err) {
+      console.error('Sign out failed:', err);
+    }
     navigate('/login');
   };
 
   const handleSettings = () => {
-    navigate('/PersonalSettings');
+    navigate('/personalsettings');
   };
 
   const handleSectionChange = (section) => {
