@@ -62,7 +62,7 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, onEdi
   };
 
   const getUserName = (userId) => {
-    return users.find(u => u.id === userId)?.full_name || "Unknown";
+    return users?.find(u => u.id === userId)?.full_name || "Unknown";
   };
 
   const getProjectColor = (projectId) => {

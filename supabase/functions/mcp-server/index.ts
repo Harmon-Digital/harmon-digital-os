@@ -156,12 +156,18 @@ async function handleMcpRequest(req: Request): Promise<Response> {
         if (!resource) {
           return Response.json(jsonRpcError(id, -32602, `Unknown resource: ${uri}`));
         }
-        const content = await resource.handler(auth.client);
-        return Response.json(
-          jsonRpcResult(id, {
-            contents: [{ uri, mimeType: resource.mimeType, text: content }],
-          })
-        );
+        try {
+          const content = await resource.handler(auth.client);
+          return Response.json(
+            jsonRpcResult(id, {
+              contents: [{ uri, mimeType: resource.mimeType, text: content ?? "" }],
+            })
+          );
+        } catch (err) {
+          return Response.json(
+            jsonRpcError(id, -32603, `Resource read failed: ${(err as Error).message}`)
+          );
+        }
       }
 
       // --- Prompts ---
@@ -181,13 +187,19 @@ async function handleMcpRequest(req: Request): Promise<Response> {
         if (!prompt) {
           return Response.json(jsonRpcError(id, -32602, `Unknown prompt: ${promptName}`));
         }
-        const text = prompt.template(promptArgs);
-        return Response.json(
-          jsonRpcResult(id, {
-            description: prompt.description,
-            messages: [{ role: "user", content: { type: "text", text } }],
-          })
-        );
+        try {
+          const text = prompt.template(promptArgs);
+          return Response.json(
+            jsonRpcResult(id, {
+              description: prompt.description,
+              messages: [{ role: "user", content: { type: "text", text } }],
+            })
+          );
+        } catch (err) {
+          return Response.json(
+            jsonRpcError(id, -32603, `Prompt template failed: ${(err as Error).message}`)
+          );
+        }
       }
 
       default: {
@@ -236,7 +248,7 @@ app.post("/mcp", async (c) => {
 app.get("/mcp", (c) => {
   // For Streamable HTTP, GET establishes an SSE stream.
   // Return a simple SSE endpoint that sends a ping and stays open.
-  let keepAliveInterval: number;
+  let keepAliveInterval: ReturnType<typeof setInterval> | undefined;
   const stream = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder();
@@ -246,17 +258,17 @@ app.get("/mcp", (c) => {
         try {
           controller.enqueue(encoder.encode(`: ping\n\n`));
         } catch {
-          clearInterval(keepAliveInterval);
+          if (keepAliveInterval) clearInterval(keepAliveInterval);
         }
       }, 30000);
       // Clean up interval when the stream is cancelled (client disconnects)
       c.req.raw.signal.addEventListener("abort", () => {
-        clearInterval(keepAliveInterval);
+        if (keepAliveInterval) clearInterval(keepAliveInterval);
         try { controller.close(); } catch { /* already closed */ }
       });
     },
     cancel() {
-      clearInterval(keepAliveInterval);
+      if (keepAliveInterval) clearInterval(keepAliveInterval);
     },
   });
 

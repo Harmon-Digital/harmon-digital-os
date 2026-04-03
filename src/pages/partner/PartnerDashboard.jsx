@@ -39,11 +39,16 @@ export default function PartnerDashboard() {
           .select("*, projects(name, status, billing_type, monthly_retainer)")
           .eq("partner_id", partnerData.id);
 
-        const { data: payouts } = await supabase
-          .from("referral_payouts")
-          .select("*, referrals(projects(name))")
-          .in("referral_id", referrals?.map(r => r.id) || [])
-          .order("created_at", { ascending: false });
+        const referralIds = referrals?.map(r => r.id) || [];
+
+        // Skip payouts query if no referrals exist to avoid empty .in() filter
+        const { data: payouts } = referralIds.length > 0
+          ? await supabase
+              .from("referral_payouts")
+              .select("*, referrals(projects(name))")
+              .in("referral_id", referralIds)
+              .order("created_at", { ascending: false })
+          : { data: [] };
 
         const totalEarned = payouts
           ?.filter(p => p.status === "paid")

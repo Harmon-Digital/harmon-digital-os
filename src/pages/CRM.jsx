@@ -164,7 +164,7 @@ export default function CRM() {
 
     const lead = leads.find(l => l.id === draggableId);
     if (lead && source.droppableId !== destination.droppableId) {
-      await Lead.update(lead.id, { ...lead, status: destination.droppableId });
+      await Lead.update(lead.id, { status: destination.droppableId });
 
       // Auto-approve referral when lead is marked as won
       if (destination.droppableId === "won" && lead.referral_id) {
@@ -244,7 +244,7 @@ export default function CRM() {
   };
 
   const handleUpdatePriority = async (lead, priority) => {
-    await Lead.update(lead.id, { ...lead, priority });
+    await Lead.update(lead.id, { priority });
     if (selectedLead?.id === lead.id) {
       setSelectedLead({ ...lead, priority });
     }

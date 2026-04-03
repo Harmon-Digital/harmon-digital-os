@@ -55,7 +55,7 @@ export function createNotificationTools(): ToolDef[] {
           .order("created_at", { ascending: false })
           .limit(limit);
         if (error) throw error;
-        return { notifications: data, count: data.length };
+        return { notifications: data ?? [], count: data?.length ?? 0 };
       },
     },
 
@@ -99,7 +99,7 @@ export function createNotificationTools(): ToolDef[] {
           .eq("read", false)
           .select();
         if (error) throw error;
-        return { updated: data.length };
+        return { updated: data?.length ?? 0 };
       },
     },
   ];

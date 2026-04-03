@@ -410,18 +410,19 @@ export default function BotChannel() {
 
     try {
       const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || anonKey;
       const res = await fetch(RELAY_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${anonKey}`,
+          Authorization: `Bearer ${token}`,
           apikey: anonKey,
         },
         body: JSON.stringify({
           message: text,
           agent_id: selectedAgentId,
           channel_id: channelId,
-          user_id: user.id,
           agent_type: selectedAgent.type,
           account_id: selectedAgent.accountId || null,
         }),

@@ -300,21 +300,25 @@ export default function Tasks() {
       const matchesView = viewFilter === "all" || task.assigned_to === currentTeamMember?.id;
       
       let matchesDueDate = true;
-      if (dueDateFilter !== "all" && task.due_date) {
-        const dueDate = new Date(task.due_date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        if (dueDateFilter === "overdue") {
-          matchesDueDate = dueDate < today && task.status !== "completed";
-        } else if (dueDateFilter === "today") {
-          matchesDueDate = dueDate.toDateString() === today.toDateString();
-        } else if (dueDateFilter === "this_week") {
-          const weekFromNow = new Date(today);
-          weekFromNow.setDate(weekFromNow.getDate() + 7);
-          matchesDueDate = dueDate >= today && dueDate <= weekFromNow;
-        } else if (dueDateFilter === "this_month") {
-          matchesDueDate = dueDate.getMonth() === today.getMonth() && dueDate.getFullYear() === today.getFullYear();
+      if (dueDateFilter !== "all") {
+        if (!task.due_date) {
+          matchesDueDate = false;
+        } else {
+          const dueDate = new Date(task.due_date);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          if (dueDateFilter === "overdue") {
+            matchesDueDate = dueDate < today && task.status !== "completed";
+          } else if (dueDateFilter === "today") {
+            matchesDueDate = dueDate.toDateString() === today.toDateString();
+          } else if (dueDateFilter === "this_week") {
+            const weekFromNow = new Date(today);
+            weekFromNow.setDate(weekFromNow.getDate() + 7);
+            matchesDueDate = dueDate >= today && dueDate <= weekFromNow;
+          } else if (dueDateFilter === "this_month") {
+            matchesDueDate = dueDate.getMonth() === today.getMonth() && dueDate.getFullYear() === today.getFullYear();
+          }
         }
       }
       

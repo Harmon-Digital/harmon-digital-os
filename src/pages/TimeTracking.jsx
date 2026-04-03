@@ -580,13 +580,8 @@ export default function TimeTracking() {
             <WeeklyCalendarView
               timeEntries={filteredEntries}
               projects={projects}
-              tasks={tasks}
-              teamMembers={teamMembers}
+              users={teamMembers}
               onEditEntry={handleEdit}
-              onAddEntry={() => {
-                setEditingEntry(null);
-                setShowDrawer(true);
-              }}
             />
           </div>
         )}

@@ -205,7 +205,7 @@ export default function AdminDashboard() {
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Financial Overview</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('StripeSync'))}>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('Accounting'))}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
               <DollarSign className="w-5 h-5 text-green-600" />
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('StripeSync'))}>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('Accounting'))}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Pending Revenue</CardTitle>
               <TrendingUp className="w-5 h-5 text-orange-600" />
@@ -227,7 +227,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('StripeSync'))}>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('Accounting'))}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Monthly Recurring</CardTitle>
               <CreditCard className="w-5 h-5 text-blue-600" />
@@ -319,7 +319,7 @@ export default function AdminDashboard() {
                 variant="outline"
                 size="sm"
                 className="border-red-300 hover:bg-red-100"
-                onClick={() => navigate(createPageUrl('StripeSync'))}
+                onClick={() => navigate(createPageUrl('Accounting'))}
               >
                 View All
               </Button>

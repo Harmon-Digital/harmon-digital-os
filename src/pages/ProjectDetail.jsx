@@ -138,7 +138,7 @@ export default function ProjectDetail() {
       setProject(currentProject);
       setEditedProject(currentProject);
 
-      const [accountData, tasksData, timeData, contactsData, invoicesData, teamMembersData, subscriptionsData] = await Promise.all([
+      const [accountData, tasksData, timeData, contactsData, invoicesData, teamMembersData, subscriptionsData] = await Promise.allSettled([
         Account.list(),
         Task.filter({ project_id: projectId }),
         TimeEntry.filter({ project_id: projectId }),
@@ -146,7 +146,11 @@ export default function ProjectDetail() {
         Invoice.list(),
         TeamMember.list(),
         api.entities.StripeSubscription.list()
-      ]);
+      ]).then(results => results.map((r, i) => {
+        if (r.status === 'fulfilled') return r.value;
+        console.error(`ProjectDetail data load [${i}] failed:`, r.reason);
+        return [];
+      }));
       const projectAccount = accountData.find(a => a.id === currentProject.account_id);
       setAccount(projectAccount);
       setAllAccounts(accountData);
@@ -421,12 +425,17 @@ export default function ProjectDetail() {
   const completedTasks = tasks.filter(t => t.status === 'completed').length;
   const taskCompletionPercentage = tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0;
 
-  // Calculate labor costs (team member hourly rates × hours worked)
-  const laborCost = timeEntries.reduce((sum, entry) => {
-    const teamMember = teamMembers.find(tm => tm.id === entry.team_member_id);
-    const hourlyRate = teamMember?.hourly_rate || 0;
-    return sum + ((entry.hours || 0) * hourlyRate);
-  }, 0);
+  // Calculate labor costs for current month only (team member hourly rates × hours worked)
+  const currentMonthStart = new Date();
+  currentMonthStart.setDate(1);
+  currentMonthStart.setHours(0, 0, 0, 0);
+  const laborCost = timeEntries
+    .filter(entry => new Date(entry.date) >= currentMonthStart)
+    .reduce((sum, entry) => {
+      const teamMember = teamMembers.find(tm => tm.id === entry.team_member_id);
+      const hourlyRate = teamMember?.hourly_rate || 0;
+      return sum + ((entry.hours || 0) * hourlyRate);
+    }, 0);
 
   // Calculate income from invoices - this is a general income metric, will be replaced in admin view
   const invoiceIncome = invoices
@@ -1870,7 +1879,7 @@ export default function ProjectDetail() {
           <div className="mt-6">
             <ContactForm
               contact={editingContact}
-              accounts={[account]}
+              accounts={[account].filter(Boolean)}
               onSubmit={handleContactSubmit}
               onCancel={() => {
                 setShowContactDrawer(false);
