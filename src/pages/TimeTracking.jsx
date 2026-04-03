@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { TimeEntry, Project, Task, TeamMember } from "@/api/entities";
+import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -229,7 +230,7 @@ export default function TimeTracking() {
   // Filter entries
   const filteredEntries = timeEntries.filter(entry => {
     if (startDate || endDate) {
-      const entryDate = new Date(entry.date);
+      const entryDate = parseLocalDate(entry.date);
       entryDate.setHours(0, 0, 0, 0);
 
       if (startDate) {
@@ -517,7 +518,7 @@ export default function TimeTracking() {
                 filteredEntries.map((entry) => (
                   <TableRow key={entry.id} className="hover:bg-gray-50/50">
                     <TableCell className="font-medium">
-                      {new Date(entry.date).toLocaleDateString('en-US', {
+                      {parseLocalDate(entry.date).toLocaleDateString('en-US', {
                         weekday: 'short',
                         month: 'short',
                         day: 'numeric'

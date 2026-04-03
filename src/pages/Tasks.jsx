@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Task, Project, Account, TeamMember } from "@/api/entities";
+import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -304,7 +305,7 @@ export default function Tasks() {
         if (!task.due_date) {
           matchesDueDate = false;
         } else {
-          const dueDate = new Date(task.due_date);
+          const dueDate = parseLocalDate(task.due_date);
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
@@ -674,7 +675,7 @@ export default function Tasks() {
                                             {task.due_date && (
                                               <div className="pt-2 border-t border-gray-100">
                                                 <p className="text-xs text-gray-500">
-                                                  Due: {new Date(task.due_date).toLocaleDateString()}
+                                                  Due: {parseLocalDate(task.due_date).toLocaleDateString()}
                                                 </p>
                                               </div>
                                             )}
@@ -750,7 +751,7 @@ export default function Tasks() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm">
-                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : '—'}
+                            {task.due_date ? parseLocalDate(task.due_date).toLocaleDateString() : '—'}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -911,7 +912,7 @@ export default function Tasks() {
                           </DropdownMenu>
                         </TableCell>
                         <TableCell>
-                          {task.due_date ? new Date(task.due_date).toLocaleDateString() : '—'}
+                          {task.due_date ? parseLocalDate(task.due_date).toLocaleDateString() : '—'}
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-end gap-2">

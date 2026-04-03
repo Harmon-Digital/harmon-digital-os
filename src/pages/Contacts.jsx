@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Contact, Account, Activity } from "@/api/entities";
+import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -417,7 +418,7 @@ export default function Contacts() {
                               <div>
                                 <h4 className="font-semibold text-gray-900">{activity.subject}</h4>
                                 <p className="text-xs text-gray-500">
-                                  {new Date(activity.date).toLocaleString()}
+                                  {parseLocalDate(activity.date).toLocaleString()}
                                   {activity.duration_minutes > 0 && ` • ${activity.duration_minutes} min`}
                                 </p>
                               </div>

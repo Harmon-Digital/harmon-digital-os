@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Project, Account, Task, TimeEntry, Contact, Invoice, TeamMember } from "@/api/entities";
+import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -376,7 +377,7 @@ export default function ProjectDetail() {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
     return timeEntries.filter(entry => {
-      const entryDate = new Date(entry.date);
+      const entryDate = parseLocalDate(entry.date);
       return entryDate >= startOfMonth && entryDate <= endOfMonth;
     }).reduce((sum, entry) => sum + (entry.hours || 0), 0);
   };
@@ -392,7 +393,7 @@ export default function ProjectDetail() {
       const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59);
 
       const monthHours = timeEntries.filter(entry => {
-        const entryDate = new Date(entry.date);
+        const entryDate = parseLocalDate(entry.date);
         return entryDate >= startOfMonth && entryDate <= endOfMonth;
       }).reduce((sum, entry) => sum + (entry.hours || 0), 0);
 
@@ -430,7 +431,7 @@ export default function ProjectDetail() {
   currentMonthStart.setDate(1);
   currentMonthStart.setHours(0, 0, 0, 0);
   const laborCost = timeEntries
-    .filter(entry => new Date(entry.date) >= currentMonthStart)
+    .filter(entry => parseLocalDate(entry.date) >= currentMonthStart)
     .reduce((sum, entry) => {
       const teamMember = teamMembers.find(tm => tm.id === entry.team_member_id);
       const hourlyRate = teamMember?.hourly_rate || 0;
@@ -470,7 +471,7 @@ export default function ProjectDetail() {
   const now = new Date();
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const weeklyHours = timeEntries
-    .filter(entry => new Date(entry.date) >= oneWeekAgo)
+    .filter(entry => parseLocalDate(entry.date) >= oneWeekAgo)
     .reduce((sum, entry) => sum + (entry.hours || 0), 0);
 
   const weeklyMinimum = project.weekly_hour_minimum || 0;
@@ -1154,7 +1155,7 @@ export default function ProjectDetail() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {task.due_date ? new Date(task.due_date).toLocaleDateString() : '—'}
+                          {task.due_date ? parseLocalDate(task.due_date).toLocaleDateString() : '—'}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
@@ -1254,7 +1255,7 @@ export default function ProjectDetail() {
                   <TableBody>
                     {timeEntries.map(entry => (
                       <TableRow key={entry.id}>
-                        <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                        <TableCell>{parseLocalDate(entry.date).toLocaleDateString()}</TableCell>
                         <TableCell>{getTeamMemberNameById(entry.team_member_id)}</TableCell>
                         <TableCell className="max-w-xs truncate">{entry.description || '—'}</TableCell>
                         <TableCell className="font-medium">{entry.hours}h</TableCell>
@@ -1471,7 +1472,7 @@ export default function ProjectDetail() {
                         <TableCell className="font-medium">
                           {invoice.invoice_number || `INV-${invoice.id.slice(0, 8)}`}
                         </TableCell>
-                        <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
+                        <TableCell>{parseLocalDate(invoice.due_date).toLocaleDateString()}</TableCell>
                         <TableCell className="font-semibold">${(invoice.total || 0).toLocaleString()}</TableCell>
                         <TableCell>
                           <Badge className={

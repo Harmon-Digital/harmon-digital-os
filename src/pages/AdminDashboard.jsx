@@ -13,7 +13,7 @@ import {
 } from "@/api/entities";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { createPageUrl, parseLocalDate } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -126,7 +126,7 @@ export default function AdminDashboard() {
     }, 0);
 
   const thisMonthTransactions = transactions.filter(t => {
-    const date = new Date(t.date);
+    const date = parseLocalDate(t.date);
     const now = new Date();
     return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
   }).reduce((sum, t) => sum + (t.amount || 0), 0);
@@ -134,7 +134,7 @@ export default function AdminDashboard() {
   // Team Metrics
   const activeTeamMembers = teamMembers.filter(tm => tm.status === 'active').length;
   const totalHoursThisMonth = timeEntries.filter(te => {
-    const date = new Date(te.date);
+    const date = parseLocalDate(te.date);
     const now = new Date();
     return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
   }).reduce((sum, te) => sum + (te.hours || 0), 0);
@@ -161,7 +161,7 @@ export default function AdminDashboard() {
   // Overdue Invoices
   const overdueInvoices = invoices.filter(inv => {
     if (inv.status !== 'sent' && inv.status !== 'overdue') return false;
-    return new Date(inv.due_date) < new Date();
+    return parseLocalDate(inv.due_date) < new Date();
   });
 
   // Recent Payments
@@ -331,7 +331,7 @@ export default function AdminDashboard() {
                     <div>
                       <p className="font-medium text-gray-900">{getAccountName(invoice.account_id)}</p>
                       <p className="text-sm text-gray-600">
-                        Due: {new Date(invoice.due_date).toLocaleDateString()}
+                        Due: {parseLocalDate(invoice.due_date).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="text-right">
@@ -367,7 +367,7 @@ export default function AdminDashboard() {
                     <div>
                       <p className="font-medium text-gray-900">{getTeamMemberName(payment.team_member_id)}</p>
                       <p className="text-sm text-gray-600">
-                        {new Date(payment.payment_date).toLocaleDateString()}
+                        {parseLocalDate(payment.payment_date).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="text-right">

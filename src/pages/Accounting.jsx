@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Transaction, Expense, Payment, Account } from "@/api/entities";
+import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -320,7 +321,7 @@ export default function Accounting() {
                   <TableBody>
                     {recentTransactions.map((transaction) => (
                       <TableRow key={transaction.id}>
-                        <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
+                        <TableCell>{parseLocalDate(transaction.date).toLocaleDateString()}</TableCell>
                         <TableCell>
                           {transaction.account_id ? getAccountName(transaction.account_id) : (
                             <span className="text-gray-400 text-xs">
@@ -388,7 +389,7 @@ export default function Accounting() {
                   <TableBody>
                     {recentExpenses.map((expense) => (
                       <TableRow key={expense.id}>
-                        <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                        <TableCell>{parseLocalDate(expense.date).toLocaleDateString()}</TableCell>
                         <TableCell className="max-w-xs truncate">{expense.description}</TableCell>
                         <TableCell>{expense.vendor || '—'}</TableCell>
                         <TableCell>
@@ -435,7 +436,7 @@ export default function Accounting() {
                   <TableBody>
                     {payments.map((payment) => (
                       <TableRow key={payment.id}>
-                        <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
+                        <TableCell>{parseLocalDate(payment.payment_date).toLocaleDateString()}</TableCell>
                         <TableCell className="text-sm">
                           {payment.period_start && payment.period_end ? (
                             `${new Date(payment.period_start).toLocaleDateString()} - ${new Date(payment.period_end).toLocaleDateString()}`

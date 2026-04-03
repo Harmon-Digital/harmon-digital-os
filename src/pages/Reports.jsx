@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
+import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -460,7 +461,7 @@ export default function Reports() {
                                   onCheckedChange={() => toggleSelect(entry.id)}
                                 />
                               </TableCell>
-                              <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                              <TableCell>{parseLocalDate(entry.date).toLocaleDateString()}</TableCell>
                               <TableCell>{project?.name || "—"}</TableCell>
                               <TableCell>{member?.full_name || "—"}</TableCell>
                               <TableCell>{entry.hours}h</TableCell>

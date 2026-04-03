@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { api } from "@/api/legacyClient";
+import { parseLocalDate } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -118,7 +119,7 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
           // Skip the entry we're editing
           if (timeEntry && entry.id === timeEntry.id) return false;
           
-          const entryDate = new Date(entry.date);
+          const entryDate = parseLocalDate(entry.date);
           return entryDate >= startOfMonth && entryDate <= endOfMonth;
         });
         

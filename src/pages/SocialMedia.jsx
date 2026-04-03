@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
+import { parseLocalDate } from "@/utils";
 import { Account, TeamMember } from "@/api/entities";
 import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -111,8 +112,8 @@ export default function SocialMedia() {
         const dailyGoal = Math.ceil(weeklyGoal / 5);
         // Count published posts assigned to this member
         const memberPosts = socialPosts.filter(p => p.assigned_to === member.id && p.status === "published");
-        const todayCount = memberPosts.filter(p => new Date(p.scheduled_date) >= startOfDay).length;
-        const weekCount = memberPosts.filter(p => new Date(p.scheduled_date) >= startOfWeek).length;
+        const todayCount = memberPosts.filter(p => parseLocalDate(p.scheduled_date) >= startOfDay).length;
+        const weekCount = memberPosts.filter(p => parseLocalDate(p.scheduled_date) >= startOfWeek).length;
 
         const dailyProgress = dailyGoal > 0 ? (todayCount / dailyGoal) * 100 : 0;
         const weeklyProgress = weeklyGoal > 0 ? (weekCount / weeklyGoal) * 100 : 0;
@@ -551,7 +552,7 @@ export default function SocialMedia() {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm">
-                      {post.scheduled_date ? new Date(post.scheduled_date).toLocaleDateString() : "—"}
+                      {post.scheduled_date ? parseLocalDate(post.scheduled_date).toLocaleDateString() : "—"}
                     </TableCell>
                     <TableCell className="text-sm">
                       {post.client_id ? getAccountName(post.client_id) : "—"}

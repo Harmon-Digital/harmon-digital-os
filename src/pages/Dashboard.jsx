@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Task, Project, TimeEntry, Lead, TeamMember, Account } from "@/api/entities";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { createPageUrl, parseLocalDate } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,12 +64,12 @@ export default function Dashboard() {
   
   const myOverdueTasks = myTasks.filter(t => {
     if (!t.due_date) return false;
-    return new Date(t.due_date) < new Date() && t.status !== 'completed';
+    return parseLocalDate(t.due_date) < new Date() && t.status !== 'completed';
   });
 
   const myTasksDueThisWeek = myTasks.filter(t => {
     if (!t.due_date) return false;
-    const dueDate = new Date(t.due_date);
+    const dueDate = parseLocalDate(t.due_date);
     const today = new Date();
     const weekFromNow = new Date(today);
     weekFromNow.setDate(weekFromNow.getDate() + 7);
@@ -88,7 +88,7 @@ export default function Dashboard() {
   const myTimeThisWeek = currentTeamMember
     ? timeEntries.filter(te => {
         if (te.team_member_id !== currentTeamMember.id) return false;
-        const entryDate = new Date(te.date);
+        const entryDate = parseLocalDate(te.date);
         return entryDate >= weekStart;
       }).reduce((sum, te) => sum + (te.hours || 0), 0)
     : 0;
@@ -247,7 +247,7 @@ export default function Dashboard() {
                       <p className="text-sm text-gray-600">{getProjectName(task.project_id)}</p>
                       {task.due_date && (
                         <p className="text-xs text-gray-500 mt-1">
-                          Due: {new Date(task.due_date).toLocaleDateString()}
+                          Due: {parseLocalDate(task.due_date).toLocaleDateString()}
                         </p>
                       )}
                     </div>
