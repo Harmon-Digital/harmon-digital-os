@@ -2,15 +2,21 @@ import { supabase, getCurrentUser, getCurrentUserProfile } from './supabaseClien
 
 // Generic entity factory - creates CRUD methods for any table
 const createEntity = (tableName) => ({
-  // List all records, with optional sorting
-  async list(orderBy = '-created_at') {
+  // List all records, with optional sorting and limit
+  async list(orderBy = '-created_at', limit = null) {
     const isDesc = orderBy.startsWith('-');
     const column = isDesc ? orderBy.slice(1) : orderBy;
 
-    const { data, error } = await supabase
+    let query = supabase
       .from(tableName)
       .select('*')
       .order(column, { ascending: !isDesc });
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data;
