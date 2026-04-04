@@ -4,12 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { localDateStr } from "@/lib/utils";
 
 export default function PaymentForm({ payment, teamMembers, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(payment || {
     team_member_id: "",
     amount: 0,
-    payment_date: new Date().toISOString().split('T')[0],
+    payment_date: localDateStr(),
     period_start: "",
     period_end: "",
     payment_method: "bank_transfer",

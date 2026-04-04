@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { api } from "@/api/legacyClient";
+import { localDateStr } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw, Package, CreditCard, Users, CheckCircle, XCircle, Link2, X, FileText, Edit, Trash2, Plus } from "lucide-react";
@@ -955,15 +956,15 @@ export default function StripeSync() {
 function InvoiceForm({ invoice, accounts, projects, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(invoice ? {
     ...invoice,
-    issue_date: invoice.issue_date ? new Date(invoice.issue_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-    due_date: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    issue_date: invoice.issue_date ? (invoice.issue_date + '').slice(0, 10) : localDateStr(),
+    due_date: invoice.due_date ? (invoice.due_date + '').slice(0, 10) : localDateStr(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
     project_id: invoice.project_id || "" // Ensure project_id is empty string for Select 'None' option
   } : {
     invoice_number: '',
     account_id: '',
     project_id: '',
-    issue_date: new Date().toISOString().split('T')[0],
-    due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    issue_date: localDateStr(),
+    due_date: localDateStr(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
     status: 'draft',
     line_items: [],
     subtotal: 0,

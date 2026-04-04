@@ -116,14 +116,16 @@ export default function TimeTracking() {
   };
 
   const navigateWeek = (direction) => {
-    const current = new Date(startDate);
+    const [y, m, d] = startDate.split('-').map(Number);
+    const current = new Date(y, m - 1, d);
     current.setDate(current.getDate() + (direction * 7));
     const end = new Date(current);
-    end.setDate(current.getDate() + 6);
+    end.setDate(end.getDate() + 6);
 
+    const fmt = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
     setDateRange("custom");
-    setStartDate(current.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
+    setStartDate(fmt(current));
+    setEndDate(fmt(end));
   };
 
   const loadData = async () => {

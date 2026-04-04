@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { localDateTimeStr } from "@/lib/utils";
 
 export default function ActivityForm({ activity, contactId, accountId, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(activity || {
@@ -12,7 +13,7 @@ export default function ActivityForm({ activity, contactId, accountId, onSubmit,
     type: "note",
     subject: "",
     description: "",
-    date: new Date().toISOString().slice(0, 16), // YYYY-MM-DDTHH:MM format
+    date: localDateTimeStr(), // Local YYYY-MM-DDTHH:MM
     duration_minutes: 0,
     outcome: "",
     next_action: "",

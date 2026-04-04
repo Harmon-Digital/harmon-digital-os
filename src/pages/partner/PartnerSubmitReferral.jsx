@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
+import { localDateStr } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Check, Send } from "lucide-react";
 
@@ -64,7 +65,7 @@ export default function PartnerSubmitReferral() {
           status: "pending",
           commission_rate: partner.commission_rate || 15,
           commission_months: partner.commission_months || 6,
-          referral_date: new Date().toISOString().split("T")[0],
+          referral_date: localDateStr(),
           submitted_at: new Date().toISOString(),
         })
         .select()

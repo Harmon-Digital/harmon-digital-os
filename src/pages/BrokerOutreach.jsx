@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
+import { localDateStr } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -227,7 +228,7 @@ export default function BrokerOutreach() {
 
       // Update broker's last_contact and status
       const updates = {
-        last_contact: new Date().toISOString().split("T")[0],
+        last_contact: localDateStr(),
         updated_at: new Date().toISOString(),
       };
       if (reachOutBroker.status === "new") {

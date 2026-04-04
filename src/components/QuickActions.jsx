@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Project, Task, Account, TimeEntry, TeamMember } from "@/api/entities";
 import { useAuth } from "@/contexts/AuthContext";
+import { localDateStr } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -208,7 +209,7 @@ export default function QuickActions() {
         project_id: timerProject,
         task_id: timerTask || null,
         team_member_id: currentTeamMember.id,
-        date: startDate.toISOString().split('T')[0],
+        date: localDateStr(startDate),
         start_time: formatTime(startDate),
         end_time: formatTime(endDate),
         hours: hours,

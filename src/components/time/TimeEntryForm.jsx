@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { api } from "@/api/legacyClient";
+import { localDateStr } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,7 +49,7 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
       project_id: "",
       task_id: "",
       team_member_id: currentTeamMember?.id || "",
-      date: new Date().toISOString().split('T')[0],
+      date: localDateStr(),
       start_time: "",
       end_time: "",
       hours: 0,

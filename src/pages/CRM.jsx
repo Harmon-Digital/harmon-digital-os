@@ -3,6 +3,7 @@ import { supabase } from "@/api/supabaseClient";
 import { Lead, TeamMember } from "@/api/entities";
 import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
+import { localDateStr } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -198,7 +199,7 @@ export default function CRM() {
       if (activityType === "call" || activityType === "email") {
         await Lead.update(selectedLead.id, {
           ...selectedLead,
-          last_contact: new Date().toISOString().split("T")[0],
+          last_contact: localDateStr(),
         });
       }
 

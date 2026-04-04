@@ -59,6 +59,7 @@ export function AuthProvider({ children }) {
         if (!error.message?.includes('aborted')) {
           console.error('Error fetching user profile:', error);
         }
+        return;
       }
       setUserProfile(data || null);
     } catch (error) {

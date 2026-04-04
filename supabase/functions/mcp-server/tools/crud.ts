@@ -28,6 +28,9 @@ export function createCrudTools(tableName: string, label: string): CrudToolDefs[
         const orderBy = (args.order_by as string) || "-created_at";
         const isDesc = orderBy.startsWith("-");
         const column = isDesc ? orderBy.slice(1) : orderBy;
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(column)) {
+          throw new Error(`Invalid order_by column name: ${column}`);
+        }
         const limit = (args.limit as number) || 50;
         const offset = (args.offset as number) || 0;
 
@@ -85,6 +88,9 @@ export function createCrudTools(tableName: string, label: string): CrudToolDefs[
         const orderBy = (args.order_by as string) || "-created_at";
         const isDesc = orderBy.startsWith("-");
         const column = isDesc ? orderBy.slice(1) : orderBy;
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(column)) {
+          throw new Error(`Invalid order_by column name: ${column}`);
+        }
         const limit = (args.limit as number) || 50;
 
         let query = client.from(tableName).select("*", { count: "exact" });
