@@ -180,10 +180,11 @@ export default function Tasks() {
   const handleQuickUpdate = async (taskId, field, value) => {
     try {
       const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
       await Task.update(taskId, { ...task, [field]: value });
-      
+
       // Send notification on reassignment
-      if (field === 'assigned_to' && value !== task.assigned_to) {
+      if (field === 'assigned_to' && value && value !== task.assigned_to) {
         const assignedTM = teamMembersMap[value];
         if (assignedTM?.user_id) {
           const project = projectsMap[task.project_id];

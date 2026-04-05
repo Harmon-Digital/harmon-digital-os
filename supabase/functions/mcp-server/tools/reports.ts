@@ -170,7 +170,7 @@ export function createReportTools(): ToolDef[] {
             budget_hours: p.budget_hours,
             hours_tracked: hoursMap[p.id as string]?.total || 0,
             billable_hours: hoursMap[p.id as string]?.billable || 0,
-            remaining: (p.budget_hours as number) ? (p.budget_hours as number) - (hoursMap[p.id as string]?.total || 0) : null,
+            remaining: (p.budget_hours != null) ? (Number(p.budget_hours) || 0) - (hoursMap[p.id as string]?.total || 0) : null,
           })),
         };
       },

@@ -119,7 +119,7 @@ export default function KPIs() {
     } finally {
       setLoading(false);
     }
-  }, [selectedWeek, selectedTeamMember]);
+  }, [selectedWeek, selectedTeamMember, teamMembers]);
 
   useEffect(() => {
     loadData();

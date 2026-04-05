@@ -136,6 +136,7 @@ async function calculateKpiValue(
   const { table, filter, aggregate, field, dateField } = kpiDef.source;
 
   const start = new Date(periodStart + "T00:00:00Z");
+  if (isNaN(start.getTime())) throw new Error(`Invalid date format for period_start: ${periodStart}`);
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 7);
   const periodEnd = end.toISOString().split("T")[0];
@@ -269,51 +270,23 @@ export function createKpiTools(): ToolDef[] {
         for (const entry of entries) {
           const teamMemberId = (entry.team_member_id as string) || null;
 
-          let matchQuery = client
+          const row = {
+            slug: entry.slug as string,
+            month: entry.month as string,
+            actual_value: entry.actual_value ?? 0,
+            target_value: entry.target_value ?? null,
+            bonus_amount: entry.bonus_amount ?? null,
+            notes: entry.notes ?? null,
+            team_member_id: teamMemberId,
+          };
+
+          const { data, error } = await client
             .from("kpi_entries")
-            .select("id")
-            .eq("slug", entry.slug as string)
-            .eq("month", entry.month as string);
-
-          if (teamMemberId) {
-            matchQuery = matchQuery.eq("team_member_id", teamMemberId);
-          } else {
-            matchQuery = matchQuery.is("team_member_id", null);
-          }
-
-          const { data: existing } = await matchQuery.maybeSingle();
-
-          if (existing) {
-            const updates: Record<string, unknown> = { actual_value: entry.actual_value };
-            if (entry.target_value !== undefined) updates.target_value = entry.target_value;
-            if (entry.bonus_amount !== undefined) updates.bonus_amount = entry.bonus_amount;
-            if (entry.notes !== undefined) updates.notes = entry.notes;
-
-            const { data, error } = await client
-              .from("kpi_entries")
-              .update(updates)
-              .eq("id", existing.id)
-              .select()
-              .single();
-            if (error) throw error;
-            results.push(data);
-          } else {
-            const { data, error } = await client
-              .from("kpi_entries")
-              .insert({
-                slug: entry.slug,
-                month: entry.month,
-                actual_value: entry.actual_value ?? 0,
-                target_value: entry.target_value ?? null,
-                bonus_amount: entry.bonus_amount ?? null,
-                notes: entry.notes ?? null,
-                team_member_id: teamMemberId,
-              })
-              .select()
-              .single();
-            if (error) throw error;
-            results.push(data);
-          }
+            .upsert(row, { onConflict: "slug,month,team_member_id" })
+            .select()
+            .single();
+          if (error) throw error;
+          results.push(data);
         }
 
         return { saved: results.length, entries: results };

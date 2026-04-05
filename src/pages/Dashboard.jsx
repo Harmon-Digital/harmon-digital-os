@@ -64,13 +64,16 @@ export default function Dashboard() {
   
   const myOverdueTasks = myTasks.filter(t => {
     if (!t.due_date) return false;
-    return parseLocalDate(t.due_date) < new Date() && t.status !== 'completed';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return parseLocalDate(t.due_date) < today && t.status !== 'completed';
   });
 
   const myTasksDueThisWeek = myTasks.filter(t => {
     if (!t.due_date) return false;
     const dueDate = parseLocalDate(t.due_date);
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const weekFromNow = new Date(today);
     weekFromNow.setDate(weekFromNow.getDate() + 7);
     return dueDate >= today && dueDate <= weekFromNow;
