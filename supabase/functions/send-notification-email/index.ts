@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
       }
 
       to = teamMember.email;
-      subject = record.title;
+      subject = record.title || "Notification";
 
       const type: "error" | "warning" | "info" =
         record.type === "error"

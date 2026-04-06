@@ -66,7 +66,7 @@ export default function QuickActions() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [timerRunning, timerPaused, startTime, pausedDuration]);
+  }, [timerRunning, timerPaused, startTime]);
 
   useEffect(() => {
     if (timerRunning) {
@@ -112,13 +112,28 @@ export default function QuickActions() {
     if (saved) {
       const state = JSON.parse(saved);
       setTimerRunning(state.running || false);
-      setTimerPaused(state.paused || false);
-      setStartTime(state.startTime || null);
-      setActualStartTime(state.actualStartTime || null);
-      setPausedDuration(state.pausedDuration || 0);
       setTimerProject(state.project || "");
       setTimerTask(state.task || "");
       setTimerDescription(state.description || "");
+      setActualStartTime(state.actualStartTime || null);
+
+      if (state.paused && state.pausedDuration && state.startTime) {
+        // Was paused: pausedDuration is the timestamp when paused.
+        // Freeze startTime so elapsed stays correct on resume.
+        const activeMs = state.pausedDuration - state.startTime;
+        const newStart = Date.now() - activeMs;
+        setStartTime(newStart);
+        setPausedDuration(Date.now());
+        setTimerPaused(true);
+      } else if (state.running && state.startTime) {
+        setStartTime(state.startTime);
+        setPausedDuration(0);
+        setTimerPaused(false);
+      } else {
+        setStartTime(state.startTime || null);
+        setPausedDuration(0);
+        setTimerPaused(false);
+      }
     }
   };
 
@@ -207,7 +222,7 @@ export default function QuickActions() {
         project_id: timerProject,
         task_id: timerTask && timerTask !== "none" ? timerTask : null,
         team_member_id: currentTeamMember.id,
-        date: startDate.toISOString().split('T')[0],
+        date: `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`,
         start_time: formatTime(startDate),
         end_time: formatTime(endDate),
         hours: hours,

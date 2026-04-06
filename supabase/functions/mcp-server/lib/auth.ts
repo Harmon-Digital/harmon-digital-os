@@ -59,7 +59,12 @@ export async function authenticate(req: Request): Promise<AuthContext> {
   }
 
   const jwt = authHeader.slice(7);
-  return { client: createUserClient(jwt), mode: "jwt" };
+  const client = createUserClient(jwt);
+  const { error: userError } = await client.auth.getUser();
+  if (userError) {
+    throw new AuthError("Invalid or expired JWT token", 401);
+  }
+  return { client, mode: "jwt" };
 }
 
 export class AuthError extends Error {

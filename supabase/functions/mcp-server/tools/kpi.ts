@@ -160,6 +160,7 @@ async function calculateKpiValue(
 
   const { data, error } = await query;
   if (error) throw error;
+  if (!data) return 0;
 
   if (aggregate === "count") return data.length;
   if (aggregate === "sum" && field) {

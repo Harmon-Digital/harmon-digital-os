@@ -48,7 +48,7 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
       project_id: "",
       task_id: "",
       team_member_id: currentTeamMember?.id || "",
-      date: new Date().toISOString().split('T')[0],
+      date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
       start_time: "",
       end_time: "",
       hours: 0,
@@ -109,17 +109,17 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
         const startOfMonth = new Date(year, month, 1);
         const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
         
-        // Fetch all time entries for this project
-        const allTimeEntries = await api.entities.TimeEntry.list();
-        
-        // Filter to current month for this project
+        // Fetch time entries for this project filtered by date range
+        const startStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+        const endStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`;
+        const allTimeEntries = await api.entities.TimeEntry.filter({ project_id: projectId });
+
+        // Filter to current month
         const monthlyEntries = allTimeEntries.filter(entry => {
-          if (entry.project_id !== projectId) return false;
           // Skip the entry we're editing
           if (timeEntry && entry.id === timeEntry.id) return false;
-          
-          const entryDate = new Date(entry.date);
-          return entryDate >= startOfMonth && entryDate <= endOfMonth;
+
+          return entry.date >= startStr && entry.date <= endStr;
         });
         
         const hoursUsed = monthlyEntries.reduce((sum, entry) => sum + (entry.hours || 0), 0);

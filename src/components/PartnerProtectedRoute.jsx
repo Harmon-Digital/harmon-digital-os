@@ -17,8 +17,15 @@ export default function PartnerProtectedRoute({ children }) {
     return <Navigate to="/partner/login" state={{ from: location }} replace />;
   }
 
-  // Check if user is a partner
-  if (userProfile && userProfile.role !== "partner") {
+  // Block access while profile is loading or if user is not a partner
+  if (!userProfile || userProfile.role !== "partner") {
+    if (!userProfile) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
     return <Navigate to="/partner/login" state={{ error: "Access denied" }} replace />;
   }
 

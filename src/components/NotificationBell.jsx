@@ -45,7 +45,6 @@ export default function NotificationBell() {
 
   const handleMarkAsRead = async (notificationId) => {
     try {
-      const notification = notifications.find(n => n.id === notificationId);
       await api.entities.Notification.update(notificationId, { read: true });
       loadNotifications();
     } catch (error) {
