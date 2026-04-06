@@ -154,19 +154,24 @@ export default function BrokerOutreach() {
 
   const loadData = async () => {
     setLoading(true);
-    const currentWeekStart = toWeekStart(new Date());
-    const [brokersRes, teamRes, activitiesRes, kpiRes] = await Promise.all([
-      supabase.from("brokers").select("*").order("created_at", { ascending: false }),
-      supabase.from("team_members").select("*").eq("status", "active"),
-      supabase.from("broker_activities").select("*, team_members(full_name)").order("created_at", { ascending: false }),
-      supabase.from("kpi_entries").select("*").eq("slug", "brokers_contacted").eq("month", currentWeekStart).not("team_member_id", "is", null),
-    ]);
+    try {
+      const currentWeekStart = toWeekStart(new Date());
+      const [brokersRes, teamRes, activitiesRes, kpiRes] = await Promise.all([
+        supabase.from("brokers").select("*").order("created_at", { ascending: false }),
+        supabase.from("team_members").select("*").eq("status", "active"),
+        supabase.from("broker_activities").select("*, team_members(full_name)").order("created_at", { ascending: false }),
+        supabase.from("kpi_entries").select("*").eq("slug", "brokers_contacted").eq("month", currentWeekStart).not("team_member_id", "is", null),
+      ]);
 
-    setBrokers(brokersRes.data || []);
-    setTeamMembers(teamRes.data || []);
-    setActivities(activitiesRes.data || []);
-    setKpiEntries(kpiRes.data || []);
-    setLoading(false);
+      setBrokers(brokersRes.data || []);
+      setTeamMembers(teamRes.data || []);
+      setActivities(activitiesRes.data || []);
+      setKpiEntries(kpiRes.data || []);
+    } catch (error) {
+      console.error("Error loading broker data:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Calculate KPI stats for each team member (sourced from kpi_entries)

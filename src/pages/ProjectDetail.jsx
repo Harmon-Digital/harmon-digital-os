@@ -127,8 +127,8 @@ export default function ProjectDetail() {
   const loadProjectData = async () => {
     setLoading(true);
     try {
-      const allProjects = await Project.list();
-      const currentProject = allProjects.find(p => p.id === projectId);
+      const projectResults = await Project.filter({ id: projectId });
+      const currentProject = projectResults?.[0];
 
       if (!currentProject) {
         setLoading(false);

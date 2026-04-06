@@ -103,12 +103,12 @@ export default function ReferralPayouts() {
 
       for (const referral of referrals) {
         // Check if payout already exists for this month
+        const periodStartStr = periodStart.toISOString().split("T")[0];
         const existingPayout = payouts.find(
           (p) =>
             p.referral_id === referral.id &&
             p.payout_type === "retainer" &&
-            new Date(p.period_start).getMonth() === periodStart.getMonth() &&
-            new Date(p.period_start).getFullYear() === periodStart.getFullYear()
+            p.period_start === periodStartStr
         );
 
         if (existingPayout) continue;

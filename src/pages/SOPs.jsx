@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import DOMPurify from "dompurify";
 import { api } from "@/api/legacyClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -278,6 +279,7 @@ export default function SOPs() {
             </SheetDescription>
           </SheetHeader>
           <SOPForm
+            key={editingSOP?.id || 'new'}
             sop={editingSOP}
             categories={categories}
             onSubmit={handleSubmit}
@@ -324,7 +326,7 @@ export default function SOPs() {
           </DialogHeader>
           <div className="mt-4">
             <div className="bg-white rounded-lg p-6 border prose prose-sm max-w-none">
-              <div dangerouslySetInnerHTML={{ __html: viewingSOP?.content || '' }} />
+              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(viewingSOP?.content || '') }} />
             </div>
             <div className="mt-4 pt-4 border-t text-xs text-gray-500 flex justify-between">
               <span>Created: {viewingSOP && new Date(viewingSOP.created_at).toLocaleDateString()}</span>

@@ -31,14 +31,15 @@ export default function PartnerLogin() {
     try {
       await signIn(email, password);
 
-      // Check if user is a partner
+      // Check if user is a partner (use user ID from session, not email)
+      const { data: { user: authUser } } = await supabase.auth.getUser();
       const { data: profile } = await supabase
         .from("user_profiles")
         .select("role")
-        .eq("email", email)
+        .eq("id", authUser.id)
         .single();
 
-      if (profile?.role !== "partner") {
+      if (!profile || profile.role !== "partner") {
         await supabase.auth.signOut();
         setError("This portal is for partners only. Please use the main login.");
         setLoading(false);

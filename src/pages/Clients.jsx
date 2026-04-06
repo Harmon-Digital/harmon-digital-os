@@ -33,20 +33,29 @@ export default function Clients() {
 
   const loadClients = async () => {
     setLoading(true);
-    const data = await Client.list("-created_at");
-    setClients(data);
-    setLoading(false);
+    try {
+      const data = await Client.list("-created_at");
+      setClients(data);
+    } catch (error) {
+      console.error("Error loading clients:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (clientData) => {
-    if (editingClient) {
-      await Client.update(editingClient.id, clientData);
-    } else {
-      await Client.create(clientData);
+    try {
+      if (editingClient) {
+        await Client.update(editingClient.id, clientData);
+      } else {
+        await Client.create(clientData);
+      }
+      setShowDrawer(false);
+      setEditingClient(null);
+      loadClients();
+    } catch (error) {
+      console.error("Error saving client:", error);
     }
-    setShowDrawer(false);
-    setEditingClient(null);
-    loadClients();
   };
 
   const handleEdit = (client) => {

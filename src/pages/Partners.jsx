@@ -150,7 +150,7 @@ export default function Partners() {
     if (!editingPartner) return;
 
     try {
-      await supabase
+      const { error } = await supabase
         .from("referral_partners")
         .update({
           contact_name: editingPartner.contact_name,
@@ -163,6 +163,7 @@ export default function Partners() {
           updated_at: new Date().toISOString(),
         })
         .eq("id", editingPartner.id);
+      if (error) throw error;
 
       setEditSheet(false);
       setEditingPartner(null);
@@ -176,13 +177,14 @@ export default function Partners() {
     if (!selectedPartner || !referralData.project_id) return;
 
     try {
-      await supabase.from("referrals").insert({
+      const { error } = await supabase.from("referrals").insert({
         partner_id: selectedPartner.id,
         project_id: referralData.project_id,
         commission_rate: referralData.commission_rate,
         commission_months: referralData.commission_months,
         status: "active",
       });
+      if (error) throw error;
 
       setReferralDialog(false);
       setSelectedPartner(null);
