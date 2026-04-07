@@ -393,8 +393,8 @@ export default function Accounting() {
                         <TableCell className="max-w-xs truncate">{expense.description}</TableCell>
                         <TableCell>{expense.vendor || '—'}</TableCell>
                         <TableCell>
-                          <Badge className={categoryColors[expense.category]}>
-                            {expense.category.replace('_', ' ')}
+                          <Badge className={categoryColors[expense.category] || ''}>
+                            {expense.category?.replace('_', ' ') || '—'}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-semibold text-red-600">
@@ -444,7 +444,7 @@ export default function Accounting() {
                         </TableCell>
                         <TableCell>{payment.hours_worked || '—'}</TableCell>
                         <TableCell className="font-semibold">
-                          ${payment.amount.toLocaleString()}
+                          ${(payment.amount ?? 0).toLocaleString()}
                         </TableCell>
                         <TableCell>
                           <Badge className={
