@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-export default function WeeklyCalendarView({ timeEntries, projects, users, onEditEntry }) {
+export default function WeeklyCalendarView({ timeEntries, projects, users, teamMembers, onEditEntry }) {
+  const members = teamMembers || users || [];
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const today = new Date();
     const day = today.getDay();
@@ -53,7 +54,10 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, onEdi
   weekEnd.setDate(weekEnd.getDate() + 6);
 
   const getEntriesForDay = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
     return timeEntries.filter(entry => entry.date === dateStr);
   };
 
@@ -62,7 +66,7 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, onEdi
   };
 
   const getUserName = (userId) => {
-    return users?.find(u => u.id === userId)?.full_name || "Unknown";
+    return members.find(u => u.id === userId)?.full_name || "Unknown";
   };
 
   const getProjectColor = (projectId) => {

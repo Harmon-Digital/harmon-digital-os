@@ -29,7 +29,7 @@ export const linkStripeCustomer = async ({ contactId, stripeCustomerId }) => {
     .single();
 
   if (error) throw error;
-  return { data: { success: true } };
+  return { data };
 };
 
 // Email functions - require Edge Function deployment

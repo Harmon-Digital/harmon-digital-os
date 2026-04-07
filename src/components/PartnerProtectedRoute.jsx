@@ -17,8 +17,8 @@ export default function PartnerProtectedRoute({ children }) {
     return <Navigate to="/partner/login" state={{ from: location }} replace />;
   }
 
-  // Check if user is a partner
-  if (userProfile && userProfile.role !== "partner") {
+  // Check if user is a partner - also deny if profile hasn't loaded
+  if (!userProfile || userProfile.role !== "partner") {
     return <Navigate to="/partner/login" state={{ error: "Access denied" }} replace />;
   }
 

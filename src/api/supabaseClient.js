@@ -32,9 +32,10 @@ export const getCurrentUserProfile = async () => {
     .from('user_profiles')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
+  if (!data) return { ...user, role: null };
   return { ...user, ...data };
 };
 

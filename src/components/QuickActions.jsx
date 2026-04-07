@@ -67,7 +67,7 @@ export default function QuickActions() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [timerRunning, timerPaused, startTime, pausedDuration]);
+  }, [timerRunning, timerPaused, startTime]);
 
   useEffect(() => {
     if (timerRunning) {
@@ -208,7 +208,7 @@ export default function QuickActions() {
         project_id: timerProject,
         task_id: timerTask && timerTask !== "none" ? timerTask : null,
         team_member_id: currentTeamMember.id,
-        date: startDate.toISOString().split('T')[0],
+        date: `${startDate.getFullYear()}-${String(startDate.getMonth()+1).padStart(2,'0')}-${String(startDate.getDate()).padStart(2,'0')}`,
         start_time: formatTime(startDate),
         end_time: formatTime(endDate),
         hours: hours,

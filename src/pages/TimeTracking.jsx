@@ -112,8 +112,9 @@ export default function TimeTracking() {
     }
 
     setDateRange(preset);
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
+    const toLocalDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    setStartDate(toLocalDateStr(start));
+    setEndDate(toLocalDateStr(end));
   };
 
   const navigateWeek = (direction) => {
@@ -122,9 +123,10 @@ export default function TimeTracking() {
     const end = new Date(current);
     end.setDate(current.getDate() + 6);
 
+    const toLocalDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     setDateRange("custom");
-    setStartDate(current.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
+    setStartDate(toLocalDateStr(current));
+    setEndDate(toLocalDateStr(end));
   };
 
   const loadData = async () => {

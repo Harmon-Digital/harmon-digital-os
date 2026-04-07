@@ -1,4 +1,4 @@
-import { supabase, getCurrentUser, getCurrentUserProfile } from './supabaseClient';
+import { supabase, getCurrentUserProfile } from './supabaseClient';
 
 // Generic entity factory - creates CRUD methods for any table
 const createEntity = (tableName) => ({
