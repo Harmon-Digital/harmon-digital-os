@@ -283,7 +283,7 @@ export function AgentChatPanel({ isOpen, onClose, accounts = [], fullWidth = fal
         (payload) => {
           const msg = payload.new;
           const msgAgentId = msg.metadata?.agent_id;
-          if (msgAgentId === selectedAgentId || !msgAgentId) {
+          if (msgAgentId === selectedAgentId) {
             setMessages((prev) => {
               if (prev.find((m) => m.id === msg.id)) return prev;
               return [...prev, msg];

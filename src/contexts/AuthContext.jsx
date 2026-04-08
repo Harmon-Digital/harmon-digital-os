@@ -180,7 +180,7 @@ export function AuthProvider({ children }) {
     resetPassword,
     updatePassword,
     invitePartner,
-    refreshProfile: () => user && fetchUserProfile(user.id),
+    refreshProfile: () => user && fetchUserProfile(user.id, true),
   };
 
   return (

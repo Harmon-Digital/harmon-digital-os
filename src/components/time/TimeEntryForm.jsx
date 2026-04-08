@@ -209,7 +209,7 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
         end_time: end.toTimeString().slice(0, 5),
       }));
     }
-  }, [timeEntry]);
+  }, [timeEntry, formData.date]);
 
   const willExceedBudget = monthlyHoursData && formData.hours > 0 && 
     (monthlyHoursData.hoursUsed + formData.hours) > monthlyHoursData.monthlyBudget;

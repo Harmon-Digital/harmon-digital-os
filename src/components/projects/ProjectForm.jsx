@@ -277,11 +277,11 @@ export default function ProjectForm({ project, accounts: initialAccounts, onSubm
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="monthly_retainer">Monthly Retainer</Label>
+                <Label htmlFor="exit_monthly_retainer">Monthly Retainer</Label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
-                    id="monthly_retainer"
+                    id="exit_monthly_retainer"
                     type="number"
                     step="0.01"
                     className="pl-9"
