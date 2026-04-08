@@ -169,7 +169,7 @@ export default function QuickActions() {
       showToast("Timer paused");
     } else {
       // Add the time spent paused to pausedDuration
-      setPausedDuration(prev => prev + (Date.now() - pauseStartTime));
+      setPausedDuration(prev => prev + (pauseStartTime ? (Date.now() - pauseStartTime) : 0));
       setTimerPaused(false);
       showToast("Timer resumed");
     }
@@ -184,7 +184,7 @@ export default function QuickActions() {
     const now = Date.now();
     // Total elapsed minus time spent paused
     const currentPausedDuration = timerPaused
-      ? pausedDuration + (now - pauseStartTime)
+      ? pausedDuration + (now - (pauseStartTime || now))
       : pausedDuration;
     const totalMs = now - startTime - currentPausedDuration;
     const hours = Math.round((totalMs / (1000 * 60 * 60)) * 100) / 100;
