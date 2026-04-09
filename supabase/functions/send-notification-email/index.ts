@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
           .from("team_members")
           .select("email, full_name")
           .eq("user_id", record.user_id)
-          .single(),
+          .maybeSingle(),
         supabase
           .from("branding_settings")
           .select("company_name, primary_color, secondary_color, accent_color, logo_url")

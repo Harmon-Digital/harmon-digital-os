@@ -120,6 +120,17 @@ export default function QuickActions() {
       setTimerProject(state.project || "");
       setTimerTask(state.task || "");
       setTimerDescription(state.description || "");
+
+      // Restore elapsed time so the display is correct on reload
+      if (state.running && state.startTime) {
+        if (state.paused && state.pausedDuration) {
+          // Timer was paused: elapsed = time between start and pause
+          setElapsedTime(Math.floor((state.pausedDuration - state.startTime) / 1000));
+        } else {
+          // Timer is running: elapsed = time since start
+          setElapsedTime(Math.floor((Date.now() - state.startTime) / 1000));
+        }
+      }
     }
   };
 

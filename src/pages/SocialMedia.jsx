@@ -190,24 +190,31 @@ export default function SocialMedia() {
   };
 
   const handleSubmit = async (postData) => {
-    if (editingPost) {
-      await supabase.from("social_posts").update(postData).eq("id", editingPost.id);
-      await notifyAdmins({
-        title: "Social post updated",
-        message: `Post updated: ${postData.title || "Untitled"}`,
-        source: "social.post_updated",
-      });
-    } else {
-      await supabase.from("social_posts").insert(postData);
-      await notifyAdmins({
-        title: "New social post created",
-        message: `${postData.title || "Untitled"} scheduled for ${postData.scheduled_date || "TBD"}`,
-        source: "social.post_created",
-      });
+    try {
+      if (editingPost) {
+        const { error } = await supabase.from("social_posts").update(postData).eq("id", editingPost.id);
+        if (error) throw error;
+        await notifyAdmins({
+          title: "Social post updated",
+          message: `Post updated: ${postData.title || "Untitled"}`,
+          source: "social.post_updated",
+        });
+      } else {
+        const { error } = await supabase.from("social_posts").insert(postData);
+        if (error) throw error;
+        await notifyAdmins({
+          title: "New social post created",
+          message: `${postData.title || "Untitled"} scheduled for ${postData.scheduled_date || "TBD"}`,
+          source: "social.post_created",
+        });
+      }
+      setShowDrawer(false);
+      setEditingPost(null);
+      loadData();
+    } catch (error) {
+      console.error("Error saving social post:", error);
+      alert("Failed to save post: " + error.message);
     }
-    setShowDrawer(false);
-    setEditingPost(null);
-    loadData();
   };
 
   const handleEdit = (post) => {

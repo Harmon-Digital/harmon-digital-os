@@ -261,7 +261,9 @@ export default function Accounts() {
                             className="w-10 h-10 rounded object-contain bg-gray-50 p-1 border"
                             onError={(e) => {
                               e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'flex';
+                              if (e.target.nextSibling) {
+                                e.target.nextSibling.style.display = 'flex';
+                              }
                             }}
                           />
                         ) : null}
