@@ -168,7 +168,8 @@ export default function CRM() {
 
       // Auto-approve referral when lead is marked as won
       if (destination.droppableId === "won" && lead.referral_id) {
-        await supabase.from("referrals").update({ status: "active" }).eq("id", lead.referral_id);
+        const { error: refError } = await supabase.from("referrals").update({ status: "active" }).eq("id", lead.referral_id);
+        if (refError) console.error("Error approving referral:", refError);
       }
 
       loadData();
@@ -191,12 +192,13 @@ export default function CRM() {
     setSavingActivity(true);
     try {
       // Save activity
-      await supabase.from("lead_activities").insert({
+      const { error: actError } = await supabase.from("lead_activities").insert({
         lead_id: selectedLead.id,
         type: activityType,
         description: activityDescription,
         created_by: user?.id,
       });
+      if (actError) throw actError;
 
       // Update lead's last contact if it's a call or email
       if (activityType === "call" || activityType === "email") {

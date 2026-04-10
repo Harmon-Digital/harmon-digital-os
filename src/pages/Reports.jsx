@@ -107,12 +107,14 @@ export default function Reports() {
 
   const toggleBonusPaid = async (entry) => {
     const newStatus = !entry.bonus_paid;
-    await supabase.from("kpi_entries").update({ bonus_paid: newStatus }).eq("id", entry.id);
+    const { error } = await supabase.from("kpi_entries").update({ bonus_paid: newStatus }).eq("id", entry.id);
+    if (error) { console.error("Error toggling bonus paid:", error); return; }
     setBonusEntries((prev) => prev.map((e) => e.id === entry.id ? { ...e, bonus_paid: newStatus } : e));
   };
 
   const bulkMarkBonusPaid = async (status) => {
-    await supabase.from("kpi_entries").update({ bonus_paid: status }).in("id", selectedBonusIds);
+    const { error } = await supabase.from("kpi_entries").update({ bonus_paid: status }).in("id", selectedBonusIds);
+    if (error) { console.error("Error bulk updating bonus paid:", error); return; }
     setBonusEntries((prev) => prev.map((e) => selectedBonusIds.includes(e.id) ? { ...e, bonus_paid: status } : e));
     setSelectedBonusIds([]);
   };
@@ -160,13 +162,15 @@ export default function Reports() {
 
   const toggleBilled = async (entry) => {
     const newStatus = !entry.client_billed;
-    await supabase.from("time_entries").update({ client_billed: newStatus }).eq("id", entry.id);
+    const { error } = await supabase.from("time_entries").update({ client_billed: newStatus }).eq("id", entry.id);
+    if (error) { console.error("Error toggling billed:", error); return; }
     setTimeEntries(prev => prev.map(e => e.id === entry.id ? { ...e, client_billed: newStatus } : e));
   };
 
   const togglePaid = async (entry) => {
     const newStatus = !entry.contractor_paid;
-    await supabase.from("time_entries").update({ contractor_paid: newStatus }).eq("id", entry.id);
+    const { error } = await supabase.from("time_entries").update({ contractor_paid: newStatus }).eq("id", entry.id);
+    if (error) { console.error("Error toggling paid:", error); return; }
     setTimeEntries(prev => prev.map(e => e.id === entry.id ? { ...e, contractor_paid: newStatus } : e));
   };
 
@@ -183,13 +187,15 @@ export default function Reports() {
   };
 
   const bulkMarkBilled = async (status) => {
-    await supabase.from("time_entries").update({ client_billed: status }).in("id", selectedIds);
+    const { error } = await supabase.from("time_entries").update({ client_billed: status }).in("id", selectedIds);
+    if (error) { console.error("Error bulk updating billed:", error); return; }
     setTimeEntries(prev => prev.map(e => selectedIds.includes(e.id) ? { ...e, client_billed: status } : e));
     setSelectedIds([]);
   };
 
   const bulkMarkPaid = async (status) => {
-    await supabase.from("time_entries").update({ contractor_paid: status }).in("id", selectedIds);
+    const { error } = await supabase.from("time_entries").update({ contractor_paid: status }).in("id", selectedIds);
+    if (error) { console.error("Error bulk updating paid:", error); return; }
     setTimeEntries(prev => prev.map(e => selectedIds.includes(e.id) ? { ...e, contractor_paid: status } : e));
     setSelectedIds([]);
   };

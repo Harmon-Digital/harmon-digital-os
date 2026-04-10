@@ -38,7 +38,11 @@ export async function calculateKpiValue(kpiDef, periodStart, teamMemberId = null
 
   if (aggregate === "count") {
     return data.length;
-  } else if (aggregate === "sum" && field) {
+  } else if (aggregate === "sum") {
+    if (!field) {
+      console.error("KPI sum aggregate requires a field");
+      return 0;
+    }
     return data.reduce((sum, row) => sum + (Number(row[field]) || 0), 0);
   }
 

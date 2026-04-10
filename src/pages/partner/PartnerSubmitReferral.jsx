@@ -73,7 +73,7 @@ export default function PartnerSubmitReferral() {
       if (error) throw error;
 
       // Also create a lead in the CRM
-      await supabase.from("leads").insert({
+      const { error: leadError } = await supabase.from("leads").insert({
         company_name: formData.client_company || formData.client_name,
         contact_name: formData.client_name,
         email: formData.client_email,
@@ -84,6 +84,7 @@ export default function PartnerSubmitReferral() {
         next_action: "Follow up on partner referral",
         referral_id: referralData.id,
       });
+      if (leadError) throw leadError;
 
       // Notify all admins about the new referral
       const { data: admins } = await supabase

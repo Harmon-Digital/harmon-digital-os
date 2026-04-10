@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '@/api/supabaseClient';
 
 const AuthContext = createContext({});
@@ -9,9 +9,11 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     let mounted = true;
+    mountedRef.current = true;
 
     // Listen for auth changes - this also fires immediately with current session
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -39,6 +41,7 @@ export function AuthProvider({ children }) {
 
     return () => {
       mounted = false;
+      mountedRef.current = false;
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
@@ -79,12 +82,15 @@ export function AuthProvider({ children }) {
     });
     if (error) throw error;
 
-    // Update last_sign_in_at
+    // Update last_sign_in_at (non-blocking — don't let metadata failure break sign-in)
     if (data.user) {
-      await supabase
+      supabase
         .from('user_profiles')
         .update({ last_sign_in_at: new Date().toISOString() })
-        .eq('id', data.user.id);
+        .eq('id', data.user.id)
+        .then(({ error: updateErr }) => {
+          if (updateErr) console.error('Failed to update last_sign_in_at:', updateErr);
+        });
     }
 
     return data;
@@ -141,20 +147,22 @@ export function AuthProvider({ children }) {
 
     // Create user profile with partner role
     if (data.user) {
-      await supabase.from('user_profiles').upsert({
+      const { error: profileError } = await supabase.from('user_profiles').upsert({
         id: data.user.id,
         email,
         full_name: contactName,
         role: 'partner',
       });
+      if (profileError) throw profileError;
 
       // Create referral_partners record
-      await supabase.from('referral_partners').insert({
+      const { error: partnerError } = await supabase.from('referral_partners').insert({
         user_id: data.user.id,
         contact_name: contactName,
         company_name: companyName,
         email,
       });
+      if (partnerError) throw partnerError;
 
       // Send password reset email so they can set their password
       await supabase.auth.resetPasswordForEmail(email, {
@@ -180,7 +188,7 @@ export function AuthProvider({ children }) {
     resetPassword,
     updatePassword,
     invitePartner,
-    refreshProfile: () => user && fetchUserProfile(user.id, true),
+    refreshProfile: () => user && fetchUserProfile(user.id, mountedRef.current),
   };
 
   return (

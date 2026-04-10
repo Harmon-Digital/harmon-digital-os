@@ -148,7 +148,8 @@ export default function ReferralPayouts() {
   const confirmGeneratePayouts = async () => {
     try {
       if (generatedPayouts.length > 0) {
-        await supabase.from("referral_payouts").insert(generatedPayouts);
+        const { error } = await supabase.from("referral_payouts").insert(generatedPayouts);
+        if (error) throw error;
       }
       setGenerateDialog(false);
       setGeneratedPayouts([]);
@@ -160,7 +161,7 @@ export default function ReferralPayouts() {
 
   const handleMarkPaid = async () => {
     try {
-      await supabase
+      const { error } = await supabase
         .from("referral_payouts")
         .update({
           status: "paid",
@@ -168,6 +169,7 @@ export default function ReferralPayouts() {
           payment_reference: paymentReference,
         })
         .in("id", selectedIds);
+      if (error) throw error;
 
       setMarkPaidDialog(false);
       setPaymentReference("");

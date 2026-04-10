@@ -218,12 +218,13 @@ export default function BrokerOutreach() {
     setSavingReachOut(true);
     try {
       // Create activity record
-      await supabase.from("broker_activities").insert({
+      const { error: activityError } = await supabase.from("broker_activities").insert({
         broker_id: reachOutBroker.id,
         team_member_id: reachOutBy,
         type: reachOutType,
         description: reachOutNote,
       });
+      if (activityError) throw activityError;
 
       // Update broker's last_contact and status
       const updates = {
@@ -233,7 +234,8 @@ export default function BrokerOutreach() {
       if (reachOutBroker.status === "new") {
         updates.status = "contacted";
       }
-      await supabase.from("brokers").update(updates).eq("id", reachOutBroker.id);
+      const { error: brokerError } = await supabase.from("brokers").update(updates).eq("id", reachOutBroker.id);
+      if (brokerError) throw brokerError;
 
       setShowReachOutDialog(false);
       setReachOutBroker(null);

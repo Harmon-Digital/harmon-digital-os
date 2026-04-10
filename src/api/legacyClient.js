@@ -26,7 +26,7 @@ export const api = {
     Activity: entities.Activity,
     SOP: entities.SOP,
     UserProfile: entities.UserProfile,
-    User: entities.UserProfile,
+    User: entities.User,
     // Stubs for removed entities
     BankAccount: {
       list: async () => [],

@@ -86,15 +86,16 @@ export default function PartnerLogin() {
 
       if (data.user) {
         // Create user profile with partner role
-        await supabase.from("user_profiles").upsert({
+        const { error: profileErr } = await supabase.from("user_profiles").upsert({
           id: data.user.id,
           email,
           full_name: contactName,
           role: "partner",
         });
+        if (profileErr) throw profileErr;
 
         // Create referral_partners record
-        const { data: partnerData } = await supabase
+        const { data: partnerData, error: partnerErr } = await supabase
           .from("referral_partners")
           .insert({
             user_id: data.user.id,
@@ -104,6 +105,7 @@ export default function PartnerLogin() {
           })
           .select()
           .single();
+        if (partnerErr) throw partnerErr;
 
         // Link to brokers table (create or update)
         if (partnerData) {
@@ -115,7 +117,7 @@ export default function PartnerLogin() {
 
           if (existingBroker) {
             // Update existing broker to signed_up status (keep existing status if further along)
-            await supabase
+            const { error: brokerUpdateErr } = await supabase
               .from("brokers")
               .update({
                 status: "signed_up",
@@ -123,15 +125,17 @@ export default function PartnerLogin() {
                 updated_at: new Date().toISOString(),
               })
               .eq("id", existingBroker.id);
+            if (brokerUpdateErr) console.error("Error updating broker:", brokerUpdateErr);
           } else {
             // Create new broker record
-            await supabase.from("brokers").insert({
+            const { error: brokerInsertErr } = await supabase.from("brokers").insert({
               name: contactName,
               firm: companyName || "",
               email,
               status: "signed_up",
               partner_id: partnerData.id,
             });
+            if (brokerInsertErr) console.error("Error creating broker:", brokerInsertErr);
           }
         }
 

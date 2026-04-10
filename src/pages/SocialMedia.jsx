@@ -224,14 +224,16 @@ export default function SocialMedia() {
 
   const handleDelete = async () => {
     if (deleteDialog.postId) {
-      await supabase.from("social_posts").delete().eq("id", deleteDialog.postId);
+      const { error } = await supabase.from("social_posts").delete().eq("id", deleteDialog.postId);
+      if (error) { console.error("Error deleting post:", error); return; }
       setDeleteDialog({ open: false, postId: null });
       loadData();
     }
   };
 
   const handleStatusChange = async (postId, newStatus) => {
-    await supabase.from("social_posts").update({ status: newStatus }).eq("id", postId);
+    const { error } = await supabase.from("social_posts").update({ status: newStatus }).eq("id", postId);
+    if (error) { console.error("Error updating post status:", error); return; }
     const post = socialPosts.find(p => p.id === postId);
 
     if (newStatus === "published") {
@@ -247,7 +249,8 @@ export default function SocialMedia() {
 
   const handleApprovalToggle = async (postId, currentApproved) => {
     const newApproved = !currentApproved;
-    await supabase.from("social_posts").update({ approved: newApproved }).eq("id", postId);
+    const { error } = await supabase.from("social_posts").update({ approved: newApproved }).eq("id", postId);
+    if (error) { console.error("Error toggling approval:", error); return; }
     setSocialPosts(prev => prev.map(p => p.id === postId ? { ...p, approved: newApproved } : p));
   };
 

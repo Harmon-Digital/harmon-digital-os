@@ -222,7 +222,8 @@ export default function ProjectDetail() {
 
   const handleDeleteDocument = async (docId, filePath) => {
     try {
-      await supabase.from('project_documents').delete().eq('id', docId);
+      const { error } = await supabase.from('project_documents').delete().eq('id', docId);
+      if (error) throw error;
       setDocuments(documents.filter(d => d.id !== docId));
     } catch (error) {
       console.error('Error deleting document:', error);
