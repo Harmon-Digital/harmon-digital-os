@@ -247,17 +247,6 @@ export default function Reports() {
       return sum + ((e.hours || 0) * (member?.hourly_rate || 0));
     }, 0);
 
-  if (!isAdmin) {
-    return (
-      <div className="p-8">
-        <div className="text-center py-12">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Admin Access Required</h2>
-          <p className="text-gray-500">You need administrator privileges to view reports.</p>
-        </div>
-      </div>
-    );
-  }
-
   // Flat list of earned (goal-met) bonus entries for the table
   const earnedBonusList = useMemo(() => {
     return bonusEntries
@@ -271,6 +260,17 @@ export default function Reports() {
         return nameA.localeCompare(nameB);
       });
   }, [bonusEntries, teamMembers]);
+
+  if (!isAdmin) {
+    return (
+      <div className="p-8">
+        <div className="text-center py-12">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Admin Access Required</h2>
+          <p className="text-gray-500">You need administrator privileges to view reports.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-6">
