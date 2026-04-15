@@ -19,7 +19,6 @@ import {
   Briefcase,
   UserCircle,
   Calendar,
-  MessageSquare,
   Hash,
   UsersRound,
   DollarSign,
@@ -29,11 +28,9 @@ import {
   Receipt,
   KeyRound,
   Search,
-  ChevronDown,
   ChevronRight,
   LogOut,
   Settings,
-  User as UserIcon,
   Menu,
   X,
   Sparkles,
@@ -87,11 +84,6 @@ function buildGroups(user) {
         { icon: Calendar, label: "Social Media", path: "SocialMedia" },
       ],
     },
-    {
-      id: "assistant",
-      label: "Assistant",
-      items: [{ icon: MessageSquare, label: "Agents", path: "BotChannel" }],
-    },
   ];
 
   if (isAdmin) {
@@ -118,38 +110,20 @@ function buildGroups(user) {
 /* Pieces                                                                     */
 /* -------------------------------------------------------------------------- */
 
-function WorkspaceSwitcher({ user, onLogout, onSettings, collapsed, onToggleCollapse }) {
+function WorkspaceSwitcher({ collapsed, onToggleCollapse, onHomeClick }) {
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1 px-1 py-2.5">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              title="Workspace"
-              className="w-8 h-8 rounded-md flex items-center justify-center hover:bg-white/5"
-            >
-              <div className="w-5 h-5 rounded overflow-hidden shrink-0">
-                <img src="/logo.png" alt="Harmon Digital OS" className="w-full h-full object-contain" />
-              </div>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <div className="px-2 py-1.5">
-              <p className="text-sm font-medium">{user?.full_name || "User"}</p>
-              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onSettings} className="cursor-pointer">
-              <UserIcon className="w-4 h-4 mr-2" />
-              Personal Settings
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-red-600 focus:text-red-600">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <button
+          type="button"
+          onClick={onHomeClick}
+          title="Harmon Digital OS"
+          className="w-8 h-8 rounded-md flex items-center justify-center hover:bg-white/5"
+        >
+          <div className="w-5 h-5 rounded overflow-hidden shrink-0">
+            <img src="/logo.png" alt="Harmon Digital OS" className="w-full h-full object-contain" />
+          </div>
+        </button>
         <button
           type="button"
           onClick={onToggleCollapse}
@@ -165,36 +139,17 @@ function WorkspaceSwitcher({ user, onLogout, onSettings, collapsed, onToggleColl
 
   return (
     <div className="flex items-center gap-1 px-2 py-2.5">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex-1 min-w-0 flex items-center gap-2 px-1.5 py-1 rounded-md hover:bg-white/5 text-left">
-            <div className="w-5 h-5 rounded overflow-hidden shrink-0">
-              <img src="/logo.png" alt="Harmon Digital OS" className="w-full h-full object-contain" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-neutral-100 truncate">Harmon Digital</div>
-              <div className="text-[11px] text-neutral-500 truncate">{user?.email || ""}</div>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
-          <div className="px-2 py-1.5">
-            <p className="text-sm font-medium">{user?.full_name || "User"}</p>
-            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-          </div>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={onSettings} className="cursor-pointer">
-            <UserIcon className="w-4 h-4 mr-2" />
-            Personal Settings
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-red-600 focus:text-red-600">
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <button
+        type="button"
+        onClick={onHomeClick}
+        className="flex-1 min-w-0 flex items-center gap-2 px-1.5 py-1 rounded-md hover:bg-white/5 text-left"
+        title="Harmon Digital OS"
+      >
+        <div className="w-5 h-5 rounded overflow-hidden shrink-0">
+          <img src="/logo.png" alt="Harmon Digital OS" className="w-full h-full object-contain" />
+        </div>
+        <span className="text-sm font-medium text-neutral-100 truncate">Harmon Digital</span>
+      </button>
       <button
         type="button"
         onClick={onToggleCollapse}
@@ -449,11 +404,9 @@ function SidebarBody({
   return (
     <div className="flex flex-col h-full bg-[#0e0e10] border-r border-white/[0.06]">
       <WorkspaceSwitcher
-        user={user}
-        onLogout={onLogout}
-        onSettings={onSettings}
         collapsed={collapsed}
         onToggleCollapse={onToggleCollapse}
+        onHomeClick={() => onNavigate("Dashboard")}
       />
       <SearchBar onOpenPalette={onOpenPalette} collapsed={collapsed} />
       <nav
