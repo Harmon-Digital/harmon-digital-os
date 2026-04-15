@@ -558,14 +558,19 @@ export function LinearSidebar({ children }) {
       .then(({ data }) => setAccounts(data || []));
   }, []);
 
-  // Active projects for the sidebar dropdown
+  // Active (non-internal) projects for the sidebar dropdown
   useEffect(() => {
     supabase
       .from("projects")
-      .select("id,name,status")
+      .select("id,name,status,is_internal,billing_type")
       .eq("status", "active")
       .order("name", { ascending: true })
-      .then(({ data }) => setProjectItems(data || []));
+      .then(({ data }) => {
+        const filtered = (data || []).filter(
+          (p) => !p.is_internal && p.billing_type !== "internal",
+        );
+        setProjectItems(filtered);
+      });
   }, []);
 
   // Keyboard shortcuts: Cmd+\ toggle chat, Cmd+. toggle collapse
