@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { api } from "@/api/legacyClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,8 @@ const extractTimeForInput = (timeStr) => {
   return "";
 };
 
-export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers, currentTeamMember, onSubmit, onCancel }) {
+export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers, currentTeamMember, onSubmit, onAutoSave, onCancel }) {
+  const isEdit = !!timeEntry?.id;
   const [formData, setFormData] = useState(
     timeEntry ? {
       ...timeEntry,
@@ -194,6 +195,67 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
     };
     onSubmit(cleanedData);
   };
+
+  /* ---- Auto-save for existing entries ---- */
+  const buildCleaned = (d = formData) => {
+    let out = { ...d };
+    if (!out.hours && out.start_time && out.end_time) {
+      const start = new Date(`${out.date}T${out.start_time}`);
+      const end = new Date(`${out.date}T${out.end_time}`);
+      if (end > start) {
+        out.hours = Math.round(((end - start) / (1000 * 60 * 60)) * 100) / 100;
+      }
+    }
+    return {
+      ...out,
+      task_id: out.task_id || null,
+      description: out.description || null,
+      start_time: out.start_time || null,
+      end_time: out.end_time || null,
+    };
+  };
+
+  const [saveState, setSaveState] = useState("idle");
+  const autoSaveTimer = useRef(null);
+  const lastSerialized = useRef(null);
+  const firstRun = useRef(true);
+
+  useEffect(() => {
+    if (!isEdit || !onAutoSave) return;
+    // Require minimum fields before saving
+    if (!formData.project_id || !formData.team_member_id || !formData.date) return;
+
+    const serialized = JSON.stringify(buildCleaned());
+    if (firstRun.current) {
+      firstRun.current = false;
+      lastSerialized.current = serialized;
+      return;
+    }
+    if (serialized === lastSerialized.current) return;
+    lastSerialized.current = serialized;
+
+    setSaveState("saving");
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(async () => {
+      try {
+        await onAutoSave(JSON.parse(serialized));
+        setSaveState("saved");
+      } catch (err) {
+        console.error("Auto-save failed:", err);
+        setSaveState("error");
+      }
+    }, 500);
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, isEdit, onAutoSave]);
+
+  useEffect(() => {
+    if (saveState !== "saved") return;
+    const t = setTimeout(() => setSaveState("idle"), 1500);
+    return () => clearTimeout(t);
+  }, [saveState]);
 
   // Convert existing hours to start/end if editing old entry (legacy entries without start/end times)
   useEffect(() => {
@@ -412,13 +474,30 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
         </div>
       )}
 
-      <div className="flex justify-end gap-3">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
-          {timeEntry ? "Update Entry" : "Log Time"}
-        </Button>
+      <div className="flex justify-end items-center gap-3 pt-4 border-t border-gray-100">
+        {isEdit ? (
+          <>
+            <span className="mr-auto text-[11px] text-gray-400 tabular-nums">
+              {saveState === "saving" && "Saving…"}
+              {saveState === "saved" && "✓ All changes saved"}
+              {saveState === "error" && (
+                <span className="text-red-600">Save failed</span>
+              )}
+            </span>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Close
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
+              Log Time
+            </Button>
+          </>
+        )}
       </div>
     </form>
   );

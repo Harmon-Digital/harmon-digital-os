@@ -15,8 +15,11 @@ import {
   DollarSign,
   FileText,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Filter,
+  List as ListIcon,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -169,6 +172,27 @@ export default function TimeTracking() {
     setShowDrawer(true);
   };
 
+  const handleAutoSave = async (entryData) => {
+    if (!editingEntry?.id) return;
+    try {
+      const saved = await TimeEntry.update(editingEntry.id, entryData);
+      setEditingEntry((prev) => (prev ? { ...prev, ...saved } : prev));
+      setTimeEntries((prev) => prev.map((e) => (e.id === saved.id ? { ...e, ...saved } : e)));
+    } catch (err) {
+      console.error("Auto-save failed:", err);
+      throw err;
+    }
+  };
+
+  const handleQuickBillableToggle = async (entryId, currentBillable) => {
+    try {
+      const saved = await TimeEntry.update(entryId, { billable: !currentBillable });
+      setTimeEntries((prev) => prev.map((e) => (e.id === saved.id ? { ...e, ...saved } : e)));
+    } catch (err) {
+      console.error("Toggle failed:", err);
+    }
+  };
+
   const handleDelete = async () => {
     if (deleteDialog.entryId) {
       await TimeEntry.delete(deleteDialog.entryId);
@@ -295,25 +319,165 @@ export default function TimeTracking() {
     return `${start.toLocaleDateString('en-US', opts)} - ${end.toLocaleDateString('en-US', opts)}`;
   };
 
+  const filterCount =
+    (projectFilter !== "all" ? 1 : 0) +
+    (isAdmin && teamMemberFilter !== "me" ? 1 : 0);
+
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Time Tracking</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Track and manage your work hours</p>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Consolidated toolbar */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px]">
+            {[
+              { key: "today", label: "Today" },
+              { key: "week", label: "Week" },
+              { key: "month", label: "Month" },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setDateRangePreset(key)}
+                className={`px-2.5 py-1 rounded ${
+                  dateRange === key
+                    ? "bg-gray-900 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-0.5 border border-gray-200 rounded-md h-8 text-[12px]">
+            <button
+              type="button"
+              onClick={() => navigateWeek(-1)}
+              className="h-full px-1.5 text-gray-500 hover:text-gray-800"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-gray-700 min-w-[120px] text-center tabular-nums">
+              {formatDateRange()}
+            </span>
+            <button
+              type="button"
+              onClick={() => navigateWeek(1)}
+              className="h-full px-1.5 text-gray-500 hover:text-gray-800"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="relative flex-1 max-w-xs min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Input
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+            />
+          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 gap-1.5 h-8 text-[13px]">
+                <Filter className="w-3.5 h-3.5" />
+                Filter
+                {filterCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold">
+                    {filterCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Filters</span>
+                {filterCount > 0 && (
+                  <button
+                    type="button"
+                    className="text-xs text-indigo-600 hover:text-indigo-700"
+                    onClick={() => {
+                      setProjectFilter("all");
+                      setTeamMemberFilter("me");
+                    }}
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-600">Project</label>
+                <Select value={projectFilter} onValueChange={setProjectFilter}>
+                  <SelectTrigger><SelectValue placeholder="All Projects" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Projects</SelectItem>
+                    {projects.filter((p) => p.status === "active").map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {isAdmin && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600">Team</label>
+                  <Select value={teamMemberFilter} onValueChange={setTeamMemberFilter}>
+                    <SelectTrigger><SelectValue placeholder="Team" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="me">My Time</SelectItem>
+                      <SelectItem value="all">All Team</SelectItem>
+                      {teamMembers.filter((tm) => tm.status === "active").map((tm) => (
+                        <SelectItem key={tm.id} value={tm.id}>
+                          {tm.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
+          <div className="ml-auto flex items-center gap-1.5">
+            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`p-1 rounded ${viewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                title="List"
+              >
+                <ListIcon className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("calendar")}
+                className={`p-1 rounded ${viewMode === "calendar" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                title="Calendar"
+              >
+                <CalendarIcon className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <Button
+              onClick={() => {
+                setEditingEntry(null);
+                setShowDrawer(true);
+              }}
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 h-8 shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Log Time
+            </Button>
+          </div>
         </div>
-        <Button
-          onClick={() => {
-            setEditingEntry(null);
-            setShowDrawer(true);
-          }}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Log Time
-        </Button>
       </div>
+
+      {/* Scrollable content */}
+      <div className="overflow-y-auto flex-1 min-h-0">
+      <div className="p-4 lg:p-6 space-y-4">
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -369,225 +533,32 @@ export default function TimeTracking() {
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="bg-white rounded-xl border p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-          {/* Date Range Presets */}
-          <div className="flex items-center gap-2">
-            <div className="flex bg-gray-100 rounded-lg p-1">
-              {[
-                { key: "today", label: "Today" },
-                { key: "week", label: "Week" },
-                { key: "month", label: "Month" },
-              ].map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setDateRangePreset(key)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    dateRange === key
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {/* Week Navigation */}
-            <div className="flex items-center gap-1 border-l pl-2 ml-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => navigateWeek(-1)}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-sm font-medium text-gray-700 min-w-[120px] text-center">
-                {formatDateRange()}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => navigateWeek(1)}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="hidden lg:block w-px h-8 bg-gray-200" />
-
-          {/* Other Filters */}
-          <div className="flex flex-1 flex-col sm:flex-row gap-3">
-            <div className="relative flex-1 max-w-xs">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9"
-              />
-            </div>
-
-            <Select value={projectFilter} onValueChange={setProjectFilter}>
-              <SelectTrigger className="w-[160px] h-9">
-                <SelectValue placeholder="All Projects" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Projects</SelectItem>
-                {projects.filter(p => p.status === 'active').map(project => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {isAdmin && (
-              <Select value={teamMemberFilter} onValueChange={setTeamMemberFilter}>
-                <SelectTrigger className="w-[140px] h-9">
-                  <SelectValue placeholder="Team" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="me">My Time</SelectItem>
-                  <SelectItem value="all">All Team</SelectItem>
-                  {teamMembers.filter(tm => tm.status === 'active').map(tm => (
-                    <SelectItem key={tm.id} value={tm.id}>
-                      {tm.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        </div>
       </div>
 
-      {/* View Toggle + Table */}
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50/50">
-          <Tabs value={viewMode} onValueChange={setViewMode}>
-            <TabsList className="h-8">
-              <TabsTrigger value="list" className="text-xs px-3">List</TabsTrigger>
-              <TabsTrigger value="calendar" className="text-xs px-3">Calendar</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <span className="text-sm text-gray-500">
-            {filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}
-          </span>
+      {viewMode === "list" ? (
+        <DayGroupedEntryList
+          entries={filteredEntries}
+          loading={loading}
+          isAdmin={isAdmin}
+          getProjectName={getProjectName}
+          getTaskTitle={getTaskTitle}
+          getTeamMemberName={getTeamMemberName}
+          getBillingDisplay={getBillingDisplay}
+          getStatusDisplay={getStatusDisplay}
+          onEdit={handleEdit}
+          onDelete={(id) => setDeleteDialog({ open: true, entryId: id })}
+          onToggleBillable={handleQuickBillableToggle}
+        />
+      ) : (
+        <div className="px-4 lg:px-6 pb-6">
+          <WeeklyCalendarView
+            timeEntries={filteredEntries}
+            projects={projects}
+            users={teamMembers}
+            onEditEntry={handleEdit}
+          />
         </div>
-
-        {viewMode === "list" ? (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50/50">
-                <TableHead className="font-semibold">Date</TableHead>
-                <TableHead className="font-semibold">Project</TableHead>
-                <TableHead className="font-semibold">Task</TableHead>
-                {isAdmin && <TableHead className="font-semibold">Team Member</TableHead>}
-                <TableHead className="font-semibold">Hours</TableHead>
-                <TableHead className="font-semibold">Description</TableHead>
-                <TableHead className="font-semibold">Type</TableHead>
-                <TableHead className="font-semibold">Status</TableHead>
-                <TableHead className="text-right font-semibold">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-12 text-gray-500">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                      Loading...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : filteredEntries.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-12">
-                    <div className="text-gray-500">
-                      <Clock className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                      <p>No time entries found</p>
-                      <p className="text-sm">Click "Log Time" to get started</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredEntries.map((entry) => (
-                  <TableRow key={entry.id} className="hover:bg-gray-50/50">
-                    <TableCell className="font-medium">
-                      {parseLocalDate(entry.date).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium text-gray-900">{getProjectName(entry.project_id)}</span>
-                    </TableCell>
-                    <TableCell className="text-gray-600">
-                      {entry.task_id ? getTaskTitle(entry.task_id) : "—"}
-                    </TableCell>
-                    {isAdmin && (
-                      <TableCell className="text-gray-600">{getTeamMemberName(entry.team_member_id)}</TableCell>
-                    )}
-                    <TableCell>
-                      <span className="font-semibold text-indigo-600">{entry.hours}h</span>
-                    </TableCell>
-                    <TableCell className="text-gray-600 max-w-[200px] truncate">
-                      {entry.description || "—"}
-                    </TableCell>
-                    <TableCell>
-                      {(() => {
-                        const billing = getBillingDisplay(entry);
-                        return <Badge className={`${billing.color} font-medium`}>{billing.label}</Badge>;
-                      })()}
-                    </TableCell>
-                    <TableCell>
-                      {(() => {
-                        const status = getStatusDisplay(entry);
-                        return <Badge className={`${status.color} font-medium`}>{status.label}</Badge>;
-                      })()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => handleEdit(entry)}
-                        >
-                          <Edit className="w-4 h-4 text-gray-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => setDeleteDialog({ open: true, entryId: entry.id })}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="p-4">
-            <WeeklyCalendarView
-              timeEntries={filteredEntries}
-              projects={projects}
-              users={teamMembers}
-              onEditEntry={handleEdit}
-            />
-          </div>
-        )}
+      )}
       </div>
 
       <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
@@ -606,6 +577,7 @@ export default function TimeTracking() {
               teamMembers={teamMembers}
               currentTeamMember={currentTeamMember}
               onSubmit={handleSubmit}
+              onAutoSave={handleAutoSave}
               onCancel={() => {
                 setShowDrawer(false);
                 setEditingEntry(null);
@@ -639,6 +611,161 @@ export default function TimeTracking() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/* ---------- Day-grouped dense entry list ---------- */
+
+function formatDayLabel(iso) {
+  const d = parseLocalDate(iso);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((dayStart - startOfToday) / (1000 * 60 * 60 * 24));
+  if (diff === 0) return "Today";
+  if (diff === -1) return "Yesterday";
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatTimeRange(entry) {
+  if (!entry.start_time || !entry.end_time) return null;
+  const fmt = (t) => {
+    // Handle both "HH:MM" and "HH:MM:SS"
+    const [h, m] = String(t).split(":").map(Number);
+    const d = new Date();
+    d.setHours(h || 0, m || 0, 0, 0);
+    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  };
+  return `${fmt(entry.start_time)} – ${fmt(entry.end_time)}`;
+}
+
+function DayGroupedEntryList({
+  entries,
+  loading,
+  isAdmin,
+  getProjectName,
+  getTaskTitle,
+  getTeamMemberName,
+  getBillingDisplay,
+  getStatusDisplay,
+  onEdit,
+  onDelete,
+  onToggleBillable,
+}) {
+  const groups = React.useMemo(() => {
+    const map = new Map();
+    for (const e of entries) {
+      const key = e.date;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(e);
+    }
+    // Sort days newest first; within each day sort by start_time descending
+    const days = Array.from(map.keys()).sort((a, b) => b.localeCompare(a));
+    return days.map((day) => ({
+      day,
+      entries: map.get(day).sort((a, b) =>
+        (b.start_time || "").localeCompare(a.start_time || ""),
+      ),
+      total: map.get(day).reduce((sum, e) => sum + (parseFloat(e.hours) || 0), 0),
+    }));
+  }, [entries]);
+
+  if (loading) {
+    return <div className="p-8 text-center text-sm text-gray-400">Loading…</div>;
+  }
+  if (entries.length === 0) {
+    return (
+      <div className="p-10 text-center text-sm text-gray-400">
+        <Clock className="w-7 h-7 mx-auto mb-2 text-gray-300" />
+        <p>No time entries found</p>
+        <p className="text-xs">Click "Log Time" to get started</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white">
+      {groups.map((g) => (
+        <div key={g.day}>
+          <div className="flex items-center gap-2 px-4 h-8 bg-gray-50 border-y border-gray-200">
+            <span className="text-[12px] font-medium text-gray-700">{formatDayLabel(g.day)}</span>
+            <span className="text-[11px] text-gray-400 tabular-nums ml-auto">
+              {g.total.toFixed(1)}h · {g.entries.length} {g.entries.length === 1 ? "entry" : "entries"}
+            </span>
+          </div>
+          {g.entries.map((entry) => {
+            const billing = getBillingDisplay(entry);
+            const status = getStatusDisplay(entry);
+            const time = formatTimeRange(entry);
+            return (
+              <div
+                key={entry.id}
+                className="group flex items-center gap-3 px-4 h-10 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+                onClick={() => onEdit(entry)}
+              >
+                {time && (
+                  <span className="text-[11px] text-gray-400 tabular-nums w-24 shrink-0">
+                    {time}
+                  </span>
+                )}
+                <span className="font-semibold text-indigo-600 tabular-nums w-10 shrink-0 text-[13px]">
+                  {parseFloat(entry.hours || 0).toFixed(1)}h
+                </span>
+                <span className="text-[13px] text-gray-900 truncate max-w-[200px]">
+                  {getProjectName(entry.project_id)}
+                </span>
+                {entry.task_id && (
+                  <span className="hidden md:inline text-[12px] text-gray-500 truncate max-w-[200px]">
+                    {getTaskTitle(entry.task_id)}
+                  </span>
+                )}
+                <span className="flex-1 min-w-0 text-[12px] text-gray-400 truncate">
+                  {entry.description || ""}
+                </span>
+                {isAdmin && entry.team_member_id && (
+                  <span className="hidden lg:inline text-[11px] text-gray-500 truncate max-w-[140px]">
+                    {getTeamMemberName(entry.team_member_id)}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (billing.label === "Billable" || billing.label === "Billable (Unbilled)") {
+                      onToggleBillable(entry.id, entry.billable);
+                    }
+                  }}
+                  className="shrink-0"
+                  title={billing.label}
+                >
+                  <Badge className={`${billing.color} text-[10px] font-medium`}>
+                    {billing.label}
+                  </Badge>
+                </button>
+                <Badge className={`${status.color} text-[10px] font-medium shrink-0`}>
+                  {status.label}
+                </Badge>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(entry.id);
+                  }}
+                  className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                  title="Delete"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }

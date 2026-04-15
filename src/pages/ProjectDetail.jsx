@@ -558,157 +558,118 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      {/* Hours Budget Progress - Updated for Retainer Monthly Tracking */}
-      {budgetHours > 0 && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>
-                {isRetainer ? `Monthly Retainer Hours - ${currentMonth}` : 'Hours Budget Progress'}
-              </span>
-              <span className="text-sm font-normal text-gray-600">
-                {isRetainer ? `${currentMonthHours.toFixed(1)} / ${monthlyBudget} hours this month` : `${totalHours.toFixed(1)} / ${budgetHours} hours total`}
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* Current Progress Bar */}
-              <div className="space-y-2">
-                <Progress value={completionPercentage} className="h-3" indicatorClassName={getProgressColor()} />
-                <div className="flex justify-between text-sm">
-                  <span className={`font-semibold ${hoursRemaining < 0 ? 'text-red-600' : hoursRemaining < budgetForProgress * 0.2 ? 'text-yellow-600' : 'text-green-600'}`}>
-                    {hoursRemaining >= 0
-                      ? `${hoursRemaining.toFixed(1)} hours remaining${isRetainer ? ' this month' : ''}`
-                      : `${Math.abs(hoursRemaining).toFixed(1)} hours over budget${isRetainer ? ' this month' : ''}`}
-                  </span>
-                  <span className="text-gray-600">{completionPercentage.toFixed(0)}% used</span>
-                </div>
-              </div>
-
-              {/* Rolling 6-Month View for Retainers */}
-              {isRetainer && monthlyHistory.length > 0 && (
-                <div className="pt-4 border-t">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Last 6 Months</h4>
-                  <div className="space-y-2">
-                    {monthlyHistory.map((month, idx) => (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-gray-600">{month.label}</span>
-                          <span className={`font-semibold ${month.isOverBudget ? 'text-red-600' : 'text-gray-900'}`}>
-                            {month.hours.toFixed(1)}h / {month.budget}h
-                            {month.isOverBudget && ` (+${(month.hours - month.budget).toFixed(1)}h)`}
-                          </span>
-                        </div>
-                        <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className={`absolute top-0 left-0 h-full transition-all ${
-                              month.hours >= month.budget
-                                ? 'bg-red-500'
-                                : month.hours >= month.budget * 0.8
-                                ? 'bg-yellow-500'
-                                : 'bg-green-500'
-                            }`}
-                            style={{ width: `${Math.min((month.hours / month.budget) * 100, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {monthlyHistory.some(m => m.isOverBudget) && (
-                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-xs text-red-800">
-                        <strong>⚠️ Note:</strong> Months with red bars exceeded the retainer budget. Consider discussing scope or additional billing with the client.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Key Metrics */}
-      <div className="flex flex-wrap gap-4 mb-6">
+      {/* Unified stats strip — inline metric pills, no card chrome */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4 text-[13px]">
         {isAdmin && !isInternalProject && (
           <>
-            <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
-              <TrendingUp className="w-4 h-4 text-blue-500" />
-              <span className="text-sm text-gray-500">Revenue</span>
+            <span className="inline-flex items-baseline gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-blue-500 self-center" />
+              <span className="text-gray-500">Revenue</span>
               <span className="font-semibold text-blue-600">${timeBasedRevenue.toLocaleString()}</span>
-              <span className="text-xs text-gray-400">({billableHours.toFixed(1)}h)</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
-              <CheckCircle className="w-4 h-4 text-green-500" />
-              <span className="text-sm text-gray-500">Billed</span>
+              <span className="text-[11px] text-gray-400">· {billableHours.toFixed(1)}h</span>
+            </span>
+            <span className="inline-flex items-baseline gap-1.5">
+              <CheckCircle className="w-3.5 h-3.5 text-green-500 self-center" />
+              <span className="text-gray-500">Billed</span>
               <span className="font-semibold text-green-600">${billedRevenue.toLocaleString()}</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
-              <TrendingDown className="w-4 h-4 text-red-500" />
-              <span className="text-sm text-gray-500">Labor</span>
+            </span>
+            <span className="inline-flex items-baseline gap-1.5">
+              <TrendingDown className="w-3.5 h-3.5 text-red-500 self-center" />
+              <span className="text-gray-500">Labor</span>
               <span className="font-semibold text-red-600">${laborCost.toLocaleString()}</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
-              <DollarSign className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-500">Margin</span>
-              <span className={`font-semibold ${billedRevenue - laborCost >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            </span>
+            <span className="inline-flex items-baseline gap-1.5">
+              <DollarSign className="w-3.5 h-3.5 text-gray-500 self-center" />
+              <span className="text-gray-500">Margin</span>
+              <span className={`font-semibold ${billedRevenue - laborCost >= 0 ? "text-green-600" : "text-red-600"}`}>
                 ${(billedRevenue - laborCost).toLocaleString()}
               </span>
-              <span className="text-xs text-gray-400">
-                ({billedRevenue > 0 ? (((billedRevenue - laborCost) / billedRevenue) * 100).toFixed(0) : 0}%)
+              <span className="text-[11px] text-gray-400">
+                · {billedRevenue > 0 ? (((billedRevenue - laborCost) / billedRevenue) * 100).toFixed(0) : 0}%
               </span>
-            </div>
+            </span>
           </>
         )}
         {(!isAdmin || isInternalProject) && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
-            <Clock className="w-4 h-4 text-gray-500" />
-            <span className="text-sm text-gray-500">Hours</span>
+          <span className="inline-flex items-baseline gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-gray-500 self-center" />
+            <span className="text-gray-500">Hours</span>
             <span className="font-semibold">{totalHours.toFixed(1)}h</span>
-            {!isInternalProject && <span className="text-xs text-gray-400">({billableHours.toFixed(1)}h billable)</span>}
-          </div>
+            {!isInternalProject && (
+              <span className="text-[11px] text-gray-400">· {billableHours.toFixed(1)}h billable</span>
+            )}
+          </span>
         )}
-        <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border">
-          <Clock className="w-4 h-4 text-gray-500" />
-          <span className="text-sm text-gray-500">This Week</span>
+        <span className="inline-flex items-baseline gap-1.5">
+          <Clock className="w-3.5 h-3.5 text-gray-500 self-center" />
+          <span className="text-gray-500">This Week</span>
           <span className="font-semibold">{weeklyHours.toFixed(1)}h</span>
           {weeklyMinimum > 0 && (
-            <span className={`text-xs ${weeklyProgress >= 100 ? 'text-green-500' : 'text-gray-400'}`}>
-              / {weeklyMinimum}h ({weeklyProgress.toFixed(0)}%)
+            <span className={`text-[11px] ${weeklyProgress >= 100 ? "text-green-500" : "text-gray-400"}`}>
+              · {weeklyProgress.toFixed(0)}% of {weeklyMinimum}h
             </span>
           )}
-        </div>
+        </span>
       </div>
 
-      {/* Additional Metrics for Retainer - Admin Only (not for internal projects) */}
-      {isAdmin && !isInternalProject && project.billing_type === "retainer" && project.monthly_retainer && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Retainer Analysis</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Monthly Retainer</p>
-                <p className="text-2xl font-bold text-gray-900">${project.monthly_retainer.toLocaleString()}</p>
+      {/* Slim hours budget progress — borderless */}
+      {budgetHours > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between text-[12px] mb-1.5">
+            <span className="text-gray-700 font-medium">
+              {isRetainer ? `Retainer · ${currentMonth}` : "Hours budget"}
+              <span className="ml-2 text-gray-400 font-normal">
+                {isRetainer
+                  ? `${currentMonthHours.toFixed(1)} / ${monthlyBudget}h this month`
+                  : `${totalHours.toFixed(1)} / ${budgetHours}h total`}
+              </span>
+            </span>
+            <span
+              className={`tabular-nums ${hoursRemaining < 0 ? "text-red-600 font-semibold" : "text-gray-500"}`}
+            >
+              {hoursRemaining >= 0
+                ? `${hoursRemaining.toFixed(1)}h remaining · ${completionPercentage.toFixed(0)}%`
+                : `${Math.abs(hoursRemaining).toFixed(1)}h over · ${completionPercentage.toFixed(0)}%`}
+            </span>
+          </div>
+          <Progress
+            value={completionPercentage}
+            className="h-2"
+            indicatorClassName={getProgressColor()}
+          />
+          {isRetainer && monthlyHistory.length > 0 && (
+            <details className="mt-3">
+              <summary className="text-[12px] text-gray-500 hover:text-gray-700 cursor-pointer select-none">
+                Last 6 months
+              </summary>
+              <div className="mt-2 space-y-1.5 pl-3 border-l border-gray-100">
+                {monthlyHistory.map((month, idx) => (
+                  <div key={idx} className="space-y-0.5">
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-gray-600">{month.label}</span>
+                      <span className={month.isOverBudget ? "text-red-600 font-semibold" : "text-gray-900"}>
+                        {month.hours.toFixed(1)}h / {month.budget}h
+                        {month.isOverBudget && ` (+${(month.hours - month.budget).toFixed(1)}h)`}
+                      </span>
+                    </div>
+                    <div className="relative h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`absolute top-0 left-0 h-full transition-all ${
+                          month.hours >= month.budget
+                            ? "bg-red-500"
+                            : month.hours >= month.budget * 0.8
+                              ? "bg-yellow-500"
+                              : "bg-green-500"
+                        }`}
+                        style={{ width: `${Math.min((month.hours / month.budget) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Labor Cost (This Month)</p>
-                <p className="text-2xl font-bold text-red-600">${laborCost.toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Retainer Value</p>
-                <p className={`text-2xl font-bold ${laborCost <= project.monthly_retainer ? 'text-green-600' : 'text-red-600'}`}>
-                  {laborCost <= project.monthly_retainer ? 'Under' : 'Over'} Budget
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  ${Math.abs(project.monthly_retainer - laborCost).toLocaleString()} {laborCost <= project.monthly_retainer ? 'remaining' : 'over'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </details>
+          )}
+        </div>
       )}
 
       {/* Tabs for different sections */}
