@@ -6,7 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3, PanelRight, Maximize2 } from "lucide-react";
+import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3, PanelRight, Maximize2, Filter } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { stripHtml } from "@/components/ui/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -513,88 +514,125 @@ export default function Tasks() {
           </div>
 
           <div className="bg-white rounded-lg border shadow-sm p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-              <div className="lg:col-span-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search tasks..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search tasks..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
               </div>
-
-              {completedFilter === "active" && (
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="todo">To Do</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="review">Review</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={projectFilter} onValueChange={setProjectFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Project" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
-                  {projects.map(project => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Assignee" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Team</SelectItem>
-                  {teamMembers.filter(tm => tm.status === 'active').map(tm => (
-                    <SelectItem key={tm.id} value={tm.id}>
-                      {tm.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Due Date" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Dates</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
-                  <SelectItem value="today">Due Today</SelectItem>
-                  <SelectItem value="this_week">This Week</SelectItem>
-                  <SelectItem value="this_month">This Month</SelectItem>
-                </SelectContent>
-              </Select>
+              {(() => {
+                const activeCount =
+                  (completedFilter === "active" && statusFilter !== "all" ? 1 : 0) +
+                  (priorityFilter !== "all" ? 1 : 0) +
+                  (projectFilter !== "all" ? 1 : 0) +
+                  (assigneeFilter !== "all" ? 1 : 0) +
+                  (dueDateFilter !== "all" ? 1 : 0);
+                return (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="shrink-0 gap-2">
+                        <Filter className="w-4 h-4" />
+                        Filters
+                        {activeCount > 0 && (
+                          <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold">
+                            {activeCount}
+                          </span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-80 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold">Filters</span>
+                        {activeCount > 0 && (
+                          <button
+                            type="button"
+                            className="text-xs text-indigo-600 hover:text-indigo-700"
+                            onClick={() => {
+                              setStatusFilter("all");
+                              setPriorityFilter("all");
+                              setProjectFilter("all");
+                              setAssigneeFilter("all");
+                              setDueDateFilter("all");
+                            }}
+                          >
+                            Clear all
+                          </button>
+                        )}
+                      </div>
+                      {completedFilter === "active" && (
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-gray-600">Status</label>
+                          <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Status</SelectItem>
+                              <SelectItem value="todo">To Do</SelectItem>
+                              <SelectItem value="in_progress">In Progress</SelectItem>
+                              <SelectItem value="review">Review</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-600">Priority</label>
+                        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                          <SelectTrigger><SelectValue placeholder="Priority" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Priority</SelectItem>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="urgent">Urgent</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-600">Project</label>
+                        <Select value={projectFilter} onValueChange={setProjectFilter}>
+                          <SelectTrigger><SelectValue placeholder="Project" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Projects</SelectItem>
+                            {projects.map(project => (
+                              <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-600">Assignee</label>
+                        <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                          <SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Team</SelectItem>
+                            {teamMembers.filter(tm => tm.status === 'active').map(tm => (
+                              <SelectItem key={tm.id} value={tm.id}>{tm.full_name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-600">Due Date</label>
+                        <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
+                          <SelectTrigger><SelectValue placeholder="Due Date" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Dates</SelectItem>
+                            <SelectItem value="overdue">Overdue</SelectItem>
+                            <SelectItem value="today">Due Today</SelectItem>
+                            <SelectItem value="this_week">This Week</SelectItem>
+                            <SelectItem value="this_month">This Month</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                );
+              })()}
             </div>
-            
+
             {(searchQuery || statusFilter !== "all" || priorityFilter !== "all" || projectFilter !== "all" || assigneeFilter !== "all" || dueDateFilter !== "all") && (
               <div className="mt-4 flex items-center gap-2">
                 <span className="text-sm text-gray-600">Active filters:</span>

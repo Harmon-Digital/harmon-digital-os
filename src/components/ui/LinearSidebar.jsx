@@ -58,10 +58,10 @@ function buildGroups(user) {
       id: "workspace",
       label: "Workspace",
       items: [
-        { icon: LayoutDashboard, label: "Dashboard", path: "Dashboard", shortcut: "G D" },
-        { icon: FolderKanban, label: "Projects", path: "Projects", shortcut: "G P" },
-        { icon: CheckSquare, label: "Tasks", path: "Tasks", shortcut: "G T" },
-        { icon: Hash, label: "Chat", path: "Channels", shortcut: "G C" },
+        { icon: LayoutDashboard, label: "Dashboard", path: "Dashboard" },
+        { icon: FolderKanban, label: "Projects", path: "Projects" },
+        { icon: CheckSquare, label: "Tasks", path: "Tasks" },
+        { icon: Hash, label: "Chat", path: "Channels" },
         { icon: Clock, label: "Time Tracking", path: "TimeTracking" },
       ],
     },
@@ -124,15 +124,17 @@ function WorkspaceSwitcher({ collapsed, onToggleCollapse, onHomeClick }) {
             <img src="/logo.png" alt="Harmon Digital OS" className="w-full h-full object-contain" />
           </div>
         </button>
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          title="Expand sidebar (⌘.)"
-          aria-label="Expand sidebar"
-          className="w-8 h-8 rounded-md flex items-center justify-center text-neutral-500 hover:text-neutral-100 hover:bg-white/5"
-        >
-          <PanelLeft className="w-3.5 h-3.5 rotate-180" />
-        </button>
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            title="Expand sidebar (⌘.)"
+            aria-label="Expand sidebar"
+            className="w-8 h-8 rounded-md flex items-center justify-center text-neutral-500 hover:text-neutral-100 hover:bg-white/5"
+          >
+            <PanelLeft className="w-3.5 h-3.5 rotate-180" />
+          </button>
+        )}
       </div>
     );
   }
@@ -150,15 +152,17 @@ function WorkspaceSwitcher({ collapsed, onToggleCollapse, onHomeClick }) {
         </div>
         <span className="text-sm font-medium text-neutral-100 truncate">Harmon Digital</span>
       </button>
-      <button
-        type="button"
-        onClick={onToggleCollapse}
-        className="shrink-0 p-1 rounded-md text-neutral-500 hover:text-neutral-200 hover:bg-white/5"
-        title="Collapse sidebar (⌘.)"
-        aria-label="Collapse sidebar"
-      >
-        <PanelLeft className="w-3.5 h-3.5" />
-      </button>
+      {onToggleCollapse && (
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="shrink-0 p-1 rounded-md text-neutral-500 hover:text-neutral-200 hover:bg-white/5"
+          title="Collapse sidebar (⌘.)"
+          aria-label="Collapse sidebar"
+        >
+          <PanelLeft className="w-3.5 h-3.5" />
+        </button>
+      )}
     </div>
   );
 }
@@ -225,11 +229,6 @@ function NavItem({ item, isActive, onNavigate, collapsed }) {
     >
       <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-neutral-100" : "text-neutral-500 group-hover:text-neutral-300"}`} />
       <span className="flex-1 text-left truncate">{item.label}</span>
-      {item.shortcut && !isActive && (
-        <span className="hidden xl:inline-block text-[10px] text-neutral-600 group-hover:text-neutral-400 font-mono tracking-wider">
-          {item.shortcut}
-        </span>
-      )}
     </button>
   );
 }
@@ -369,6 +368,7 @@ function SidebarBody({
   onOpenPalette,
   currentPath,
   onNavigate,
+  hideCollapseToggle = false,
 }) {
   const groups = useMemo(() => buildGroups(user), [user]);
 
@@ -405,7 +405,7 @@ function SidebarBody({
     <div className="flex flex-col h-full bg-[#0e0e10] border-r border-white/[0.06]">
       <WorkspaceSwitcher
         collapsed={collapsed}
-        onToggleCollapse={onToggleCollapse}
+        onToggleCollapse={hideCollapseToggle ? null : onToggleCollapse}
         onHomeClick={() => onNavigate("Dashboard")}
       />
       <SearchBar onOpenPalette={onOpenPalette} collapsed={collapsed} />
@@ -446,7 +446,7 @@ function MobileTopBar({ onMenuClick }) {
       <button
         type="button"
         onClick={onMenuClick}
-        className="flex items-center justify-center size-9 rounded-md text-neutral-400 hover:text-neutral-50 hover:bg-white/5"
+        className="flex items-center justify-center size-10 rounded-md text-neutral-400 hover:text-neutral-50 hover:bg-white/5"
         aria-label="Open menu"
       >
         <Menu className="w-5 h-5" />
@@ -455,7 +455,7 @@ function MobileTopBar({ onMenuClick }) {
         <img src="/logo.png" alt="Harmon Digital OS" className="w-5 h-5" />
         <span className="text-sm font-medium text-neutral-100">Harmon Digital</span>
       </div>
-      <NotificationBell />
+      <div className="w-10" aria-hidden="true" />
     </header>
   );
 }
@@ -519,6 +519,19 @@ export function LinearSidebar({ children }) {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
+  // Lock body scroll while mobile drawer or mobile chat overlay is open
+  useEffect(() => {
+    if (!isMobile) return;
+    const shouldLock = mobileMenuOpen || chatOpen;
+    if (shouldLock) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [isMobile, mobileMenuOpen, chatOpen]);
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -550,7 +563,7 @@ export function LinearSidebar({ children }) {
 
         {/* Backdrop */}
         <div
-          className={`fixed inset-0 bg-black/70 z-50 transition-opacity duration-200 ${
+          className={`fixed inset-0 bg-black/70 z-40 transition-opacity duration-200 ${
             mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
           onClick={() => setMobileMenuOpen(false)}
@@ -558,38 +571,29 @@ export function LinearSidebar({ children }) {
 
         {/* Drawer */}
         <aside
-          className={`fixed top-0 left-0 h-full w-72 z-50 transform transition-transform duration-200 ${
+          className={`fixed top-0 left-0 h-full w-[85vw] max-w-xs z-50 transform transition-transform duration-200 ${
             mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <div className="relative h-full">
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              className="absolute right-2 top-2 z-10 p-1.5 rounded-md text-neutral-500 hover:text-neutral-200 hover:bg-white/5"
-              aria-label="Close menu"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <SidebarBody
-              user={userProfile}
-              collapsed={false}
-              onToggleCollapse={() => setMobileMenuOpen(false)}
-              onLogout={handleLogout}
-              onSettings={handleSettings}
-              onChatToggle={() => {
-                setChatOpen(true);
-                setMobileMenuOpen(false);
-              }}
-              chatOpen={chatOpen}
-              onOpenPalette={openPalette}
-              currentPath={location.pathname}
-              onNavigate={(p) => {
-                handleNavigate(p);
-                setMobileMenuOpen(false);
-              }}
-            />
-          </div>
+          <SidebarBody
+            user={userProfile}
+            collapsed={false}
+            hideCollapseToggle={true}
+            onToggleCollapse={() => setMobileMenuOpen(false)}
+            onLogout={handleLogout}
+            onSettings={handleSettings}
+            onChatToggle={() => {
+              setChatOpen(true);
+              setMobileMenuOpen(false);
+            }}
+            chatOpen={chatOpen}
+            onOpenPalette={openPalette}
+            currentPath={location.pathname}
+            onNavigate={(p) => {
+              handleNavigate(p);
+              setMobileMenuOpen(false);
+            }}
+          />
         </aside>
 
         <main className="flex-1 overflow-auto min-w-0 bg-white">{children}</main>
