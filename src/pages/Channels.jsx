@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Hash, Plus, Send, Search, Loader2, Trash2 } from "lucide-react";
+import { Hash, Plus, Send, Search, Loader2, Trash2, MessageCircle } from "lucide-react";
 
 function formatTime(iso) {
   if (!iso) return "";
@@ -77,6 +77,7 @@ export default function Channels() {
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [showNewDm, setShowNewDm] = useState(false);
   const [authorMap, setAuthorMap] = useState({});
   const [teamMembers, setTeamMembers] = useState([]);
   const [mentionQuery, setMentionQuery] = useState(null);
@@ -104,6 +105,38 @@ export default function Channels() {
   const selectedChannel = useMemo(
     () => channels.find((c) => c.id === selectedChannelId),
     [channels, selectedChannelId],
+  );
+
+  // For a DM, return the other participant's user_id (or null).
+  const dmPartnerId = (channel) => {
+    if (!channel?.is_dm || !user?.id) return null;
+    return (channel.dm_user_ids || []).find((id) => id !== user.id) || null;
+  };
+
+  const displayNameForChannel = (c) => {
+    if (!c) return "";
+    if (c.is_dm) {
+      const other = dmPartnerId(c);
+      return userIdToName[other] || "Direct message";
+    }
+    return c.name;
+  };
+
+  const publicChannels = useMemo(
+    () => channels.filter((c) => !c.is_dm),
+    [channels],
+  );
+  const dmChannels = useMemo(
+    () =>
+      channels
+        .filter((c) => c.is_dm && user?.id && (c.dm_user_ids || []).includes(user.id))
+        .sort((a, b) => {
+          const an = displayNameForChannel(a).toLowerCase();
+          const bn = displayNameForChannel(b).toLowerCase();
+          return an.localeCompare(bn);
+        }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [channels, user?.id, userIdToName],
   );
 
   // Bootstrap: load channels + team members
@@ -213,11 +246,22 @@ export default function Channels() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, selectedChannelId]);
 
-  const filteredChannels = useMemo(() => {
+  const matchesSearch = (label) => {
     const q = search.trim().toLowerCase();
-    if (!q) return channels;
-    return channels.filter((c) => c.name.toLowerCase().includes(q));
-  }, [channels, search]);
+    if (!q) return true;
+    return label.toLowerCase().includes(q);
+  };
+
+  const filteredPublic = useMemo(
+    () => publicChannels.filter((c) => matchesSearch(c.name)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [publicChannels, search],
+  );
+  const filteredDms = useMemo(
+    () => dmChannels.filter((c) => matchesSearch(displayNameForChannel(c))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dmChannels, search, userIdToName],
+  );
 
   // --- Mention autocomplete ---
   const handleDraftChange = (e) => {
@@ -380,52 +424,104 @@ export default function Channels() {
       {/* Channel list */}
       <aside className="w-64 border-r border-gray-200 flex flex-col bg-gray-50">
         <div className="p-3 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-gray-900">Channels</h2>
-            <button
-              type="button"
-              onClick={() => setShowCreate(true)}
-              className="p-1 rounded hover:bg-gray-200 text-gray-500"
-              title="New channel"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
+          <h2 className="text-sm font-semibold text-gray-900 mb-2">Team chat</h2>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search channels"
+              placeholder="Search"
               className="pl-7 h-8 text-sm bg-white"
             />
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-1">
-          {loading ? (
-            <div className="text-xs text-gray-400 px-3 py-2">Loading…</div>
-          ) : filteredChannels.length === 0 ? (
-            <div className="text-xs text-gray-400 px-3 py-2">No channels</div>
-          ) : (
-            filteredChannels.map((c) => {
-              const active = c.id === selectedChannelId;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setSelectedChannelId(c.id)}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm flex items-center gap-1.5 ${
-                    active
-                      ? "bg-indigo-100 text-indigo-900 font-medium"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  <Hash className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                  <span className="truncate">{c.name}</span>
-                </button>
-              );
-            })
-          )}
+        <div className="flex-1 overflow-y-auto p-1 space-y-3">
+          {/* Public channels */}
+          <div>
+            <div className="flex items-center justify-between px-2.5 pt-1 pb-0.5">
+              <span className="text-[11px] uppercase tracking-wide font-semibold text-gray-500">
+                Channels
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowCreate(true)}
+                className="p-0.5 rounded hover:bg-gray-200 text-gray-500"
+                title="New channel"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            {loading ? (
+              <div className="text-xs text-gray-400 px-3 py-1">Loading…</div>
+            ) : filteredPublic.length === 0 ? (
+              <div className="text-xs text-gray-400 px-3 py-1">
+                {search ? "No matches" : "No channels"}
+              </div>
+            ) : (
+              filteredPublic.map((c) => {
+                const active = c.id === selectedChannelId;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedChannelId(c.id)}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm flex items-center gap-1.5 ${
+                      active
+                        ? "bg-indigo-100 text-indigo-900 font-medium"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    <Hash className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <span className="truncate">{c.name}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Direct messages */}
+          <div>
+            <div className="flex items-center justify-between px-2.5 pt-1 pb-0.5">
+              <span className="text-[11px] uppercase tracking-wide font-semibold text-gray-500">
+                Direct Messages
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowNewDm(true)}
+                className="p-0.5 rounded hover:bg-gray-200 text-gray-500"
+                title="New direct message"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            {filteredDms.length === 0 ? (
+              <div className="text-xs text-gray-400 px-3 py-1">
+                {search ? "No matches" : "No direct messages"}
+              </div>
+            ) : (
+              filteredDms.map((c) => {
+                const active = c.id === selectedChannelId;
+                const name = displayNameForChannel(c);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedChannelId(c.id)}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm flex items-center gap-2 ${
+                      active
+                        ? "bg-indigo-100 text-indigo-900 font-medium"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center shrink-0">
+                      {initials(name)}
+                    </div>
+                    <span className="truncate">{name}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
       </aside>
 
@@ -439,10 +535,23 @@ export default function Channels() {
           <>
             <header className="border-b border-gray-200 px-5 py-3">
               <div className="flex items-center gap-2">
-                <Hash className="w-4 h-4 text-gray-400" />
-                <h1 className="font-semibold text-gray-900">{selectedChannel.name}</h1>
+                {selectedChannel.is_dm ? (
+                  <>
+                    <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center">
+                      {initials(displayNameForChannel(selectedChannel))}
+                    </div>
+                    <h1 className="font-semibold text-gray-900">
+                      {displayNameForChannel(selectedChannel)}
+                    </h1>
+                  </>
+                ) : (
+                  <>
+                    <Hash className="w-4 h-4 text-gray-400" />
+                    <h1 className="font-semibold text-gray-900">{selectedChannel.name}</h1>
+                  </>
+                )}
               </div>
-              {selectedChannel.description && (
+              {!selectedChannel.is_dm && selectedChannel.description && (
                 <p className="text-xs text-gray-500 mt-0.5 ml-6">{selectedChannel.description}</p>
               )}
             </header>
@@ -502,7 +611,11 @@ export default function Channels() {
                   value={draft}
                   onChange={handleDraftChange}
                   onKeyDown={handleKeyDown}
-                  placeholder={`Message #${selectedChannel.name}`}
+                  placeholder={
+                    selectedChannel.is_dm
+                      ? `Message ${displayNameForChannel(selectedChannel)}`
+                      : `Message #${selectedChannel.name}`
+                  }
                   rows={2}
                   className="resize-none pr-12"
                 />
@@ -556,7 +669,153 @@ export default function Channels() {
           setShowCreate(false);
         }}
       />
+
+      <NewDmDialog
+        open={showNewDm}
+        onOpenChange={setShowNewDm}
+        teamMembers={teamMembers}
+        existingDms={dmChannels}
+        onOpened={(channel) => {
+          setChannels((prev) =>
+            prev.find((c) => c.id === channel.id) ? prev : [...prev, channel],
+          );
+          setSelectedChannelId(channel.id);
+          setShowNewDm(false);
+        }}
+      />
     </div>
+  );
+}
+
+function NewDmDialog({ open, onOpenChange, teamMembers, existingDms, onOpened }) {
+  const { user } = useAuth();
+  const [query, setQuery] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      setError("");
+      setSubmitting(false);
+    }
+  }, [open]);
+
+  const candidates = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return teamMembers
+      .filter((tm) => tm.status === "active" && tm.user_id && tm.user_id !== user?.id)
+      .filter((tm) => !q || tm.full_name.toLowerCase().includes(q))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name));
+  }, [teamMembers, query, user?.id]);
+
+  const openWithUser = async (otherUserId) => {
+    if (!user?.id || !otherUserId) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const pair = [user.id, otherUserId].sort();
+      // 1. Look for an existing DM in already-loaded list
+      const preloaded = existingDms.find(
+        (c) =>
+          c.dm_user_ids.length === 2 &&
+          c.dm_user_ids.includes(pair[0]) &&
+          c.dm_user_ids.includes(pair[1]),
+      );
+      if (preloaded) {
+        onOpened(preloaded);
+        return;
+      }
+      // 2. Server lookup (RLS lets us see DMs we're in)
+      const { data: existing, error: selErr } = await supabase
+        .from("chat_channels")
+        .select("id, name, description, is_archived, is_dm, dm_user_ids, created_by, created_at, updated_at")
+        .eq("is_dm", true)
+        .contains("dm_user_ids", pair)
+        .limit(1);
+      if (selErr) throw selErr;
+      if (existing && existing.length > 0) {
+        onOpened(existing[0]);
+        return;
+      }
+      // 3. Create
+      const { data: created, error: insErr } = await supabase
+        .from("chat_channels")
+        .insert({
+          name: `dm-${pair[0].slice(0, 4)}-${pair[1].slice(0, 4)}`,
+          is_dm: true,
+          dm_user_ids: pair,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+      if (insErr) throw insErr;
+      onOpened(created);
+    } catch (err) {
+      console.error("open DM failed:", err);
+      setError(err.message || "Failed to open DM");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>New direct message</DialogTitle>
+          <DialogDescription>
+            Start a private conversation with a teammate.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-1">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search teammates"
+              className="pl-8"
+              autoFocus
+            />
+          </div>
+          <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-md divide-y divide-gray-100">
+            {candidates.length === 0 ? (
+              <div className="text-xs text-gray-400 px-3 py-4 text-center">
+                {query ? "No matches" : "No teammates available"}
+              </div>
+            ) : (
+              candidates.map((tm) => (
+                <button
+                  key={tm.id}
+                  type="button"
+                  onClick={() => openWithUser(tm.user_id)}
+                  disabled={submitting}
+                  className="w-full text-left px-3 py-2 flex items-center gap-2.5 hover:bg-gray-50 disabled:opacity-60"
+                >
+                  <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center justify-center shrink-0">
+                    {tm.full_name
+                      .split(" ")
+                      .map((p) => p[0])
+                      .slice(0, 2)
+                      .join("")
+                      .toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm text-gray-900 truncate">{tm.full_name}</div>
+                    {tm.role && (
+                      <div className="text-xs text-gray-400 truncate">{tm.role}</div>
+                    )}
+                  </div>
+                  <MessageCircle className="w-4 h-4 text-gray-300 shrink-0" />
+                </button>
+              ))
+            )}
+          </div>
+          {error && <div className="text-xs text-red-600">{error}</div>}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
