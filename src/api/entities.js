@@ -8,6 +8,8 @@ export {
   Task,
   TaskAttachment,
   TaskComment,
+  ChatChannel,
+  ChatMessage,
   TimeEntry,
   Invoice,
   Lead,

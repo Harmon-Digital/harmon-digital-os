@@ -32,6 +32,7 @@ import {
   MessageSquareDot,
   Menu,
   X,
+  Hash,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -139,6 +140,12 @@ function getSidebarContent(activeSection, user) {
           title: "Assistant",
           items: [
             { icon: <MessageSquare className="w-4 h-4 text-neutral-50" />, label: "Agents", path: "BotChannel" },
+          ],
+        },
+        {
+          title: "Team chat",
+          items: [
+            { icon: <Hash className="w-4 h-4 text-neutral-50" />, label: "Channels", path: "Channels" },
           ],
         },
       ],

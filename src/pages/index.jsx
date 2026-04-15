@@ -35,6 +35,7 @@ import Partners from "./Partners";
 import ReferralPayouts from "./ReferralPayouts";
 import KPIs from "./KPIs";
 import BotChannel from "./BotChannel";
+import Channels from "./Channels";
 import McpApiKeys from "./McpApiKeys";
 
 // Partner portal pages
@@ -71,6 +72,7 @@ const PAGES = {
   ReferralPayouts,
   KPIs,
   BotChannel,
+  Channels,
   McpApiKeys,
 };
 
@@ -302,6 +304,14 @@ function PagesContent() {
         <ProtectedRoute>
           <Layout currentPageName={currentPage}>
             <BotChannel />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/Channels" element={
+        <ProtectedRoute>
+          <Layout currentPageName={currentPage}>
+            <Channels />
           </Layout>
         </ProtectedRoute>
       } />
