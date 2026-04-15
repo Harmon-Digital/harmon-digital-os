@@ -415,18 +415,45 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
         )}
       </div>
 
-      <div className="border-t border-gray-100" />
-
-      {/* Description */}
-      <div>
-        <div className="text-[11px] uppercase tracking-wider font-semibold text-gray-500 mb-1.5">
-          Description
-        </div>
+      {/* Description — block that reveals its toolbar on focus */}
+      <div className="task-description-block border border-gray-200 rounded-lg bg-white hover:border-gray-300 focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-100 transition-colors overflow-hidden">
         <RichTextEditor
           value={formData.description}
           onChange={(content) => setFormData({ ...formData, description: content })}
+          placeholder="Add a description…"
         />
       </div>
+      <style>{`
+        /* Hide Quill's outer borders so our wrapper is the one border */
+        .task-description-block .ql-toolbar,
+        .task-description-block .ql-container {
+          border: none !important;
+        }
+        /* Toolbar hidden at rest, revealed when the description block is focused */
+        .task-description-block .ql-toolbar {
+          max-height: 0;
+          padding: 0 12px;
+          overflow: hidden;
+          opacity: 0;
+          border-bottom: 1px solid transparent !important;
+          transition: max-height 0.15s ease, padding 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
+        }
+        .task-description-block:focus-within .ql-toolbar {
+          max-height: 48px;
+          padding: 6px 12px;
+          opacity: 1;
+          border-bottom-color: #f3f4f6 !important;
+        }
+        .task-description-block .ql-editor {
+          min-height: 80px;
+          padding: 10px 12px;
+        }
+        .task-description-block .ql-editor.ql-blank::before {
+          left: 12px;
+          color: #9ca3af;
+          font-style: normal;
+        }
+      `}</style>
 
       {/* Checklist */}
       <div>
