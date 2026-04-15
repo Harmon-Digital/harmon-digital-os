@@ -6,7 +6,9 @@ import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Edit, Search, Trash2, ChevronLeft, ChevronRight, Check, Target, Trophy, Settings } from "lucide-react";
+import { Plus, Edit, Search, Trash2, ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon, Check, Target, Trophy, Settings, Filter, List, Calendar as CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PostStatusIcon, PostStatusPicker, PlatformChip, STATUS_LIST as POST_STATUS_LIST } from "../components/social/PostIcons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toWeekStart } from "@/config/kpiConfig";
@@ -264,6 +266,30 @@ export default function SocialMedia() {
     return member?.full_name || "Unassigned";
   };
 
+  const accountsMap = useMemo(() => {
+    const m = {};
+    for (const a of accounts || []) m[a.id] = a;
+    return m;
+  }, [accounts]);
+
+  const handleAutoSave = async (postData) => {
+    if (!editingPost?.id) return;
+    try {
+      const { data: saved, error } = await supabase
+        .from("social_posts")
+        .update(postData)
+        .eq("id", editingPost.id)
+        .select()
+        .single();
+      if (error) throw error;
+      setEditingPost((prev) => (prev ? { ...prev, ...saved } : prev));
+      setSocialPosts((prev) => prev.map((p) => (p.id === saved.id ? { ...p, ...saved } : p)));
+    } catch (err) {
+      console.error("Auto-save failed:", err);
+      throw err;
+    }
+  };
+
   const filteredPosts = socialPosts.filter(post => {
     const matchesSearch = searchQuery === "" ||
       post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -328,24 +354,9 @@ export default function SocialMedia() {
   };
 
   return (
-    <div className="p-6 lg:p-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Social Media</h1>
-          <p className="text-gray-500 mt-1">Plan and schedule social media content</p>
-        </div>
-        <Button
-          onClick={() => {
-            setEditingPost(null);
-            setShowDrawer(true);
-          }}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Post
-        </Button>
-      </div>
-
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      <div className="overflow-y-auto flex-1 min-h-0">
+      <div className="p-6 lg:p-8 pb-0">
       {/* KPI Dashboard */}
       {kpiStats.length > 0 && (
         <div className="mb-6">
@@ -447,51 +458,121 @@ export default function SocialMedia() {
         </Card>
       )}
 
-      {/* View Toggle + Filters */}
-      <div className="flex items-center gap-4 mb-6">
-        <Tabs value={viewMode} onValueChange={setViewMode}>
-          <TabsList>
-            <TabsTrigger value="list">List</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
-          </TabsList>
-        </Tabs>
+      </div>
 
-        <div className="flex-1" />
+      {/* Consolidated toolbar */}
+      <div className="sticky top-0 z-20 bg-white border-y border-gray-200">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px]">
+            {[
+              { id: "all", label: "All" },
+              { id: "draft", label: "Draft" },
+              { id: "scheduled", label: "Scheduled" },
+              { id: "published", label: "Published" },
+            ].map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setStatusFilter(s.id)}
+                className={`px-2.5 py-1 rounded ${
+                  statusFilter === s.id
+                    ? "bg-gray-900 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
 
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Search posts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+          <div className="relative flex-1 max-w-md min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Input
+              placeholder="Search posts"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+            />
+          </div>
+
+          {(() => {
+            const filterCount = platformFilter !== "all" ? 1 : 0;
+            return (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="shrink-0 gap-1.5 h-8 text-[13px]">
+                    <Filter className="w-3.5 h-3.5" />
+                    Filter
+                    {filterCount > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold">
+                        {filterCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-64 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">Filters</span>
+                    {filterCount > 0 && (
+                      <button
+                        type="button"
+                        className="text-xs text-indigo-600 hover:text-indigo-700"
+                        onClick={() => setPlatformFilter("all")}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-600">Platform</label>
+                    <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                      <SelectTrigger><SelectValue placeholder="Platform" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Platforms</SelectItem>
+                        <SelectItem value="linkedin">LinkedIn</SelectItem>
+                        <SelectItem value="twitter">Twitter</SelectItem>
+                        <SelectItem value="facebook">Facebook</SelectItem>
+                        <SelectItem value="instagram">Instagram</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            );
+          })()}
+
+          <div className="ml-auto flex items-center gap-1.5">
+            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`p-1 rounded ${viewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                title="List"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("calendar")}
+                className={`p-1 rounded ${viewMode === "calendar" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                title="Calendar"
+              >
+                <CalendarIcon className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <Button
+              onClick={() => {
+                setEditingPost(null);
+                setShowDrawer(true);
+              }}
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 h-8 shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              New Post
+            </Button>
+          </div>
         </div>
-
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="scheduled">Scheduled</SelectItem>
-            <SelectItem value="published">Published</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={platformFilter} onValueChange={setPlatformFilter}>
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Platform" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Platforms</SelectItem>
-            <SelectItem value="linkedin">LinkedIn</SelectItem>
-            <SelectItem value="twitter">Twitter</SelectItem>
-            <SelectItem value="facebook">Facebook</SelectItem>
-            <SelectItem value="instagram">Instagram</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {loading ? (
@@ -499,116 +580,18 @@ export default function SocialMedia() {
           <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
         </div>
       ) : viewMode === "list" ? (
-        /* List View */
-        <div className="bg-white rounded-lg border shadow-sm">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">OK</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Platforms</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Account</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPosts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                    {socialPosts.length === 0 ? "No posts yet. Click \"New Post\" to get started." : "No posts match your filters."}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredPosts.map((post) => (
-                  <TableRow key={post.id} className="hover:bg-gray-50">
-                    <TableCell>
-                      <Checkbox
-                        checked={post.approved || false}
-                        onCheckedChange={() => handleApprovalToggle(post.id, post.approved)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {post.image_url && (
-                          <img
-                            src={post.image_url}
-                            alt=""
-                            className="w-10 h-10 rounded object-cover shrink-0"
-                            onError={(e) => { e.target.style.display = "none"; }}
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <span className="font-medium">{post.title}</span>
-                          <p className="text-xs text-gray-500 truncate max-w-xs">{post.content}</p>
-                          {post.hashtags && (
-                            <p className="text-xs text-indigo-500 truncate max-w-xs">{post.hashtags}</p>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {post.platforms?.map((platform) => (
-                          <span
-                            key={platform}
-                            className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium"
-                            title={platform}
-                          >
-                            {platformIcons[platform]}
-                          </span>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {post.scheduled_date ? parseLocalDate(post.scheduled_date).toLocaleDateString() : "—"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {post.client_id ? getAccountName(post.client_id) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={post.status}
-                        onValueChange={(val) => handleStatusChange(post.id, val)}
-                      >
-                        <SelectTrigger className="h-7 w-28 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="scheduled">Scheduled</SelectItem>
-                          <SelectItem value="published">Published</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(post)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteDialog({ open: true, postId: post.id })}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <LinearPostList
+          posts={filteredPosts}
+          allPostCount={socialPosts.length}
+          accountsMap={accountsMap}
+          onApprovalToggle={handleApprovalToggle}
+          onStatusChange={handleStatusChange}
+          onEdit={handleEdit}
+          onDelete={(id) => setDeleteDialog({ open: true, postId: id })}
+        />
       ) : (
-        /* Calendar View */
+        <div className="p-6 lg:p-8">
+        {/* Calendar View */}
         <div className="bg-white rounded-lg border shadow-sm p-4">
           {/* Calendar Header */}
           <div className="flex items-center justify-between mb-4">
@@ -675,7 +658,9 @@ export default function SocialMedia() {
             })}
           </div>
         </div>
+        </div>
       )}
+      </div>
 
       <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
@@ -691,6 +676,7 @@ export default function SocialMedia() {
               accounts={accounts}
               teamMembers={teamMembers}
               onSubmit={handleSubmit}
+              onAutoSave={handleAutoSave}
               onCancel={() => {
                 setShowDrawer(false);
                 setEditingPost(null);
@@ -787,6 +773,181 @@ export default function SocialMedia() {
           </div>
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+/* ---------- Linear-style post list ---------- */
+
+function formatScheduledDate(iso) {
+  if (!iso) return null;
+  const d = parseLocalDate(iso);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const postStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const days = Math.round((postStart - startOfToday) / (1000 * 60 * 60 * 24));
+  if (days === 0) return { label: "Today", late: false };
+  if (days === 1) return { label: "Tomorrow", late: false };
+  if (days === -1) return { label: "Yesterday", late: true };
+  if (days > 1 && days <= 6)
+    return { label: d.toLocaleDateString(undefined, { weekday: "short" }), late: false };
+  return {
+    label: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+    late: days < 0,
+  };
+}
+
+function PostRow({ post, accountsMap, onApprovalToggle, onStatusChange, onEdit, onDelete }) {
+  const scheduled = formatScheduledDate(post.scheduled_date);
+  const account = post.client_id ? accountsMap[post.client_id] : null;
+  return (
+    <div
+      className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+      onClick={() => onEdit(post)}
+    >
+      <div className="flex items-center justify-center w-5 shrink-0" onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={post.approved || false}
+          onCheckedChange={() => onApprovalToggle(post.id, post.approved)}
+        />
+      </div>
+
+      <PostStatusPicker value={post.status} onChange={(v) => onStatusChange(post.id, v)}>
+        <PostStatusIcon status={post.status} size={14} />
+      </PostStatusPicker>
+
+      {post.image_url && (
+        <img
+          src={post.image_url}
+          alt=""
+          className="w-7 h-7 rounded object-cover shrink-0"
+          onError={(e) => {
+            e.target.style.display = "none";
+          }}
+        />
+      )}
+
+      <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+        {post.title}
+        {post.content && (
+          <span className="ml-2 text-gray-400 font-normal">{post.content.slice(0, 60)}</span>
+        )}
+      </span>
+
+      <div className="hidden md:flex items-center gap-0.5 shrink-0">
+        {post.platforms?.map((p) => (
+          <PlatformChip key={p} platform={p} />
+        ))}
+      </div>
+
+      {scheduled && (
+        <span
+          className={`hidden md:inline-flex items-center gap-1 text-[11px] shrink-0 tabular-nums ${
+            scheduled.late ? "text-red-600" : "text-gray-500"
+          }`}
+        >
+          <CalendarIcon className="w-3 h-3" />
+          {scheduled.label}
+        </span>
+      )}
+
+      {account && (
+        <span className="hidden lg:inline-flex max-w-[140px] text-[11px] text-gray-500 truncate shrink-0">
+          {account.company_name}
+        </span>
+      )}
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(post.id);
+        }}
+        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+        title="Delete"
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function LinearPostList({
+  posts,
+  allPostCount,
+  accountsMap,
+  onApprovalToggle,
+  onStatusChange,
+  onEdit,
+  onDelete,
+}) {
+  const [collapsed, setCollapsed] = React.useState(() => new Set());
+  const toggleGroup = (id) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const grouped = React.useMemo(() => {
+    const m = new Map();
+    for (const s of POST_STATUS_LIST) m.set(s.id, []);
+    for (const p of posts) {
+      if (m.has(p.status)) m.get(p.status).push(p);
+    }
+    return m;
+  }, [posts]);
+
+  if (posts.length === 0) {
+    return (
+      <div className="p-8 text-center text-sm text-gray-400">
+        {allPostCount === 0
+          ? 'No posts yet. Click "New Post" to get started.'
+          : "No posts match your filters."}
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white">
+      {POST_STATUS_LIST.map((s) => {
+        const groupPosts = grouped.get(s.id) || [];
+        const isCollapsed = collapsed.has(s.id);
+        return (
+          <div key={s.id}>
+            <button
+              type="button"
+              onClick={() => toggleGroup(s.id)}
+              className="w-full flex items-center gap-2 px-3 h-8 bg-gray-50 border-b border-gray-200 hover:bg-gray-100"
+            >
+              <ChevronRightIcon
+                className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+              />
+              <PostStatusIcon status={s.id} size={12} />
+              <span className="text-[12px] font-medium text-gray-700">{s.label}</span>
+              <span className="text-[11px] text-gray-400 tabular-nums">{groupPosts.length}</span>
+            </button>
+            {!isCollapsed &&
+              (groupPosts.length === 0 ? (
+                <div className="px-3 py-2 text-[12px] text-gray-400 italic border-b border-gray-100">
+                  No posts
+                </div>
+              ) : (
+                groupPosts.map((post) => (
+                  <PostRow
+                    key={post.id}
+                    post={post}
+                    accountsMap={accountsMap}
+                    onApprovalToggle={onApprovalToggle}
+                    onStatusChange={onStatusChange}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                  />
+                ))
+              ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
