@@ -193,7 +193,7 @@ function SearchBar({ onOpenPalette, collapsed }) {
   );
 }
 
-function NavItem({ item, isActive, onNavigate, collapsed }) {
+function NavItem({ item, isActive, onNavigate, collapsed, expandable, isExpanded, onToggleExpanded, children }) {
   const Icon = item.icon;
   if (collapsed) {
     return (
@@ -212,23 +212,68 @@ function NavItem({ item, isActive, onNavigate, collapsed }) {
     );
   }
   return (
+    <div>
+      <div
+        className={`group w-full flex items-center h-7 pr-1 rounded-md text-[13px] transition-colors ${
+          isActive
+            ? "bg-white/[0.08] text-neutral-50 font-medium"
+            : "text-neutral-400 hover:text-neutral-100 hover:bg-white/[0.04]"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => onNavigate(item.path)}
+          className="flex-1 flex items-center gap-2 h-full pl-2 text-left min-w-0"
+        >
+          <Icon
+            className={`w-3.5 h-3.5 shrink-0 ${
+              isActive ? "text-neutral-100" : "text-neutral-500 group-hover:text-neutral-300"
+            }`}
+          />
+          <span className="flex-1 truncate">{item.label}</span>
+        </button>
+        {expandable && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpanded?.();
+            }}
+            className="shrink-0 p-0.5 rounded text-neutral-500 hover:text-neutral-200 hover:bg-white/[0.05]"
+            aria-label={isExpanded ? "Collapse" : "Expand"}
+          >
+            <ChevronRight
+              className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+            />
+          </button>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function SubNavItem({ label, path, isActive, onNavigate }) {
+  return (
     <button
       type="button"
-      onClick={() => onNavigate(item.path)}
-      className={`group w-full flex items-center gap-2 h-7 px-2 rounded-md text-[13px] transition-colors ${
+      onClick={() => onNavigate(path)}
+      className={`w-full flex items-center gap-2 h-6 pl-7 pr-2 rounded-md text-[12px] transition-colors ${
         isActive
-          ? "bg-white/[0.08] text-neutral-50 font-medium"
-          : "text-neutral-400 hover:text-neutral-100 hover:bg-white/[0.04]"
+          ? "bg-white/[0.08] text-neutral-100 font-medium"
+          : "text-neutral-500 hover:text-neutral-200 hover:bg-white/[0.04]"
       }`}
+      title={label}
     >
-      <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-neutral-100" : "text-neutral-500 group-hover:text-neutral-300"}`} />
-      <span className="flex-1 text-left truncate">{item.label}</span>
+      <span className="w-1 h-1 rounded-full bg-current opacity-40 shrink-0" />
+      <span className="flex-1 text-left truncate">{label}</span>
     </button>
   );
 }
 
-function NavGroup({ group, currentPath, onNavigate, collapsed, isOpen, onToggle }) {
+function NavGroup({ group, currentPath, onNavigate, collapsed, isOpen, onToggle, projectItems = [] }) {
   const open = !!isOpen;
+  const [projectsExpanded, setProjectsExpanded] = useState(false);
 
   if (collapsed) {
     return (
@@ -267,7 +312,33 @@ function NavGroup({ group, currentPath, onNavigate, collapsed, isOpen, onToggle 
           {group.items.map((item) => {
             const itemPath = createPageUrl(item.path);
             const isActive = currentPath === itemPath;
-            return (
+            const isProjects = item.path === "Projects" && projectItems.length > 0;
+            return isProjects ? (
+              <NavItem
+                key={item.path}
+                item={item}
+                isActive={isActive}
+                onNavigate={onNavigate}
+                collapsed={false}
+                expandable
+                isExpanded={projectsExpanded}
+                onToggleExpanded={() => setProjectsExpanded((x) => !x)}
+              >
+                {projectsExpanded && (
+                  <div className="mt-0.5 space-y-0.5">
+                    {projectItems.map((p) => (
+                      <SubNavItem
+                        key={p.id}
+                        label={p.name}
+                        path={`/ProjectDetail?id=${p.id}`}
+                        isActive={currentPath === "/ProjectDetail" && typeof window !== "undefined" && window.location.search.includes(`id=${p.id}`)}
+                        onNavigate={(path) => onNavigate(path, { raw: true })}
+                      />
+                    ))}
+                  </div>
+                )}
+              </NavItem>
+            ) : (
               <NavItem
                 key={item.path}
                 item={item}
@@ -363,6 +434,7 @@ function SidebarBody({
   currentPath,
   onNavigate,
   hideCollapseToggle = false,
+  projectItems = [],
 }) {
   const groups = useMemo(() => buildGroups(user), [user]);
 
@@ -415,6 +487,7 @@ function SidebarBody({
             collapsed={collapsed}
             isOpen={openGroupId === g.id}
             onToggle={() => handleToggleGroup(g.id)}
+            projectItems={g.id === "workspace" ? projectItems : []}
           />
         ))}
       </nav>
@@ -471,6 +544,7 @@ export function LinearSidebar({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [accounts, setAccounts] = useState([]);
+  const [projectItems, setProjectItems] = useState([]);
 
   useEffect(() => {
     window.localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0");
@@ -482,6 +556,16 @@ export function LinearSidebar({ children }) {
       .select("id,company_name")
       .order("company_name", { ascending: true })
       .then(({ data }) => setAccounts(data || []));
+  }, []);
+
+  // Active projects for the sidebar dropdown
+  useEffect(() => {
+    supabase
+      .from("projects")
+      .select("id,name,status")
+      .eq("status", "active")
+      .order("name", { ascending: true })
+      .then(({ data }) => setProjectItems(data || []));
   }, []);
 
   // Keyboard shortcuts: Cmd+\ toggle chat, Cmd+. toggle collapse
@@ -535,8 +619,8 @@ export function LinearSidebar({ children }) {
     navigate("/login");
   };
   const handleSettings = () => navigate("/personalsettings");
-  const handleNavigate = (path) => {
-    navigate(createPageUrl(path));
+  const handleNavigate = (path, opts = {}) => {
+    navigate(opts.raw ? path : createPageUrl(path));
   };
   // Open the command palette by dispatching Cmd+K; CommandPalette component listens for it globally
   const openPalette = () => {
@@ -583,10 +667,11 @@ export function LinearSidebar({ children }) {
             chatOpen={chatOpen}
             onOpenPalette={openPalette}
             currentPath={location.pathname}
-            onNavigate={(p) => {
-              handleNavigate(p);
+            onNavigate={(p, opts) => {
+              handleNavigate(p, opts);
               setMobileMenuOpen(false);
             }}
+            projectItems={projectItems}
           />
         </aside>
 
@@ -638,6 +723,7 @@ export function LinearSidebar({ children }) {
           onOpenPalette={openPalette}
           currentPath={location.pathname}
           onNavigate={handleNavigate}
+          projectItems={projectItems}
         />
       </aside>
       <main className="flex-1 overflow-auto min-w-0 bg-white">{children}</main>

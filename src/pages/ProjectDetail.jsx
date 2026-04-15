@@ -526,6 +526,44 @@ export default function ProjectDetail() {
 
   return (
     <div className="px-4 lg:px-6 py-4">
+      <style>{`
+        .project-detail-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+        .project-detail-form textarea,
+        .project-detail-form [role="combobox"] {
+          border-color: transparent !important;
+          background-color: transparent !important;
+          box-shadow: none !important;
+          transition: background-color 0.12s ease, border-color 0.12s ease;
+        }
+        .project-detail-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):hover,
+        .project-detail-form textarea:hover,
+        .project-detail-form [role="combobox"]:hover {
+          background-color: rgb(249 250 251) !important;
+        }
+        .project-detail-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+        .project-detail-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus-visible,
+        .project-detail-form textarea:focus,
+        .project-detail-form textarea:focus-visible,
+        .project-detail-form [role="combobox"]:focus,
+        .project-detail-form [role="combobox"][data-state="open"] {
+          background-color: white !important;
+          border-color: rgb(199 210 254) !important;
+          box-shadow: 0 0 0 3px rgb(224 231 255 / 0.45) !important;
+          outline: none !important;
+        }
+        /* Tighten the card chrome inside Details — less shadow, softer border */
+        .project-detail-form .rounded-lg.border.shadow-sm,
+        .project-detail-form [class*="rounded-lg"][class*="border"][class*="shadow"] {
+          box-shadow: none !important;
+          border-color: rgb(229 231 235) !important;
+        }
+        /* Label styling: smaller, softer */
+        .project-detail-form label {
+          font-size: 12px !important;
+          font-weight: 500 !important;
+          color: rgb(107 114 128) !important;
+        }
+      `}</style>
       {/* Compact header */}
       <div className="flex items-center gap-3 mb-4 text-[13px]">
         <Link
@@ -685,7 +723,7 @@ export default function ProjectDetail() {
           <TabsTrigger value="api">API</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="details" className="space-y-6">
+        <TabsContent value="details" className="space-y-6 project-detail-form">
           {/* Billing Type Overview - Compact inline stats (not for internal projects) */}
           {!isInternalProject && project.billing_type === 'exit' && (
             <div className="flex flex-wrap gap-3 p-3 bg-white rounded-lg border">
