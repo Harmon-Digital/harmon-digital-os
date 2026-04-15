@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import RichTextEditor from "@/components/ui/RichTextEditor";
+import NotionEditor from "@/components/ui/NotionEditor";
 import TaskAttachments from "./TaskAttachments";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -415,45 +415,12 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
         )}
       </div>
 
-      {/* Description — block that reveals its toolbar on focus */}
-      <div className="task-description-block border border-gray-200 rounded-lg bg-white hover:border-gray-300 focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-100 transition-colors overflow-hidden">
-        <RichTextEditor
-          value={formData.description}
-          onChange={(content) => setFormData({ ...formData, description: content })}
-          placeholder="Add a description…"
-        />
-      </div>
-      <style>{`
-        /* Hide Quill's outer borders so our wrapper is the one border */
-        .task-description-block .ql-toolbar,
-        .task-description-block .ql-container {
-          border: none !important;
-        }
-        /* Toolbar hidden at rest, revealed when the description block is focused */
-        .task-description-block .ql-toolbar {
-          max-height: 0;
-          padding: 0 12px;
-          overflow: hidden;
-          opacity: 0;
-          border-bottom: 1px solid transparent !important;
-          transition: max-height 0.15s ease, padding 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
-        }
-        .task-description-block:focus-within .ql-toolbar {
-          max-height: 48px;
-          padding: 6px 12px;
-          opacity: 1;
-          border-bottom-color: #f3f4f6 !important;
-        }
-        .task-description-block .ql-editor {
-          min-height: 80px;
-          padding: 10px 12px;
-        }
-        .task-description-block .ql-editor.ql-blank::before {
-          left: 12px;
-          color: #9ca3af;
-          font-style: normal;
-        }
-      `}</style>
+      {/* Description — Notion/Linear-style borderless block editor */}
+      <NotionEditor
+        value={formData.description}
+        onChange={(content) => setFormData({ ...formData, description: content })}
+        placeholder="Add a description. Use  #  for a heading,  -  for a list, or  [ ]  for a checkbox."
+      />
 
       {/* Checklist */}
       <div>
