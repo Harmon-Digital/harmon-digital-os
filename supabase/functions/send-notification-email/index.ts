@@ -132,13 +132,26 @@ function buildEmailTemplate(params: {
 </html>`;
 }
 
-Deno.serve(async (req) => {
-  // Auth: require Authorization header with service role key for direct calls
-  const authHeader = req.headers.get("authorization");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+// Shared secret for DB-trigger → function calls. The matching value is
+// stored in Supabase Vault under the name 'notify_internal_secret' so the
+// pg_net trigger can read it without it leaking to end users. To rotate:
+// update both this constant and the vault entry in one change.
+const INTERNAL_SHARED_SECRET = "hdo-notify-3f9a1c7e4b2d8f6e9a1c3b5d7e9f1a3c";
 
-  if (!bearerToken || bearerToken !== serviceKey) {
+Deno.serve(async (req) => {
+  // Auth: accept either the Supabase service role key (env) or the
+  // dedicated internal shared secret. Either one can come in via
+  // Authorization: Bearer <token>.
+  const authHeader = req.headers.get("authorization");
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  const accepted = bearerToken && (
+    bearerToken === INTERNAL_SHARED_SECRET ||
+    (serviceKey && bearerToken === serviceKey)
+  );
+
+  if (!accepted) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
