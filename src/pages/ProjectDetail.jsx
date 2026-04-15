@@ -525,33 +525,35 @@ export default function ProjectDetail() {
   const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="p-6 lg:p-8">
-      <Link to={createPageUrl("Projects")} className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Projects
-      </Link>
+    <div className="px-4 lg:px-6 py-4">
+      {/* Compact header */}
+      <div className="flex items-center gap-3 mb-4 text-[13px]">
+        <Link
+          to={createPageUrl("Projects")}
+          className="inline-flex items-center text-gray-500 hover:text-gray-900 shrink-0"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+          Projects
+        </Link>
+        <span className="text-gray-300">/</span>
+        {account?.logo_url ? (
+          <img src={account.logo_url} alt="" className="w-5 h-5 rounded object-contain bg-gray-50 border border-gray-100 shrink-0" />
+        ) : (
+          <Users className="w-4 h-4 text-gray-400 shrink-0" />
+        )}
+        {account?.company_name && (
+          <span className="text-gray-500 truncate">{account.company_name}</span>
+        )}
+      </div>
 
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          {account?.logo_url ? (
-            <img src={account.logo_url} alt={account.company_name} className="w-16 h-16 rounded object-cover" />
-          ) : (
-            <div className="w-16 h-16 bg-indigo-100 rounded flex items-center justify-center">
-              <Users className="w-8 h-8 text-indigo-600" />
-            </div>
-          )}
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
-            <p className="text-gray-600 mt-1">{account?.company_name}</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Badge className={statusColors[project.status]}>
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <h1 className="text-2xl font-semibold text-gray-900 truncate">{project.name}</h1>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge className={`${statusColors[project.status]} capitalize text-[11px]`}>
             {project.status.replace('_', ' ')}
           </Badge>
-          <Badge className={riskColors[project.risk_level || 'low']}>
-            {(project.risk_level || 'low').toUpperCase()} Risk
+          <Badge className={`${riskColors[project.risk_level || 'low']} text-[11px]`}>
+            {(project.risk_level || 'low').toUpperCase()} risk
           </Badge>
         </div>
       </div>

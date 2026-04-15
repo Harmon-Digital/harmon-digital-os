@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DollarSign, Clock, TrendingUp, Building2, Plus, X, Loader2 } from "lucide-react";
 import { Account } from "@/api/entities";
 
-export default function ProjectForm({ project, accounts: initialAccounts, onSubmit, onCancel }) {
+export default function ProjectForm({ project, accounts: initialAccounts, onSubmit, onAutoSave, onCancel }) {
+  const isEdit = !!project?.id;
   const [accounts, setAccounts] = useState(initialAccounts || []);
   const [formData, setFormData] = useState(project || {
     name: "",
@@ -62,20 +63,65 @@ export default function ProjectForm({ project, accounts: initialAccounts, onSubm
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const isInternal = !formData.account_id;
-    const cleanedData = {
-      ...formData,
-      account_id: formData.account_id || null,
+  const cleanData = (d = formData) => {
+    const isInternal = !d.account_id;
+    return {
+      ...d,
+      account_id: d.account_id || null,
       is_internal: isInternal,
-      start_date: formData.start_date || null,
-      end_date: formData.end_date || null,
-      exit_target_date: formData.exit_target_date || null,
-      description: formData.description || null,
+      start_date: d.start_date || null,
+      end_date: d.end_date || null,
+      exit_target_date: d.exit_target_date || null,
+      description: d.description || null,
     };
-    onSubmit(cleanedData);
   };
+
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
+    onSubmit(cleanData());
+  };
+
+  /* ---- Auto-save ---- */
+  const [saveState, setSaveState] = useState("idle");
+  const autoSaveTimer = useRef(null);
+  const lastSerialized = useRef(null);
+  const firstRun = useRef(true);
+
+  useEffect(() => {
+    // Skip auto-save while the inline "new account" sub-form is open —
+    // the user is mid-flow and account_id hasn't settled yet.
+    if (!isEdit || !onAutoSave || showNewAccountForm) return;
+    const serialized = JSON.stringify(cleanData());
+    if (firstRun.current) {
+      firstRun.current = false;
+      lastSerialized.current = serialized;
+      return;
+    }
+    if (serialized === lastSerialized.current) return;
+    lastSerialized.current = serialized;
+
+    setSaveState("saving");
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(async () => {
+      try {
+        await onAutoSave(JSON.parse(serialized));
+        setSaveState("saved");
+      } catch (err) {
+        console.error("Auto-save failed:", err);
+        setSaveState("error");
+      }
+    }, 500);
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, isEdit, onAutoSave, showNewAccountForm]);
+
+  useEffect(() => {
+    if (saveState !== "saved") return;
+    const t = setTimeout(() => setSaveState("idle"), 1500);
+    return () => clearTimeout(t);
+  }, [saveState]);
 
   const billingOptions = [
     { value: "retainer", label: "Retainer", icon: Building2, description: "Monthly recurring" },
@@ -422,13 +468,30 @@ export default function ProjectForm({ project, accounts: initialAccounts, onSubm
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
-          {project ? "Update" : "Create"} Project
-        </Button>
+      <div className="flex justify-end items-center gap-3 pt-4 border-t">
+        {isEdit ? (
+          <>
+            <span className="mr-auto text-[11px] text-gray-400 tabular-nums">
+              {saveState === "saving" && "Saving…"}
+              {saveState === "saved" && "✓ All changes saved"}
+              {saveState === "error" && (
+                <span className="text-red-600">Save failed — changes may be lost</span>
+              )}
+            </span>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Close
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
+              Create Project
+            </Button>
+          </>
+        )}
       </div>
     </form>
   );

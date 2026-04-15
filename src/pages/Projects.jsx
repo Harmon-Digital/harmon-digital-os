@@ -7,7 +7,14 @@ import { createPageUrl } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Edit, Building2, ExternalLink, Search, Trash2 } from "lucide-react";
+import { Plus, Edit, Building2, ExternalLink, Search, Trash2, Filter, ChevronRight } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  ProjectStatusIcon,
+  ProjectStatusPicker,
+  PROJECT_STATUS_LIST,
+  RiskDot,
+} from "../components/projects/ProjectIcons";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -162,6 +169,29 @@ export default function Projects() {
     }
   };
 
+  // Inline status change from the list row
+  const handleQuickStatusChange = async (projectId, newStatus) => {
+    try {
+      const saved = await Project.update(projectId, { status: newStatus });
+      setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, ...saved } : p)));
+    } catch (err) {
+      console.error("status change failed:", err);
+    }
+  };
+
+  // Auto-save from the edit drawer
+  const handleAutoSave = async (projectData) => {
+    if (!editingProject?.id) return;
+    try {
+      const saved = await Project.update(editingProject.id, projectData);
+      setEditingProject((prev) => (prev ? { ...prev, ...saved } : prev));
+      setProjects((prev) => prev.map((p) => (p.id === saved.id ? { ...p, ...saved } : p)));
+    } catch (err) {
+      console.error("Auto-save failed:", err);
+      throw err;
+    }
+  };
+
   const handleRowClick = (projectId) => {
     navigate(createPageUrl(`ProjectDetail?id=${projectId}`));
   };
@@ -220,267 +250,171 @@ export default function Projects() {
   const clientProjectsCount = projects.filter(p => !p.is_internal && p.billing_type !== 'internal').length;
   const internalProjectsCount = projects.filter(p => p.is_internal || p.billing_type === 'internal').length;
 
+  const activeFilterCount =
+    (statusFilter !== "all" ? 1 : 0) +
+    (activeTab === "client" && billingFilter !== "all" ? 1 : 0) +
+    (activeTab === "client" && riskFilter !== "all" ? 1 : 0) +
+    (activeTab === "client" && accountFilter !== "all" ? 1 : 0);
+
   return (
-    <div className="p-6 lg:p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
-          <p className="text-gray-500 mt-1">Track all your ongoing work</p>
-        </div>
-        <Button 
-          onClick={() => {
-            setEditingProject(null);
-            setShowDrawer(true);
-          }}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Project
-        </Button>
-      </div>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Consolidated toolbar */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px]">
+            <button
+              type="button"
+              onClick={() => setActiveTab("client")}
+              className={`px-2.5 py-1 rounded ${
+                activeTab === "client"
+                  ? "bg-gray-900 text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              Client <span className="opacity-60">({clientProjectsCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("internal")}
+              className={`px-2.5 py-1 rounded ${
+                activeTab === "internal"
+                  ? "bg-gray-900 text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              Internal <span className="opacity-60">({internalProjectsCount})</span>
+            </button>
+          </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="client">
-            Client Projects ({clientProjectsCount})
-          </TabsTrigger>
-          <TabsTrigger value="internal">
-            Internal Projects ({internalProjectsCount})
-          </TabsTrigger>
-        </TabsList>
+          <div className="relative flex-1 max-w-md min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Input
+              placeholder="Search projects"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+            />
+          </div>
 
-        <TabsContent value={activeTab} className="space-y-6">
-          {/* Filters */}
-          <div className="bg-white rounded-lg border shadow-sm p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div className="lg:col-span-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search projects..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 gap-1.5 h-8 text-[13px]">
+                <Filter className="w-3.5 h-3.5" />
+                Filter
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Filters</span>
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    className="text-xs text-indigo-600 hover:text-indigo-700"
+                    onClick={() => {
+                      setStatusFilter("all");
+                      setBillingFilter("all");
+                      setRiskFilter("all");
+                      setAccountFilter("all");
+                    }}
+                  >
+                    Clear all
+                  </button>
+                )}
               </div>
-
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="on_hold">On Hold</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {activeTab === "client" && (
-                <>
-                  <Select value={billingFilter} onValueChange={setBillingFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Billing" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Billing</SelectItem>
-                      <SelectItem value="hourly">Hourly</SelectItem>
-                      <SelectItem value="fixed">Fixed</SelectItem>
-                      <SelectItem value="retainer">Retainer</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={riskFilter} onValueChange={setRiskFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Risk" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Risk</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </>
-              )}
-            </div>
-
-            {activeTab === "client" && (
-              <div className="grid grid-cols-1 mt-4">
-                <Select value={accountFilter} onValueChange={setAccountFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by account" />
-                  </SelectTrigger>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-600">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Accounts</SelectItem>
-                    {accounts.map(account => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.company_name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="on_hold">On Hold</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            )}
-            
-            {(searchQuery || statusFilter !== "all" || (activeTab === "client" && (billingFilter !== "all" || riskFilter !== "all" || accountFilter !== "all"))) && (
-              <div className="mt-4 flex items-center gap-2">
-                <span className="text-sm text-gray-600">Active filters:</span>
-                <div className="flex gap-2 flex-wrap">
-                  {searchQuery && (
-                    <Badge variant="secondary" className="cursor-pointer" onClick={() => setSearchQuery("")}>
-                      Search: {searchQuery} ×
-                    </Badge>
-                  )}
-                  {statusFilter !== "all" && (
-                    <Badge variant="secondary" className="cursor-pointer" onClick={() => setStatusFilter("all")}>
-                      Status: {statusFilter} ×
-                    </Badge>
-                  )}
-                  {activeTab === "client" && billingFilter !== "all" && (
-                    <Badge variant="secondary" className="cursor-pointer" onClick={() => setBillingFilter("all")}>
-                      Billing: {billingFilter} ×
-                    </Badge>
-                  )}
-                  {activeTab === "client" && riskFilter !== "all" && (
-                    <Badge variant="secondary" className="cursor-pointer" onClick={() => setRiskFilter("all")}>
-                      Risk: {riskFilter} ×
-                    </Badge>
-                  )}
-                  {activeTab === "client" && accountFilter !== "all" && (
-                    <Badge variant="secondary" className="cursor-pointer" onClick={() => setAccountFilter("all")}>
-                      Account: {getAccountName(accountFilter)} ×
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+              {activeTab === "client" && (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-600">Billing</label>
+                    <Select value={billingFilter} onValueChange={setBillingFilter}>
+                      <SelectTrigger><SelectValue placeholder="Billing" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Billing</SelectItem>
+                        <SelectItem value="hourly">Hourly</SelectItem>
+                        <SelectItem value="fixed">Fixed</SelectItem>
+                        <SelectItem value="retainer">Retainer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-600">Risk</label>
+                    <Select value={riskFilter} onValueChange={setRiskFilter}>
+                      <SelectTrigger><SelectValue placeholder="Risk" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Risk</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-600">Account</label>
+                    <Select value={accountFilter} onValueChange={setAccountFilter}>
+                      <SelectTrigger><SelectValue placeholder="Account" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Accounts</SelectItem>
+                        {accounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.company_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+            </PopoverContent>
+          </Popover>
 
-          <div className="bg-white rounded-lg border shadow-sm overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Project</TableHead>
-                  {activeTab === "client" && <TableHead>Account</TableHead>}
-                  {activeTab === "client" && <TableHead>Type</TableHead>}
-                  {activeTab === "client" && <TableHead>Billing</TableHead>}
-                  <TableHead>Status</TableHead>
-                  {activeTab === "client" && <TableHead>Risk</TableHead>}
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                      Loading...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredProjects.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                      {projectsByTab.length === 0 
-                        ? `No ${activeTab} projects yet. Click "New Project" to get started.` 
-                        : "No projects match your filters."}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredProjects.map((project) => {
-                    const account = getAccount(project.account_id);
-                    const isInternal = project.is_internal || project.billing_type === 'internal';
-                    
-                    return (
-                      <TableRow 
-                        key={project.id} 
-                        className="hover:bg-gray-50 cursor-pointer"
-                        onClick={() => handleRowClick(project.id)}
-                      >
-                        <TableCell>
-                          <span className="font-medium">{project.name}</span>
-                        </TableCell>
-                        {activeTab === "client" && (
-                          <>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {account?.logo_url ? (
-                                  <img 
-                                    src={account.logo_url} 
-                                    alt={account.company_name} 
-                                    className="w-8 h-8 rounded object-contain bg-gray-50 p-1 border"
-                                    onError={(e) => {
-                                      e.target.style.display = 'none';
-                                      if (e.target.nextElementSibling) {
-                                        e.target.nextElementSibling.style.display = 'flex';
-                                      }
-                                    }}
-                                  />
-                                ) : null}
-                                <div className={`w-8 h-8 bg-indigo-100 rounded flex items-center justify-center ${account?.logo_url ? 'hidden' : ''}`}>
-                                  <Building2 className="w-4 h-4 text-indigo-600" />
-                                </div>
-                                <span>{account?.company_name}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="capitalize">
-                              {project.project_type?.replace('_', ' ') || '—'}
-                            </TableCell>
-                            <TableCell className="capitalize">
-                              {project.billing_type}
-                            </TableCell>
-                          </>
-                        )}
-                        <TableCell>
-                          <Badge className={statusColors[project.status]}>
-                            {project.status.replace('_', ' ')}
-                          </Badge>
-                        </TableCell>
-                        {activeTab === "client" && (
-                          <TableCell>
-                            <Badge className={riskColors[project.risk_level || 'low']}>
-                              {(project.risk_level || 'low').toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                        )}
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingProject(project);
-                                setShowDrawer(true);
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            {isAdmin && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteDialog({ open: true, projectId: project.id });
-                                }}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+          <div className="ml-auto">
+            <Button
+              onClick={() => {
+                setEditingProject(null);
+                setShowDrawer(true);
+              }}
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 h-8 shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              New Project
+            </Button>
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
+
+      <LinearProjectList
+        projects={filteredProjects}
+        loading={loading}
+        allCount={projectsByTab.length}
+        activeTab={activeTab}
+        getAccount={getAccount}
+        isAdmin={isAdmin}
+        onRowClick={handleRowClick}
+        onEdit={(p) => {
+          setEditingProject(p);
+          setShowDrawer(true);
+        }}
+        onDelete={(id) => setDeleteDialog({ open: true, projectId: id })}
+        onQuickStatusChange={handleQuickStatusChange}
+      />
 
       <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
@@ -495,6 +429,7 @@ export default function Projects() {
               project={editingProject}
               accounts={accounts}
               onSubmit={handleSubmit}
+              onAutoSave={handleAutoSave}
               onCancel={() => {
                 setShowDrawer(false);
                 setEditingProject(null);
@@ -528,6 +463,182 @@ export default function Projects() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/* ---------- Linear-style project list ---------- */
+
+function ProjectRow({
+  project,
+  activeTab,
+  account,
+  isAdmin,
+  onRowClick,
+  onEdit,
+  onDelete,
+  onQuickStatusChange,
+}) {
+  return (
+    <div
+      className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+      onClick={() => onRowClick(project.id)}
+    >
+      <ProjectStatusPicker
+        value={project.status}
+        onChange={(v) => onQuickStatusChange(project.id, v)}
+      >
+        <ProjectStatusIcon status={project.status} size={14} />
+      </ProjectStatusPicker>
+
+      <div className="shrink-0 w-5 flex justify-center">
+        <RiskDot risk={project.risk_level} />
+      </div>
+
+      <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+        {project.name}
+      </span>
+
+      {activeTab === "client" && account && (
+        <span
+          className="hidden md:inline-flex items-center gap-1.5 text-[11px] text-gray-500 shrink-0 max-w-[200px] truncate"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {account.logo_url ? (
+            <img
+              src={account.logo_url}
+              alt=""
+              className="w-4 h-4 rounded object-contain bg-gray-50 border border-gray-100"
+              onError={(e) => {
+                e.target.style.display = "none";
+              }}
+            />
+          ) : (
+            <Building2 className="w-3 h-3 text-gray-400" />
+          )}
+          <span className="truncate">{account.company_name}</span>
+        </span>
+      )}
+
+      {activeTab === "client" && project.project_type && (
+        <span className="hidden lg:inline capitalize text-[11px] text-gray-500 shrink-0">
+          {project.project_type.replace(/_/g, " ")}
+        </span>
+      )}
+
+      {activeTab === "client" && project.billing_type && (
+        <span className="hidden lg:inline capitalize text-[11px] text-gray-400 shrink-0">
+          {project.billing_type}
+        </span>
+      )}
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit(project);
+        }}
+        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+        title="Edit"
+      >
+        <Edit className="w-3.5 h-3.5" />
+      </button>
+      {isAdmin && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(project.id);
+          }}
+          className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+          title="Delete"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function LinearProjectList({
+  projects,
+  loading,
+  allCount,
+  activeTab,
+  getAccount,
+  isAdmin,
+  onRowClick,
+  onEdit,
+  onDelete,
+  onQuickStatusChange,
+}) {
+  const [collapsed, setCollapsed] = React.useState(() => new Set());
+  const toggleGroup = (id) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const grouped = React.useMemo(() => {
+    const m = new Map();
+    for (const s of PROJECT_STATUS_LIST) m.set(s.id, []);
+    for (const p of projects) {
+      if (m.has(p.status)) m.get(p.status).push(p);
+    }
+    return m;
+  }, [projects]);
+
+  if (loading) {
+    return <div className="p-8 text-center text-sm text-gray-400">Loading…</div>;
+  }
+  if (projects.length === 0) {
+    return (
+      <div className="p-8 text-center text-sm text-gray-400">
+        {allCount === 0
+          ? `No ${activeTab} projects yet. Click "New Project" to get started.`
+          : "No projects match your filters."}
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+      {PROJECT_STATUS_LIST.map((s) => {
+        const groupProjects = grouped.get(s.id) || [];
+        const isCollapsed = collapsed.has(s.id);
+        if (groupProjects.length === 0) return null;
+        return (
+          <div key={s.id}>
+            <button
+              type="button"
+              onClick={() => toggleGroup(s.id)}
+              className="w-full flex items-center gap-2 px-3 h-8 bg-gray-50 border-b border-gray-200 hover:bg-gray-100"
+            >
+              <ChevronRight
+                className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+              />
+              <ProjectStatusIcon status={s.id} size={12} />
+              <span className="text-[12px] font-medium text-gray-700">{s.label}</span>
+              <span className="text-[11px] text-gray-400 tabular-nums">{groupProjects.length}</span>
+            </button>
+            {!isCollapsed &&
+              groupProjects.map((project) => (
+                <ProjectRow
+                  key={project.id}
+                  project={project}
+                  activeTab={activeTab}
+                  account={getAccount(project.account_id)}
+                  isAdmin={isAdmin}
+                  onRowClick={onRowClick}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onQuickStatusChange={onQuickStatusChange}
+                />
+              ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
