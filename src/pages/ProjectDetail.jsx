@@ -710,17 +710,27 @@ export default function ProjectDetail() {
         </div>
       )}
 
-      {/* Tabs for different sections */}
-      <Tabs defaultValue="details" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="tasks">Tasks</TabsTrigger>
-          <TabsTrigger value="time">Time</TabsTrigger>
-          {isAdmin && <TabsTrigger value="reports">Reports</TabsTrigger>}
-          {!isInternalProject && <TabsTrigger value="contacts">Contacts</TabsTrigger>}
-          {!isInternalProject && <TabsTrigger value="billing">Billing</TabsTrigger>}
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="api">API</TabsTrigger>
+      {/* Linear-style tabs: thin underlined row */}
+      <Tabs defaultValue="details" className="space-y-4">
+        <TabsList className="h-9 bg-transparent p-0 border-b border-gray-200 rounded-none w-full justify-start gap-5 px-1">
+          {[
+            { v: "details", label: "Details" },
+            { v: "tasks", label: "Tasks" },
+            { v: "time", label: "Time" },
+            ...(isAdmin ? [{ v: "reports", label: "Reports" }] : []),
+            ...(!isInternalProject ? [{ v: "contacts", label: "Contacts" }] : []),
+            ...(!isInternalProject ? [{ v: "billing", label: "Billing" }] : []),
+            { v: "documents", label: "Documents" },
+            { v: "api", label: "API" },
+          ].map(t => (
+            <TabsTrigger
+              key={t.v}
+              value={t.v}
+              className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+            >
+              {t.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="details" className="space-y-6 project-detail-form">
@@ -1077,242 +1087,121 @@ export default function ProjectDetail() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="tasks" className="space-y-6">
-          {/* Task Status Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-sm text-gray-600">To Do</div>
-                <div className="text-2xl font-bold text-gray-900">{tasksByStatus.todo}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-sm text-gray-600">In Progress</div>
-                <div className="text-2xl font-bold text-blue-600">{tasksByStatus.in_progress}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-sm text-gray-600">Blocked</div>
-                <div className="text-2xl font-bold text-red-600">{tasksByStatus.blocked}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-sm text-gray-600">Review</div>
-                <div className="text-2xl font-bold text-yellow-600">{tasksByStatus.review}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-sm text-gray-600">Completed</div>
-                <div className="text-2xl font-bold text-green-600">{tasksByStatus.completed}</div>
-              </CardContent>
-            </Card>
+        <TabsContent value="tasks" className="space-y-3">
+          {/* Inline status strip */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
+            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> Todo <span className="text-gray-900 font-medium">{tasksByStatus.todo}</span></span>
+            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> In progress <span className="text-gray-900 font-medium">{tasksByStatus.in_progress}</span></span>
+            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Blocked <span className="text-gray-900 font-medium">{tasksByStatus.blocked}</span></span>
+            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-yellow-500" /> Review <span className="text-gray-900 font-medium">{tasksByStatus.review}</span></span>
+            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Completed <span className="text-gray-900 font-medium">{tasksByStatus.completed}</span></span>
+            <div className="flex-1" />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { setEditingTask(null); setShowTaskDrawer(true); }}
+              className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" /> New task
+            </Button>
           </div>
 
-          {/* Tasks Table */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>All Tasks</CardTitle>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditingTask(null);
-                  setShowTaskDrawer(true);
-                }}
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Task
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {tasks.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No tasks yet</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Task</TableHead>
-                      <TableHead>Assigned To</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tasks.map(task => (
-                      <TableRow key={task.id}>
-                        <TableCell className="font-medium">{task.title}</TableCell>
-                        <TableCell>{getUserName(task.assigned_to)}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                            task.status === 'blocked' ? 'bg-red-100 text-red-800' :
-                            task.status === 'review' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }>
-                            {task.status.replace('_', ' ')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {task.priority}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {task.due_date ? parseLocalDate(task.due_date).toLocaleDateString() : '—'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEditingTask(task);
-                                setShowTaskDrawer(true);
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeleteConfirmDialog({ open: true, type: 'task', id: task.id })}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          {/* Dense list */}
+          <div className="border-t border-gray-200">
+            {tasks.length === 0 ? (
+              <div className="py-10 text-center text-[13px] text-gray-500">No tasks yet</div>
+            ) : (
+              tasks.map(task => {
+                const statusDot =
+                  task.status === 'completed' ? 'bg-green-500' :
+                  task.status === 'in_progress' ? 'bg-blue-500' :
+                  task.status === 'blocked' ? 'bg-red-500' :
+                  task.status === 'review' ? 'bg-yellow-500' : 'bg-gray-300';
+                const priorityColor =
+                  task.priority === 'urgent' ? 'text-red-600' :
+                  task.priority === 'high' ? 'text-orange-600' :
+                  task.priority === 'low' ? 'text-gray-400' : 'text-gray-600';
+                return (
+                  <div
+                    key={task.id}
+                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                    onClick={() => { setEditingTask(task); setShowTaskDrawer(true); }}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${statusDot} flex-shrink-0`} />
+                    <span className="flex-1 text-[13px] text-gray-900 truncate">{task.title}</span>
+                    <span className={`text-[11px] capitalize ${priorityColor} w-14 text-right`}>{task.priority}</span>
+                    <span className="text-[12px] text-gray-500 w-28 truncate text-right">{getUserName(task.assigned_to) || '—'}</span>
+                    <span className="text-[12px] text-gray-500 w-20 text-right">
+                      {task.due_date ? parseLocalDate(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmDialog({ open: true, type: 'task', id: task.id }); }}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </TabsContent>
 
-        <TabsContent value="time" className="space-y-6">
-          {/* Time Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-sm text-gray-600">Total Hours</div>
-                <div className="text-2xl font-bold text-gray-900">{totalHours.toFixed(1)}h</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-sm text-gray-600">This Month</div>
-                <div className="text-2xl font-bold text-indigo-600">{currentMonthHours.toFixed(1)}h</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-sm text-gray-600">
-                  {project?.billing_type === 'hourly' ? 'Billable' : 'Tracked'}
-                </div>
-                <div className="text-2xl font-bold text-green-600">{billableHours.toFixed(1)}h</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-sm text-gray-600">Entries</div>
-                <div className="text-2xl font-bold text-gray-600">{timeEntries.length}</div>
-              </CardContent>
-            </Card>
+        <TabsContent value="time" className="space-y-3">
+          {/* Inline metric strip */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
+            <span>Total <span className="text-gray-900 font-medium">{totalHours.toFixed(1)}h</span></span>
+            <span>This month <span className="text-gray-900 font-medium">{currentMonthHours.toFixed(1)}h</span></span>
+            <span>{project?.billing_type === 'hourly' ? 'Billable' : 'Tracked'} <span className="text-gray-900 font-medium">{billableHours.toFixed(1)}h</span></span>
+            <span>Entries <span className="text-gray-900 font-medium">{timeEntries.length}</span></span>
+            <div className="flex-1" />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { setEditingTimeEntry(null); setShowTimeDrawer(true); }}
+              className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" /> Log time
+            </Button>
           </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Time Entries</CardTitle>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditingTimeEntry(null);
-                  setShowTimeDrawer(true);
-                }}
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Log Time
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {timeEntries.length === 0 ? (
-                <div className="text-center py-12">
-                  <Clock className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No time logged yet</h3>
-                  <p className="text-gray-500">Start tracking time for this project</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Team Member</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Hours</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {timeEntries.map(entry => (
-                      <TableRow key={entry.id}>
-                        <TableCell>{parseLocalDate(entry.date).toLocaleDateString()}</TableCell>
-                        <TableCell>{getTeamMemberNameById(entry.team_member_id)}</TableCell>
-                        <TableCell className="max-w-xs truncate">{entry.description || '—'}</TableCell>
-                        <TableCell className="font-medium">{entry.hours}h</TableCell>
-                        <TableCell>
-                          {project?.billing_type === 'retainer' || project?.billing_type === 'exit' ? (
-                            <Badge className="bg-purple-100 text-purple-700">Retainer</Badge>
-                          ) : entry.billable ? (
-                            <Badge className="bg-green-100 text-green-700">Billable</Badge>
-                          ) : (
-                            <Badge className="bg-gray-100 text-gray-700">Non-billable</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEditingTimeEntry(entry);
-                                setShowTimeDrawer(true);
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const canDelete = isAdmin || entry.team_member_id === currentTeamMember?.id;
-                                if (canDelete) {
-                                  setDeleteConfirmDialog({ open: true, type: 'time', id: entry.id });
-                                } else {
-                                  alert("You can only delete your own time entries. Ask an admin to delete this entry.");
-                                }
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          <div className="border-t border-gray-200">
+            {timeEntries.length === 0 ? (
+              <div className="py-10 text-center text-[13px] text-gray-500">No time logged yet</div>
+            ) : (
+              timeEntries.map(entry => {
+                const isRetainer = project?.billing_type === 'retainer' || project?.billing_type === 'exit';
+                const typeLabel = isRetainer ? 'Retainer' : entry.billable ? 'Billable' : 'Non-billable';
+                const typeColor = isRetainer ? 'text-purple-600' : entry.billable ? 'text-green-600' : 'text-gray-500';
+                return (
+                  <div
+                    key={entry.id}
+                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                    onClick={() => { setEditingTimeEntry(entry); setShowTimeDrawer(true); }}
+                  >
+                    <span className="text-[12px] text-gray-500 w-20">
+                      {parseLocalDate(entry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                    <span className="text-[13px] text-gray-900 w-32 truncate">{getTeamMemberNameById(entry.team_member_id)}</span>
+                    <span className="flex-1 text-[13px] text-gray-600 truncate">{entry.description || '—'}</span>
+                    <span className={`text-[12px] ${typeColor} w-24 text-right`}>{typeLabel}</span>
+                    <span className="text-[13px] text-gray-900 font-medium w-12 text-right">{entry.hours}h</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const canDelete = isAdmin || entry.team_member_id === currentTeamMember?.id;
+                        if (canDelete) setDeleteConfirmDialog({ open: true, type: 'time', id: entry.id });
+                        else alert("You can only delete your own time entries.");
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </TabsContent>
 
         {/* Updated Reports Tab (was Accounting) - Admin Only */}
@@ -1327,396 +1216,276 @@ export default function ProjectDetail() {
           </TabsContent>
         )}
 
-        <TabsContent value="contacts">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Project Contacts</CardTitle>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditingContact(null);
-                  setShowContactDrawer(true);
-                }}
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Contact
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {contacts.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No contacts</p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {contacts.map(contact => (
-                    <Card key={contact.id}>
-                      <CardContent className="pt-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">
-                              {contact.first_name} {contact.last_name}
-                            </h3>
-                            <p className="text-sm text-gray-600">{contact.title}</p>
-                            <div className="mt-3 space-y-2">
-                              <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <Mail className="w-4 h-4" />
-                                <a href={`mailto:${contact.email}`} className="hover:text-indigo-600">
-                                  {contact.email}
-                                </a>
-                              </div>
-                              {contact.phone && (
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                  <Phone className="w-4 h-4" />
-                                  <a href={`tel:${contact.phone}`} className="hover:text-indigo-600">
-                                    {contact.phone}
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex gap-2 mt-3">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingContact(contact);
-                                  setShowContactDrawer(true);
-                                }}
-                              >
-                                <Edit className="w-3 h-3 mr-1" />
-                                Edit
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setDeleteConfirmDialog({ open: true, type: 'contact', id: contact.id })}
-                              >
-                                <Trash2 className="w-3 h-3 mr-1 text-red-600" />
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                          <Badge variant="outline" className="capitalize">
-                            {contact.role}
-                          </Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="contacts" className="space-y-3">
+          <div className="flex items-center text-[13px] text-gray-600">
+            <span>{contacts.length} contact{contacts.length === 1 ? '' : 's'}</span>
+            <div className="flex-1" />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { setEditingContact(null); setShowContactDrawer(true); }}
+              className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" /> New contact
+            </Button>
+          </div>
+
+          <div className="border-t border-gray-200">
+            {contacts.length === 0 ? (
+              <div className="py-10 text-center text-[13px] text-gray-500">No contacts</div>
+            ) : (
+              contacts.map(contact => {
+                const initials = `${contact.first_name?.[0] || ''}${contact.last_name?.[0] || ''}`.toUpperCase();
+                return (
+                  <div
+                    key={contact.id}
+                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                      {initials || '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] text-gray-900 truncate">
+                        {contact.first_name} {contact.last_name}
+                        {contact.title && <span className="text-gray-400 font-normal ml-1.5">· {contact.title}</span>}
+                      </div>
+                    </div>
+                    <a href={`mailto:${contact.email}`} className="text-[12px] text-gray-500 hover:text-gray-900 w-52 truncate text-right" onClick={(e) => e.stopPropagation()}>
+                      {contact.email}
+                    </a>
+                    {contact.phone ? (
+                      <a href={`tel:${contact.phone}`} className="text-[12px] text-gray-500 hover:text-gray-900 w-28 text-right" onClick={(e) => e.stopPropagation()}>
+                        {contact.phone}
+                      </a>
+                    ) : (
+                      <span className="text-[12px] text-gray-300 w-28 text-right">—</span>
+                    )}
+                    <span className="text-[11px] capitalize text-gray-500 w-20 text-right">{contact.role || '—'}</span>
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
+                      <button
+                        onClick={() => { setEditingContact(contact); setShowContactDrawer(true); }}
+                        className="p-1 text-gray-400 hover:text-gray-900"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirmDialog({ open: true, type: 'contact', id: contact.id })}
+                        className="p-1 text-gray-400 hover:text-red-600"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </TabsContent>
 
-        <TabsContent value="billing" className="space-y-6">
-          {/* Billing Summary based on project type */}
+        <TabsContent value="billing" className="space-y-5">
+          {/* Inline billing metric strip */}
           {project && (
-            <Card className="bg-gray-50">
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div>
-                    <p className="text-sm text-gray-600">Billing Type</p>
-                    <p className="text-lg font-semibold capitalize">{project.billing_type}</p>
-                  </div>
-                  {project.billing_type === 'hourly' && (
-                    <>
-                      <div>
-                        <p className="text-sm text-gray-600">Hourly Rate</p>
-                        <p className="text-lg font-semibold">${project.hourly_rate || 0}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Billable Value</p>
-                        <p className="text-lg font-semibold text-green-600">
-                          ${(billableHours * (project.hourly_rate || 0)).toLocaleString()}
-                        </p>
-                      </div>
-                    </>
-                  )}
-                  {(project.billing_type === 'retainer' || project.billing_type === 'exit') && (
-                    <>
-                      <div>
-                        <p className="text-sm text-gray-600">Monthly Retainer</p>
-                        <p className="text-lg font-semibold">${(project.monthly_retainer || 0).toLocaleString()}</p>
-                      </div>
-                      {project.billing_type === 'exit' && (
-                        <div>
-                          <p className="text-sm text-gray-600">Success Fee</p>
-                          <p className="text-lg font-semibold">{project.valuation_percentage || 8}%</p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  <div>
-                    <p className="text-sm text-gray-600">Invoices</p>
-                    <p className="text-lg font-semibold">{invoices.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
+              <span>Type <span className="text-gray-900 font-medium capitalize">{project.billing_type}</span></span>
+              {project.billing_type === 'hourly' && (
+                <>
+                  <span>Rate <span className="text-gray-900 font-medium">${project.hourly_rate || 0}/hr</span></span>
+                  <span>Billable <span className="text-gray-900 font-medium">${(billableHours * (project.hourly_rate || 0)).toLocaleString()}</span></span>
+                </>
+              )}
+              {(project.billing_type === 'retainer' || project.billing_type === 'exit') && (
+                <span>Retainer <span className="text-gray-900 font-medium">${(project.monthly_retainer || 0).toLocaleString()}/mo</span></span>
+              )}
+              {project.billing_type === 'exit' && (
+                <span>Success fee <span className="text-gray-900 font-medium">{project.valuation_percentage || 8}%</span></span>
+              )}
+              <span>Invoices <span className="text-gray-900 font-medium">{invoices.length}</span></span>
+            </div>
           )}
 
-          {/* Invoices */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Invoices</CardTitle>
-            </CardHeader>
-            <CardContent>
+          {/* Invoices section */}
+          <div>
+            <div className="flex items-center h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500">Invoices</div>
+            <div className="border-t border-gray-200">
               {invoices.length === 0 ? (
-                <div className="text-center py-8">
-                  <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p className="text-gray-500">No invoices yet</p>
-                </div>
+                <div className="py-8 text-center text-[13px] text-gray-500">No invoices yet</div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Invoice</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoices.map((invoice) => (
-                      <TableRow key={invoice.id}>
-                        <TableCell className="font-medium">
-                          {invoice.invoice_number || `INV-${invoice.id.slice(0, 8)}`}
-                        </TableCell>
-                        <TableCell>{parseLocalDate(invoice.due_date).toLocaleDateString()}</TableCell>
-                        <TableCell className="font-semibold">${(invoice.total || 0).toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            invoice.status === 'paid' ? 'bg-green-100 text-green-800' :
-                            invoice.status === 'sent' ? 'bg-blue-100 text-blue-800' :
-                            invoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }>
-                            {invoice.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                invoices.map(invoice => {
+                  const statusColor =
+                    invoice.status === 'paid' ? 'text-green-600' :
+                    invoice.status === 'sent' ? 'text-blue-600' :
+                    invoice.status === 'overdue' ? 'text-red-600' : 'text-gray-500';
+                  return (
+                    <div key={invoice.id} className="flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50">
+                      <span className="flex-1 text-[13px] text-gray-900 truncate">
+                        {invoice.invoice_number || `INV-${invoice.id.slice(0, 8)}`}
+                      </span>
+                      <span className="text-[12px] text-gray-500 w-24 text-right">
+                        {invoice.due_date ? parseLocalDate(invoice.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                      </span>
+                      <span className="text-[13px] text-gray-900 font-medium w-24 text-right">
+                        ${(invoice.total || 0).toLocaleString()}
+                      </span>
+                      <span className={`text-[11px] capitalize ${statusColor} w-20 text-right`}>{invoice.status}</span>
+                    </div>
+                  );
+                })
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Subscriptions */}
+          {/* Subscriptions section */}
           {subscriptions.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Active Subscriptions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {subscriptions.map((sub) => (
-                      <TableRow key={sub.id}>
-                        <TableCell className="font-medium">{sub.product_name || 'Subscription'}</TableCell>
-                        <TableCell>${(sub.amount || 0).toLocaleString()}/{sub.interval || 'month'}</TableCell>
-                        <TableCell className="text-sm text-gray-600">
-                          {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : '—'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={sub.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                            {sub.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <div>
+              <div className="flex items-center h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500">Active subscriptions</div>
+              <div className="border-t border-gray-200">
+                {subscriptions.map(sub => (
+                  <div key={sub.id} className="flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50">
+                    <span className="flex-1 text-[13px] text-gray-900 truncate">{sub.product_name || 'Subscription'}</span>
+                    <span className="text-[13px] text-gray-900 w-28 text-right">
+                      ${(sub.amount || 0).toLocaleString()}/{sub.interval || 'month'}
+                    </span>
+                    <span className="text-[12px] text-gray-500 w-24 text-right">
+                      {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}
+                    </span>
+                    <span className={`text-[11px] capitalize w-16 text-right ${sub.status === 'active' ? 'text-green-600' : 'text-gray-500'}`}>
+                      {sub.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </TabsContent>
 
         {/* Documents Tab */}
-        <TabsContent value="documents">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <File className="w-5 h-5" />
-                Project Documents
-              </CardTitle>
-              <div>
-                <input
-                  type="file"
-                  id="document-upload"
-                  className="hidden"
-                  onChange={handleDocumentUpload}
-                />
-                <Button
-                  size="sm"
-                  onClick={() => document.getElementById('document-upload').click()}
-                  disabled={uploadingDocument}
-                  className="bg-indigo-600 hover:bg-indigo-700"
-                >
-                  {uploadingDocument ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Document
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {documents.length === 0 ? (
-                <div className="text-center py-12">
-                  <File className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No documents yet</h3>
-                  <p className="text-gray-500 mb-4">Upload contracts, proposals, and other project files</p>
-                  <Button
-                    variant="outline"
-                    onClick={() => document.getElementById('document-upload').click()}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload First Document
-                  </Button>
-                </div>
+        <TabsContent value="documents" className="space-y-3">
+          <input
+            type="file"
+            id="document-upload"
+            className="hidden"
+            onChange={handleDocumentUpload}
+          />
+          <div className="flex items-center text-[13px] text-gray-600">
+            <span>{documents.length} file{documents.length === 1 ? '' : 's'}</span>
+            <div className="flex-1" />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => document.getElementById('document-upload').click()}
+              disabled={uploadingDocument}
+              className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+            >
+              {uploadingDocument ? (
+                <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Uploading</>
               ) : (
-                <div className="space-y-3">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-indigo-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-gray-900">{doc.name}</h4>
-                          <p className="text-xs text-gray-500">
-                            {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : ''}
-                            {doc.created_at && ` • Uploaded ${new Date(doc.created_at).toLocaleDateString()}`}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={doc.file_path}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        >
-                          <Download className="w-4 h-4" />
-                        </a>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteDocument(doc.id, doc.file_path)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <><Upload className="w-3.5 h-3.5 mr-1" /> Upload</>
               )}
-            </CardContent>
-          </Card>
+            </Button>
+          </div>
+
+          <div className="border-t border-gray-200">
+            {documents.length === 0 ? (
+              <div className="py-10 text-center text-[13px] text-gray-500">
+                No documents yet. Upload contracts, proposals, and other project files.
+              </div>
+            ) : (
+              documents.map(doc => (
+                <div key={doc.id} className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50">
+                  <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <span className="flex-1 text-[13px] text-gray-900 truncate">{doc.name}</span>
+                  <span className="text-[12px] text-gray-500 w-20 text-right">
+                    {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : '—'}
+                  </span>
+                  <span className="text-[12px] text-gray-500 w-24 text-right">
+                    {doc.created_at ? new Date(doc.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                  </span>
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                    <a
+                      href={doc.file_path}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 text-gray-400 hover:text-gray-900"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </a>
+                    <button
+                      onClick={() => handleDeleteDocument(doc.id, doc.file_path)}
+                      className="p-1 text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </TabsContent>
 
         {/* Ticket API Tab */}
-        <TabsContent value="api">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Ticket className="w-5 h-5" />
-                Ticket API Configuration
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="w-4 h-4 text-gray-400" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-sm">
-                      <p className="font-semibold mb-2">Create tickets from external systems</p>
-                      <p className="text-xs">Use this API to create tickets/tasks in this project from Zapier, Make.com, Typeform, or any webhook-enabled service. Tickets appear in the Tasks page.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {!project.api_key ? (
-                <div className="text-center py-8">
-                  <Ticket className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p className="text-gray-600 mb-4">No API key generated yet</p>
-                  <Button onClick={generateApiKey} className="bg-indigo-600 hover:bg-indigo-700">
-                    Generate API Key
-                  </Button>
+        <TabsContent value="api" className="space-y-5 max-w-3xl">
+          <div className="flex items-center gap-2 text-[13px] text-gray-600">
+            <Ticket className="w-4 h-4" />
+            <span>Create tickets from Zapier, Make, Typeform, or any webhook.</span>
+          </div>
+
+          {!project.api_key ? (
+            <div className="py-10 text-center border-t border-gray-200">
+              <p className="text-[13px] text-gray-500 mb-3">No API key generated yet</p>
+              <Button onClick={generateApiKey} size="sm" className="bg-gray-900 hover:bg-gray-800 text-white h-7 text-[13px]">
+                Generate API key
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* API Endpoint */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                  <span>Endpoint</span>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-200 normal-case tracking-normal">POST</span>
                 </div>
-              ) : (
-                <>
-                  {/* API Endpoint */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      API Endpoint
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        POST
-                      </Badge>
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={`${window.location.origin}/functions/createTicket`}
-                        readOnly
-                        className="font-mono text-sm"
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(`${window.location.origin}/functions/createTicket`, 'url')}
-                      >
-                        {copySuccess.url ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-1.5 border-b border-gray-200 hover:border-gray-300 focus-within:border-indigo-300 transition-colors">
+                  <input
+                    value={`${window.location.origin}/functions/createTicket`}
+                    readOnly
+                    className="flex-1 bg-transparent text-[13px] font-mono text-gray-900 py-1.5 outline-none"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(`${window.location.origin}/functions/createTicket`, 'url')}
+                    className="p-1 text-gray-400 hover:text-gray-900"
+                  >
+                    {copySuccess.url ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
 
-                  {/* API Key */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      API Key
-                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                        Secret
-                      </Badge>
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={project.api_key}
-                        readOnly
-                        type="password"
-                        className="font-mono text-sm"
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(project.api_key, 'key')}
-                      >
-                        {copySuccess.key ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500">Keep this key secret. Include it in the X-API-Key header.</p>
-                  </div>
+              {/* API Key */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                  <span>API key</span>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 normal-case tracking-normal">Secret</span>
+                </div>
+                <div className="flex items-center gap-1.5 border-b border-gray-200 hover:border-gray-300 focus-within:border-indigo-300 transition-colors">
+                  <input
+                    value={project.api_key}
+                    readOnly
+                    type="password"
+                    className="flex-1 bg-transparent text-[13px] font-mono text-gray-900 py-1.5 outline-none"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(project.api_key, 'key')}
+                    className="p-1 text-gray-400 hover:text-gray-900"
+                  >
+                    {copySuccess.key ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-500">Keep secret. Include in the <code className="text-gray-700">X-API-Key</code> header.</p>
+              </div>
 
-                  {/* Example Request */}
-                  <div className="space-y-2">
-                    <Label>Example Request (cURL)</Label>
-                    <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
-                      <pre className="text-xs font-mono">
+              {/* Example Request */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Example request</div>
+                <pre className="bg-gray-50 border border-gray-200 text-gray-800 p-3 rounded-md overflow-x-auto text-[12px] font-mono leading-relaxed">
 {`curl -X POST ${window.location.origin}/functions/createTicket \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: ${project.api_key}" \\
@@ -1728,82 +1497,51 @@ export default function ProjectDetail() {
     "requester_email": "john@example.com",
     "external_source": "Typeform"
   }'`}
-                      </pre>
+                </pre>
+              </div>
+
+              {/* Field Documentation */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Request body</div>
+                <div className="border-t border-gray-200">
+                  {[
+                    { name: 'title', desc: 'Ticket title/summary', required: true },
+                    { name: 'description', desc: 'Detailed description' },
+                    { name: 'priority', desc: 'low, medium, high, or urgent (default: medium)' },
+                    { name: 'status', desc: 'todo, in_progress, review, or completed (default: todo)' },
+                    { name: 'requester_name', desc: 'Name of person submitting the ticket' },
+                    { name: 'requester_email', desc: 'Email of person submitting the ticket' },
+                    { name: 'external_source', desc: 'System name (e.g., "Typeform", "Zapier", "Slack")' },
+                    { name: 'external_id', desc: 'ID from external system for reference' },
+                    { name: 'due_date', desc: 'Due date in YYYY-MM-DD format' },
+                    { name: 'estimated_hours', desc: 'Estimated hours to complete' },
+                  ].map(f => (
+                    <div key={f.name} className="flex items-start gap-3 px-2 py-1.5 border-b border-gray-100">
+                      <code className="text-[12px] font-mono text-gray-900 w-36 flex-shrink-0">{f.name}</code>
+                      <span className="flex-1 text-[12px] text-gray-600">{f.desc}</span>
+                      {f.required && <span className="text-[10px] font-medium uppercase tracking-wide text-red-600">required</span>}
                     </div>
-                  </div>
+                  ))}
+                </div>
+              </div>
 
-                  {/* Field Documentation */}
-                  <div className="space-y-2">
-                    <Label>Request Body Fields</Label>
-                    <div className="border rounded-lg divide-y">
-                      <div className="p-3 bg-gray-50">
-                        <div className="flex items-center justify-between">
-                          <code className="text-sm font-mono text-indigo-600">title</code>
-                          <Badge variant="outline" className="text-xs">required</Badge>
-                        </div>
-                        <p className="text-xs text-gray-600 mt-1">Ticket title/summary</p>
-                      </div>
-                      <div className="p-3">
-                        <code className="text-sm font-mono">description</code>
-                        <p className="text-xs text-gray-600 mt-1">Detailed description</p>
-                      </div>
-                      <div className="p-3 bg-gray-50">
-                        <code className="text-sm font-mono">priority</code>
-                        <p className="text-xs text-gray-600 mt-1">low, medium, high, or urgent (default: medium)</p>
-                      </div>
-                      <div className="p-3">
-                        <code className="text-sm font-mono">status</code>
-                        <p className="text-xs text-gray-600 mt-1">todo, in_progress, review, or completed (default: todo)</p>
-                      </div>
-                      <div className="p-3 bg-gray-50">
-                        <code className="text-sm font-mono">requester_name</code>
-                        <p className="text-xs text-gray-600 mt-1">Name of person submitting the ticket</p>
-                      </div>
-                      <div className="p-3">
-                        <code className="text-sm font-mono">requester_email</code>
-                        <p className="text-xs text-gray-600 mt-1">Email of person submitting the ticket</p>
-                      </div>
-                      <div className="p-3 bg-gray-50">
-                        <code className="text-sm font-mono">external_source</code>
-                        <p className="text-xs text-gray-600 mt-1">System name (e.g., "Typeform", "Zapier", "Slack")</p>
-                      </div>
-                      <div className="p-3">
-                        <code className="text-sm font-mono">external_id</code>
-                        <p className="text-xs text-gray-600 mt-1">ID from external system for reference</p>
-                      </div>
-                      <div className="p-3 bg-gray-50">
-                        <code className="text-sm font-mono">due_date</code>
-                        <p className="text-xs text-gray-600 mt-1">Due date in YYYY-MM-DD format</p>
-                      </div>
-                      <div className="p-3">
-                        <code className="text-sm font-mono">estimated_hours</code>
-                        <p className="text-xs text-gray-600 mt-1">Estimated hours to complete</p>
-                      </div>
-                    </div>
-                  </div>
+              {/* Integration Tips */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Integration tips</div>
+                <ul className="text-[12px] text-gray-600 space-y-1 leading-relaxed">
+                  <li><span className="text-gray-900 font-medium">Zapier/Make:</span> Use "Webhooks by Zapier" or "HTTP Request" module</li>
+                  <li><span className="text-gray-900 font-medium">Typeform:</span> Set up webhook in Settings → Webhooks</li>
+                  <li><span className="text-gray-900 font-medium">Slack:</span> Create slash command or use incoming webhooks</li>
+                  <li><span className="text-gray-900 font-medium">Email:</span> Use email parser services like Mailgun or SendGrid</li>
+                  <li>Tickets appear instantly in the <Link to={createPageUrl("Tasks")} className="text-indigo-600 hover:underline">Tasks page</Link></li>
+                  <li>Each ticket gets an auto-incremented number (#1, #2, #3…)</li>
+                </ul>
+              </div>
 
-                  {/* Integration Tips */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                      <HelpCircle className="w-4 h-4" />
-                      Integration Tips
-                    </h4>
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      <li>• <strong>Zapier/Make:</strong> Use "Webhooks by Zapier" or "HTTP Request" module</li>
-                      <li>• <strong>Typeform:</strong> Set up webhook in Settings → Webhooks</li>
-                      <li>• <strong>Slack:</strong> Create slash command or use incoming webhooks</li>
-                      <li>• <strong>Email:</strong> Use email parser services like Mailgun or SendGrid</li>
-                      <li>• Tickets appear instantly in the <Link to={createPageUrl("Tasks")} className="underline font-semibold">Tasks page</Link></li>
-                      <li>• Team can assign, update status, and track tickets like any other task</li>
-                      <li>• Each ticket gets an auto-incremented ticket number (#1, #2, #3...)</li>
-                    </ul>
-                  </div>
-
-                  {/* Response Example */}
-                  <div className="space-y-2">
-                    <Label>Example Response</Label>
-                    <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
-                      <pre className="text-xs font-mono">
+              {/* Response Example */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Example response</div>
+                <pre className="bg-gray-50 border border-gray-200 text-gray-800 p-3 rounded-md overflow-x-auto text-[12px] font-mono leading-relaxed">
 {`{
   "success": true,
   "ticket": {
@@ -1816,15 +1554,12 @@ export default function ProjectDetail() {
     "project_name": "${project.name}",
     "created_at": "2025-01-15T10:30:00Z"
   },
-  "message": "Ticket #42 created successfully for project \\"${project.name}\\""
+  "message": "Ticket #42 created successfully"
 }`}
-                      </pre>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                </pre>
+              </div>
+            </>
+          )}
         </TabsContent>
       </Tabs>
 
