@@ -443,16 +443,25 @@ export default function Tasks() {
               <h1 className="text-3xl font-bold text-gray-900">Tasks</h1>
               <p className="text-gray-500 mt-1">Manage all project tasks</p>
             </div>
-            <Button 
-              onClick={() => {
-                setEditingTask(null);
-                setShowDrawer(true);
-              }}
-              className="bg-indigo-600 hover:bg-indigo-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Task
-            </Button>
+            <div className="flex items-center gap-2 w-full lg:w-auto">
+              <QuickAddTask
+                authUser={authUser}
+                currentTeamMember={currentTeamMember}
+                onCreated={(task) => {
+                  setTasks((prev) => [task, ...prev]);
+                }}
+              />
+              <Button
+                onClick={() => {
+                  setEditingTask(null);
+                  setShowDrawer(true);
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 shrink-0"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Task
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -1154,5 +1163,46 @@ export default function Tasks() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function QuickAddTask({ authUser, currentTeamMember, onCreated }) {
+  const [title, setTitle] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const t = title.trim();
+    if (!t || submitting) return;
+    setSubmitting(true);
+    try {
+      const created = await Task.create({
+        title: t,
+        status: "todo",
+        priority: "medium",
+        assigned_to: currentTeamMember?.id || null,
+      });
+      onCreated?.(created);
+      setTitle("");
+    } catch (err) {
+      console.error("quick add failed:", err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex-1 lg:w-80">
+      <div className="relative">
+        <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Quick add task and press Enter"
+          className="pl-8"
+          disabled={submitting}
+        />
+      </div>
+    </form>
   );
 }

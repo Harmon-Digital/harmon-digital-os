@@ -10,6 +10,7 @@ export {
   TaskComment,
   ChatChannel,
   ChatMessage,
+  ChatMessageReaction,
   TimeEntry,
   Invoice,
   Lead,

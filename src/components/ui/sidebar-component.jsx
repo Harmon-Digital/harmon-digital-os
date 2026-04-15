@@ -111,6 +111,7 @@ function getSidebarContent(activeSection, user) {
             { icon: <LayoutDashboard className="w-4 h-4 text-neutral-50" />, label: "Dashboard", path: "Dashboard" },
             { icon: <FolderKanban className="w-4 h-4 text-neutral-50" />, label: "Projects", path: "Projects" },
             { icon: <CheckSquare className="w-4 h-4 text-neutral-50" />, label: "Tasks", path: "Tasks" },
+            { icon: <Hash className="w-4 h-4 text-neutral-50" />, label: "Chat", path: "Channels" },
             { icon: <Clock className="w-4 h-4 text-neutral-50" />, label: "Time Tracking", path: "TimeTracking" },
             { icon: <FileText className="w-4 h-4 text-neutral-50" />, label: "SOPs", path: "SOPs" },
             { icon: <Building2 className="w-4 h-4 text-neutral-50" />, label: "Branding", path: "Branding" },
@@ -140,12 +141,6 @@ function getSidebarContent(activeSection, user) {
           title: "Assistant",
           items: [
             { icon: <MessageSquare className="w-4 h-4 text-neutral-50" />, label: "Agents", path: "BotChannel" },
-          ],
-        },
-        {
-          title: "Team chat",
-          items: [
-            { icon: <Hash className="w-4 h-4 text-neutral-50" />, label: "Channels", path: "Channels" },
           ],
         },
       ],

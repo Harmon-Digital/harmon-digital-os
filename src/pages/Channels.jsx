@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
-import { ChatChannel, ChatMessage, TeamMember } from "@/api/entities";
+import { ChatChannel, ChatMessage, ChatMessageReaction, TeamMember } from "@/api/entities";
 import { useAuth } from "@/contexts/AuthContext";
 import { sendNotification } from "@/api/functions";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Hash, Plus, Send, Search, Loader2, Trash2, MessageCircle } from "lucide-react";
+import {
+  Hash,
+  Plus,
+  Send,
+  Search,
+  Loader2,
+  Trash2,
+  MessageCircle,
+  Smile,
+  Pencil,
+  Pin,
+  X,
+  Check,
+} from "lucide-react";
+
+const QUICK_REACTIONS = ["👍", "❤️", "🎉", "😂", "🚀", "👀", "✅", "🔥"];
 
 function formatTime(iso) {
   if (!iso) return "";
@@ -82,6 +97,11 @@ export default function Channels() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [mentionQuery, setMentionQuery] = useState(null);
   const [mentionIndex, setMentionIndex] = useState(0);
+  const [reactions, setReactions] = useState(new Map()); // message_id -> [{id, user_id, emoji}]
+  const [reactionPickerFor, setReactionPickerFor] = useState(null); // message_id
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [showPinned, setShowPinned] = useState(false);
 
   const textareaRef = useRef(null);
   const scrollerRef = useRef(null);
@@ -297,11 +317,29 @@ export default function Channels() {
       try {
         const { data } = await supabase
           .from("chat_messages")
-          .select("id, channel_id, user_id, body, mentioned_user_ids, edited_at, created_at")
+          .select("id, channel_id, user_id, body, mentioned_user_ids, edited_at, is_pinned, pinned_by, pinned_at, created_at")
           .eq("channel_id", channelId)
           .order("created_at", { ascending: true })
           .limit(300);
         setMessages(data || []);
+
+        // Load reactions for all loaded messages
+        const ids = (data || []).map((m) => m.id);
+        if (ids.length > 0) {
+          const { data: rxs } = await supabase
+            .from("chat_message_reactions")
+            .select("id, message_id, user_id, emoji")
+            .in("message_id", ids);
+          const rxMap = new Map();
+          for (const r of rxs || []) {
+            const arr = rxMap.get(r.message_id) || [];
+            arr.push(r);
+            rxMap.set(r.message_id, arr);
+          }
+          setReactions(rxMap);
+        } else {
+          setReactions(new Map());
+        }
 
         const missing = Array.from(
           new Set((data || []).map((m) => m.user_id).filter((id) => id && !userIdToName[id])),
@@ -355,6 +393,19 @@ export default function Channels() {
       .on(
         "postgres_changes",
         {
+          event: "UPDATE",
+          schema: "public",
+          table: "chat_messages",
+          filter: `channel_id=eq.${selectedChannelId}`,
+        },
+        (payload) => {
+          const upd = payload.new;
+          setMessages((prev) => prev.map((m) => (m.id === upd.id ? { ...m, ...upd } : m)));
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
           event: "DELETE",
           schema: "public",
           table: "chat_messages",
@@ -362,6 +413,42 @@ export default function Channels() {
         },
         (payload) => {
           setMessages((prev) => prev.filter((m) => m.id !== payload.old.id));
+          setReactions((prev) => {
+            const next = new Map(prev);
+            next.delete(payload.old.id);
+            return next;
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_message_reactions" },
+        (payload) => {
+          const r = payload.new;
+          setReactions((prev) => {
+            const arr = prev.get(r.message_id) || [];
+            if (arr.find((x) => x.id === r.id)) return prev;
+            const next = new Map(prev);
+            next.set(r.message_id, [...arr, r]);
+            return next;
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "chat_message_reactions" },
+        (payload) => {
+          const old = payload.old;
+          setReactions((prev) => {
+            const arr = prev.get(old.message_id);
+            if (!arr) return prev;
+            const next = new Map(prev);
+            next.set(
+              old.message_id,
+              arr.filter((x) => x.id !== old.id),
+            );
+            return next;
+          });
         },
       )
       .subscribe();
@@ -369,6 +456,78 @@ export default function Channels() {
     realtimeRef.current = ch;
     return () => supabase.removeChannel(ch);
   }, [selectedChannelId]);
+
+  // --- Message actions ---
+  const toggleReaction = async (messageId, emoji) => {
+    if (!user?.id) return;
+    const arr = reactions.get(messageId) || [];
+    const existing = arr.find((r) => r.user_id === user.id && r.emoji === emoji);
+    try {
+      if (existing) {
+        // Optimistic remove
+        setReactions((prev) => {
+          const next = new Map(prev);
+          next.set(messageId, (next.get(messageId) || []).filter((r) => r.id !== existing.id));
+          return next;
+        });
+        await ChatMessageReaction.delete(existing.id);
+      } else {
+        const created = await ChatMessageReaction.create({
+          message_id: messageId,
+          user_id: user.id,
+          emoji,
+        });
+        setReactions((prev) => {
+          const next = new Map(prev);
+          const cur = next.get(messageId) || [];
+          if (!cur.find((r) => r.id === created.id)) next.set(messageId, [...cur, created]);
+          return next;
+        });
+      }
+    } catch (err) {
+      // Unique constraint or RLS miss — reload
+      console.error("toggleReaction failed:", err);
+    }
+    setReactionPickerFor(null);
+  };
+
+  const startEdit = (m) => {
+    setEditingMessageId(m.id);
+    setEditDraft(m.body);
+  };
+  const cancelEdit = () => {
+    setEditingMessageId(null);
+    setEditDraft("");
+  };
+  const saveEdit = async () => {
+    if (!editingMessageId) return;
+    const body = editDraft.trim();
+    if (!body) return;
+    try {
+      const updated = await ChatMessage.update(editingMessageId, {
+        body,
+        edited_at: new Date().toISOString(),
+      });
+      setMessages((prev) => prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m)));
+      cancelEdit();
+    } catch (err) {
+      console.error("saveEdit failed:", err);
+    }
+  };
+
+  const togglePin = async (m) => {
+    const next = !m.is_pinned;
+    try {
+      const updated = await ChatMessage.update(m.id, {
+        is_pinned: next,
+        pinned_by: next ? user?.id || null : null,
+        pinned_at: next ? new Date().toISOString() : null,
+      });
+      setMessages((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
+    } catch (err) {
+      console.error("togglePin failed:", err);
+    }
+  };
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -688,7 +847,7 @@ export default function Channels() {
           </div>
         ) : (
           <>
-            <header className="border-b border-gray-200 px-5 py-3">
+            <header className="relative border-b border-gray-200 px-5 py-3">
               <div className="flex items-center gap-2">
                 {selectedChannel.is_dm ? (
                   <>
@@ -726,7 +885,45 @@ export default function Channels() {
               {!selectedChannel.is_dm && selectedChannel.description && (
                 <p className="text-xs text-gray-500 mt-0.5 ml-6">{selectedChannel.description}</p>
               )}
+              {messages.some((m) => m.is_pinned) && (
+                <button
+                  type="button"
+                  onClick={() => setShowPinned((s) => !s)}
+                  className="absolute right-5 top-3 inline-flex items-center gap-1 text-xs text-amber-700 hover:text-amber-800 px-2 py-1 rounded hover:bg-amber-50"
+                >
+                  <Pin className="w-3.5 h-3.5" />
+                  <span>{messages.filter((m) => m.is_pinned).length} pinned</span>
+                </button>
+              )}
             </header>
+            {showPinned && messages.some((m) => m.is_pinned) && (
+              <div className="border-b border-amber-200 bg-amber-50/60 px-5 py-2 space-y-1 max-h-40 overflow-y-auto">
+                {messages
+                  .filter((m) => m.is_pinned)
+                  .map((m) => {
+                    const author = userIdToName[m.user_id] || "Unknown";
+                    return (
+                      <div key={m.id} className="flex items-start gap-2 text-xs">
+                        <Pin className="w-3 h-3 text-amber-600 mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-gray-900">{author}:</span>{" "}
+                          <span className="text-gray-700">
+                            {m.body.replace(/@\[([^\]]+)\]\([0-9a-f-]+\)/g, "@$1")}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => togglePin(m)}
+                          className="text-gray-400 hover:text-red-600"
+                          title="Unpin"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
 
             <div ref={scrollerRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
               {loadingMessages ? (
@@ -747,23 +944,163 @@ export default function Channels() {
                           <span className="text-sm font-semibold text-gray-900">{author}</span>
                           <span className="text-xs text-gray-400">{formatTime(first.created_at)}</span>
                         </div>
-                        <div className="space-y-0.5">
+                        <div className="space-y-1">
                           {g.messages.map((m) => {
                             const mine = m.user_id === user?.id;
+                            const isEditing = editingMessageId === m.id;
+                            const msgRx = reactions.get(m.id) || [];
+                            // Aggregate reactions by emoji
+                            const rxAgg = new Map();
+                            for (const r of msgRx) {
+                              const existing = rxAgg.get(r.emoji) || { count: 0, mine: false };
+                              existing.count += 1;
+                              if (r.user_id === user?.id) existing.mine = true;
+                              rxAgg.set(r.emoji, existing);
+                            }
                             return (
-                              <div key={m.id} className="group flex items-start gap-2">
-                                <div className="text-sm text-gray-800 whitespace-pre-wrap break-words flex-1">
-                                  {renderBody(m.body, userIdToName)}
+                              <div
+                                key={m.id}
+                                className={`group relative flex items-start gap-2 -mx-2 px-2 py-0.5 rounded ${
+                                  m.is_pinned ? "bg-amber-50/50" : "hover:bg-gray-50"
+                                }`}
+                              >
+                                <div className="min-w-0 flex-1">
+                                  {m.is_pinned && (
+                                    <div className="flex items-center gap-1 text-[11px] text-amber-700 mb-0.5">
+                                      <Pin className="w-3 h-3" />
+                                      <span>Pinned</span>
+                                    </div>
+                                  )}
+                                  {isEditing ? (
+                                    <div className="space-y-1.5">
+                                      <Textarea
+                                        value={editDraft}
+                                        onChange={(e) => setEditDraft(e.target.value)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Escape") {
+                                            e.preventDefault();
+                                            cancelEdit();
+                                          } else if (
+                                            e.key === "Enter" &&
+                                            !e.shiftKey &&
+                                            !e.metaKey &&
+                                            !e.ctrlKey
+                                          ) {
+                                            e.preventDefault();
+                                            saveEdit();
+                                          }
+                                        }}
+                                        rows={2}
+                                        className="resize-none text-sm"
+                                        autoFocus
+                                      />
+                                      <div className="flex gap-2 text-xs text-gray-500">
+                                        <button
+                                          type="button"
+                                          onClick={saveEdit}
+                                          className="px-2 py-0.5 rounded bg-indigo-600 text-white hover:bg-indigo-700"
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={cancelEdit}
+                                          className="px-2 py-0.5 rounded border border-gray-200 hover:bg-gray-100"
+                                        >
+                                          Cancel
+                                        </button>
+                                        <span className="self-center">Enter to save · Esc to cancel</span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="text-sm text-gray-800 whitespace-pre-wrap break-words">
+                                        {renderBody(m.body, userIdToName)}
+                                        {m.edited_at && (
+                                          <span className="ml-1 text-[11px] text-gray-400">(edited)</span>
+                                        )}
+                                      </div>
+                                      {rxAgg.size > 0 && (
+                                        <div className="mt-1 flex flex-wrap gap-1">
+                                          {Array.from(rxAgg.entries()).map(([emoji, info]) => (
+                                            <button
+                                              key={emoji}
+                                              type="button"
+                                              onClick={() => toggleReaction(m.id, emoji)}
+                                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-xs ${
+                                                info.mine
+                                                  ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                                                  : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                                              }`}
+                                            >
+                                              <span>{emoji}</span>
+                                              <span className="tabular-nums font-medium">{info.count}</span>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
                                 </div>
-                                {mine && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteMessage(m)}
-                                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 rounded"
-                                    title="Delete"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
+                                {!isEditing && (
+                                  <div className="opacity-0 group-hover:opacity-100 absolute right-2 -top-3 flex items-center bg-white border border-gray-200 rounded-md shadow-sm">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setReactionPickerFor(
+                                          reactionPickerFor === m.id ? null : m.id,
+                                        )
+                                      }
+                                      className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-l-md"
+                                      title="Add reaction"
+                                    >
+                                      <Smile className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => togglePin(m)}
+                                      className={`p-1.5 hover:bg-gray-50 ${
+                                        m.is_pinned ? "text-amber-600" : "text-gray-500 hover:text-gray-700"
+                                      }`}
+                                      title={m.is_pinned ? "Unpin" : "Pin"}
+                                    >
+                                      <Pin className="w-3.5 h-3.5" />
+                                    </button>
+                                    {mine && (
+                                      <button
+                                        type="button"
+                                        onClick={() => startEdit(m)}
+                                        className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                                        title="Edit"
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    {mine && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteMessage(m)}
+                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-gray-50 rounded-r-md"
+                                        title="Delete"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                {reactionPickerFor === m.id && (
+                                  <div className="absolute right-2 top-6 z-10 bg-white border border-gray-200 rounded-lg shadow-lg p-1 flex gap-0.5">
+                                    {QUICK_REACTIONS.map((e) => (
+                                      <button
+                                        key={e}
+                                        type="button"
+                                        onClick={() => toggleReaction(m.id, e)}
+                                        className="text-lg hover:bg-gray-100 rounded w-8 h-8 flex items-center justify-center"
+                                      >
+                                        {e}
+                                      </button>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                             );

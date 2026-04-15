@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import TaskAttachments from "./TaskAttachments";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CheckSquare, Plus, Trash2, GripVertical } from "lucide-react";
 
 export default function TaskForm({ task, projects = [], teamMembers = [], onSubmit, onCancel }) {
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -23,7 +25,28 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
     recurrence_interval: 1,
     recurrence_end_date: "",
     recurrence_count: "",
+    checklist: [],
   });
+  const [newChecklistItem, setNewChecklistItem] = useState("");
+
+  const checklist = Array.isArray(formData.checklist) ? formData.checklist : [];
+  const setChecklist = (items) => setFormData({ ...formData, checklist: items });
+
+  const addChecklistItem = (text) => {
+    const trimmed = (text || "").trim();
+    if (!trimmed) return;
+    setChecklist([
+      ...checklist,
+      { id: (crypto?.randomUUID && crypto.randomUUID()) || `${Date.now()}-${Math.random()}`, text: trimmed, done: false },
+    ]);
+    setNewChecklistItem("");
+  };
+  const toggleChecklistItem = (id) =>
+    setChecklist(checklist.map((it) => (it.id === id ? { ...it, done: !it.done } : it)));
+  const removeChecklistItem = (id) =>
+    setChecklist(checklist.filter((it) => it.id !== id));
+  const updateChecklistItemText = (id, text) =>
+    setChecklist(checklist.map((it) => (it.id === id ? { ...it, text } : it)));
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -234,6 +257,64 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
               </p>
             </>
           )}
+        </div>
+
+        {/* Checklist */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-1.5">
+            <CheckSquare className="w-3.5 h-3.5 text-gray-400" />
+            Checklist
+            {checklist.length > 0 && (
+              <span className="text-xs text-gray-400 font-normal">
+                ({checklist.filter((i) => i.done).length}/{checklist.length})
+              </span>
+            )}
+          </Label>
+          {checklist.length > 0 && (
+            <ul className="space-y-1">
+              {checklist.map((item) => (
+                <li
+                  key={item.id}
+                  className="group flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-50"
+                >
+                  <Checkbox
+                    checked={!!item.done}
+                    onCheckedChange={() => toggleChecklistItem(item.id)}
+                  />
+                  <Input
+                    value={item.text}
+                    onChange={(e) => updateChecklistItemText(item.id, e.target.value)}
+                    className={`h-7 border-none shadow-none focus-visible:ring-0 px-1 text-sm ${
+                      item.done ? "line-through text-gray-400" : ""
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeChecklistItem(item.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 rounded"
+                    title="Remove"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex items-center gap-2 pl-2">
+            <Plus className="w-3.5 h-3.5 text-gray-400" />
+            <Input
+              value={newChecklistItem}
+              onChange={(e) => setNewChecklistItem(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addChecklistItem(newChecklistItem);
+                }
+              }}
+              placeholder="Add a subtask and press Enter"
+              className="h-7 border-none shadow-none focus-visible:ring-0 px-1 text-sm"
+            />
+          </div>
         </div>
 
         <TaskAttachments
