@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3, PanelRight, Maximize2, Filter } from "lucide-react";
+import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3, PanelRight, Maximize2, Filter, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { stripHtml } from "@/components/ui/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +52,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import TaskForm from "../components/tasks/TaskForm";
 import TaskComments from "../components/tasks/TaskComments";
+import {
+  StatusIcon,
+  StatusPicker,
+  PriorityIcon,
+  PriorityPicker,
+  STATUS_LIST,
+} from "../components/tasks/TaskIcons";
 import { api } from "@/api/legacyClient";
 import { sendNotification } from "@/api/functions";
 
@@ -870,173 +877,25 @@ export default function Tasks() {
         )}
 
         {viewMode === "list" && (
-          <div className="p-6 lg:p-8 overflow-y-auto h-full">
-            <div className="bg-white rounded-lg border shadow-sm overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={selectedTasks.length === filteredTasks.length && filteredTasks.length > 0}
-                        onCheckedChange={() => {
-                          if (selectedTasks.length === filteredTasks.length) {
-                            setSelectedTasks([]);
-                          } else {
-                            setSelectedTasks(filteredTasks.map(t => t.id));
-                          }
-                        }}
-                      />
-                    </TableHead>
-                    <TableHead>Task</TableHead>
-                    <TableHead>Project</TableHead>
-                    <TableHead>Account</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    {completedFilter === "active" && <TableHead>Status</TableHead>}
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead className="w-24">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                        Loading...
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredTasks.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                        {tasks.length === 0 ? "No tasks yet. Click \"New Task\" to get started." : "No tasks match your filters."}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredTasks.map((task) => (
-                      <TableRow key={task.id} className="hover:bg-gray-50">
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedTasks.includes(task.id)}
-                            onCheckedChange={() => toggleTaskSelection(task.id)}
-                          />
-                        </TableCell>
-                        <TableCell className="cursor-pointer" onClick={() => handleOpenDrawer(task)}>
-                          <div>
-                            {task.ticket_number && (
-                              <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                                #{task.ticket_number}
-                                {task.source && task.source !== 'manual' && (
-                                  <span>{sourceIcons[task.source]}</span>
-                                )}
-                                {task.external_source && (
-                                  <span className="text-xs bg-gray-100 px-1 rounded">{task.external_source}</span>
-                                )}
-                              </div>
-                            )}
-                            <div className="font-medium">{task.title}</div>
-                            {task.requester_name && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                Requested by: {task.requester_name}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">{getProjectName(task.project_id)}</TableCell>
-                        <TableCell className="text-sm text-gray-600">{getAccountName(task.project_id)}</TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Select
-                            value={task.assigned_to || ""}
-                            onValueChange={(value) => handleQuickUpdate(task.id, 'assigned_to', value)}
-                          >
-                            <SelectTrigger className="w-40 border-0 hover:bg-gray-100">
-                              <SelectValue placeholder="Unassigned" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {teamMembers.filter(tm => tm.status === 'active').map(tm => (
-                                <SelectItem key={tm.id} value={tm.id}>
-                                  {tm.full_name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        {completedFilter === "active" && (
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Select
-                              value={task.status}
-                              onValueChange={(value) => handleQuickUpdate(task.id, 'status', value)}
-                            >
-                              <SelectTrigger className="w-32 border-0 hover:bg-gray-100">
-                                <SelectValue>
-                                  <Badge className={statusColors[task.status]}>
-                                    {task.status.replace('_', ' ')}
-                                  </Badge>
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="todo">To Do</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="review">Review</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                        )}
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Badge className={`${priorityColors[task.priority]} cursor-pointer transition-colors`}>
-                                {task.priority}
-                              </Badge>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start">
-                              <DropdownMenuItem onClick={() => handleQuickUpdate(task.id, 'priority', 'low')}>
-                                Low
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleQuickUpdate(task.id, 'priority', 'medium')}>
-                                Medium
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleQuickUpdate(task.id, 'priority', 'high')}>
-                                High
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleQuickUpdate(task.id, 'priority', 'urgent')}>
-                                Urgent
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                        <TableCell>
-                          {task.due_date ? parseLocalDate(task.due_date).toLocaleDateString() : '—'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenDrawer(task)}
-                              className="text-gray-400 hover:text-gray-600"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteConfirmDialog({ open: true, taskIds: [task.id] });
-                              }}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+          <LinearTaskList
+            tasks={filteredTasks}
+            loading={loading}
+            allTaskCount={tasks.length}
+            completedFilter={completedFilter}
+            teamMembers={teamMembers}
+            projectsMap={projectsMap}
+            accountsMap={accountsMap}
+            teamMembersMap={teamMembersMap}
+            selectedTasks={selectedTasks}
+            onToggleSelect={toggleTaskSelection}
+            onToggleSelectAll={() => {
+              if (selectedTasks.length === filteredTasks.length) setSelectedTasks([]);
+              else setSelectedTasks(filteredTasks.map((t) => t.id));
+            }}
+            onOpenTask={handleOpenDrawer}
+            onQuickUpdate={handleQuickUpdate}
+            onDelete={(taskId) => setDeleteConfirmDialog({ open: true, taskIds: [taskId] })}
+          />
         )}
       </div>
 
@@ -1200,6 +1059,302 @@ export default function Tasks() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function formatDueDate(iso) {
+  if (!iso) return null;
+  const d = parseLocalDate(iso);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const days = Math.round((dueStart - startOfToday) / (1000 * 60 * 60 * 24));
+  let label;
+  if (days === 0) label = "Today";
+  else if (days === 1) label = "Tomorrow";
+  else if (days === -1) label = "Yesterday";
+  else if (days > 1 && days <= 6) label = d.toLocaleDateString(undefined, { weekday: "short" });
+  else label = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const overdue = days < 0;
+  return { label, overdue };
+}
+
+function initialsOf(name) {
+  if (!name) return "?";
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function AssigneePicker({ value, teamMembers, onChange, children }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        {children}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48 max-h-64 overflow-y-auto">
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange("");
+          }}
+          className={value === "" || !value ? "bg-gray-100 font-medium" : ""}
+        >
+          Unassigned
+        </DropdownMenuItem>
+        {teamMembers
+          .filter((tm) => tm.status === "active")
+          .map((tm) => (
+            <DropdownMenuItem
+              key={tm.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange(tm.id);
+              }}
+              className={`flex items-center gap-2 ${value === tm.id ? "bg-gray-100 font-medium" : ""}`}
+            >
+              <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center">
+                {initialsOf(tm.full_name)}
+              </div>
+              <span className="truncate">{tm.full_name}</span>
+            </DropdownMenuItem>
+          ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function TaskRow({
+  task,
+  teamMembers,
+  teamMembersMap,
+  projectsMap,
+  selected,
+  onToggleSelect,
+  onOpenTask,
+  onQuickUpdate,
+  onDelete,
+}) {
+  const assignee = task.assigned_to ? teamMembersMap[task.assigned_to] : null;
+  const project = task.project_id ? projectsMap[task.project_id] : null;
+  const due = formatDueDate(task.due_date);
+  const checklist = Array.isArray(task.checklist) ? task.checklist : [];
+  const doneCount = checklist.filter((i) => i.done).length;
+
+  return (
+    <div
+      className={`group flex items-center gap-2 pl-3 pr-2 h-9 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+        selected ? "bg-indigo-50/40" : ""
+      }`}
+      onClick={() => onOpenTask(task)}
+    >
+      <div
+        className="flex items-center justify-center w-5 shrink-0 opacity-0 group-hover:opacity-100 data-[checked=true]:opacity-100"
+        data-checked={selected}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Checkbox checked={selected} onCheckedChange={() => onToggleSelect(task.id)} />
+      </div>
+
+      {task.ticket_number && (
+        <span className="hidden sm:inline text-[11px] text-gray-400 tabular-nums w-12 shrink-0 truncate">
+          #{task.ticket_number}
+        </span>
+      )}
+
+      <StatusPicker
+        value={task.status}
+        onChange={(v) => onQuickUpdate(task.id, "status", v)}
+      >
+        <StatusIcon status={task.status} size={14} />
+      </StatusPicker>
+
+      <PriorityPicker
+        value={task.priority}
+        onChange={(v) => onQuickUpdate(task.id, "priority", v)}
+      >
+        <PriorityIcon priority={task.priority} size={14} />
+      </PriorityPicker>
+
+      <span
+        className={`flex-1 min-w-0 truncate text-[13px] ${
+          task.status === "completed" ? "text-gray-400 line-through" : "text-gray-900"
+        }`}
+      >
+        {task.title}
+      </span>
+
+      {checklist.length > 0 && (
+        <span className="hidden md:inline text-[11px] text-gray-400 tabular-nums shrink-0">
+          {doneCount}/{checklist.length}
+        </span>
+      )}
+
+      {project && (
+        <span className="hidden lg:inline-flex items-center max-w-[140px] text-[11px] text-gray-500 truncate shrink-0">
+          {project.name}
+        </span>
+      )}
+
+      {due && (
+        <span
+          className={`hidden md:inline-flex items-center gap-1 text-[11px] shrink-0 tabular-nums ${
+            due.overdue ? "text-red-600" : "text-gray-500"
+          }`}
+        >
+          <CalendarIcon className="w-3 h-3" />
+          {due.label}
+        </span>
+      )}
+
+      <AssigneePicker
+        value={task.assigned_to || ""}
+        teamMembers={teamMembers}
+        onChange={(v) => onQuickUpdate(task.id, "assigned_to", v)}
+      >
+        <button
+          type="button"
+          className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center hover:ring-2 hover:ring-indigo-200"
+          title={assignee?.full_name || "Unassigned"}
+        >
+          {assignee ? (
+            <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center">
+              {initialsOf(assignee.full_name)}
+            </div>
+          ) : (
+            <div className="w-6 h-6 rounded-full border border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-[10px]">
+              ?
+            </div>
+          )}
+        </button>
+      </AssigneePicker>
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(task.id);
+        }}
+        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+        title="Delete"
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function LinearTaskList({
+  tasks,
+  loading,
+  allTaskCount,
+  completedFilter,
+  teamMembers,
+  projectsMap,
+  accountsMap,
+  teamMembersMap,
+  selectedTasks,
+  onToggleSelect,
+  onToggleSelectAll,
+  onOpenTask,
+  onQuickUpdate,
+  onDelete,
+}) {
+  const [collapsed, setCollapsed] = React.useState(() => new Set());
+  const toggleGroup = (id) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const visibleStatuses = React.useMemo(
+    () =>
+      completedFilter === "completed"
+        ? STATUS_LIST.filter((s) => s.id === "completed")
+        : STATUS_LIST.filter((s) => s.id !== "completed"),
+    [completedFilter],
+  );
+
+  const grouped = React.useMemo(() => {
+    const m = new Map();
+    for (const s of visibleStatuses) m.set(s.id, []);
+    for (const t of tasks) {
+      if (m.has(t.status)) m.get(t.status).push(t);
+    }
+    return m;
+  }, [tasks, visibleStatuses]);
+
+  if (loading) {
+    return <div className="p-8 text-center text-sm text-gray-400">Loading…</div>;
+  }
+  if (tasks.length === 0) {
+    return (
+      <div className="p-8 text-center text-sm text-gray-400">
+        {allTaskCount === 0
+          ? "No tasks yet. Click \"New Task\" to get started."
+          : "No tasks match your filters."}
+      </div>
+    );
+  }
+
+  const allSelected = selectedTasks.length === tasks.length && tasks.length > 0;
+
+  return (
+    <div className="overflow-y-auto h-full bg-white">
+      <div className="flex items-center gap-2 px-3 h-8 border-b border-gray-200 bg-gray-50/60 text-[11px] text-gray-500 sticky top-0 z-10">
+        <div className="flex items-center justify-center w-5 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <Checkbox checked={allSelected} onCheckedChange={onToggleSelectAll} />
+        </div>
+        <span>{tasks.length} {tasks.length === 1 ? "task" : "tasks"}</span>
+      </div>
+
+      {visibleStatuses.map((s) => {
+        const groupTasks = grouped.get(s.id) || [];
+        const isCollapsed = collapsed.has(s.id);
+        return (
+          <div key={s.id}>
+            <button
+              type="button"
+              onClick={() => toggleGroup(s.id)}
+              className="w-full flex items-center gap-2 px-3 h-8 bg-gray-50 border-b border-gray-200 hover:bg-gray-100"
+            >
+              <ChevronRight
+                className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+              />
+              <StatusIcon status={s.id} size={12} />
+              <span className="text-[12px] font-medium text-gray-700">{s.label}</span>
+              <span className="text-[11px] text-gray-400 tabular-nums">{groupTasks.length}</span>
+            </button>
+            {!isCollapsed &&
+              (groupTasks.length === 0 ? (
+                <div className="px-3 py-2 text-[12px] text-gray-400 italic border-b border-gray-100">
+                  No tasks
+                </div>
+              ) : (
+                groupTasks.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    teamMembers={teamMembers}
+                    teamMembersMap={teamMembersMap}
+                    projectsMap={projectsMap}
+                    selected={selectedTasks.includes(task.id)}
+                    onToggleSelect={onToggleSelect}
+                    onOpenTask={onOpenTask}
+                    onQuickUpdate={onQuickUpdate}
+                    onDelete={onDelete}
+                  />
+                ))
+              ))}
+          </div>
+        );
+      })}
     </div>
   );
 }

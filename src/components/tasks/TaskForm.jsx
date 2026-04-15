@@ -1,33 +1,198 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import RichTextEditor from "@/components/ui/RichTextEditor";
 import TaskAttachments from "./TaskAttachments";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckSquare, Plus, Trash2, GripVertical } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  StatusIcon,
+  StatusPicker,
+  PriorityIcon,
+  PriorityPicker,
+  STATUS_LIST,
+  PRIORITY_LIST,
+} from "./TaskIcons";
+import {
+  CheckSquare,
+  Plus,
+  Trash2,
+  Calendar as CalendarIcon,
+  FolderKanban,
+  User as UserIcon,
+  Clock,
+  Repeat,
+  ChevronDown,
+} from "lucide-react";
+
+function initialsOf(name) {
+  if (!name) return "?";
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function PropertyRow({ icon: Icon, label, children }) {
+  return (
+    <div className="flex items-center gap-3 min-h-[32px]">
+      <div className="flex items-center gap-1.5 w-28 shrink-0 text-[12px] text-gray-500">
+        <Icon className="w-3.5 h-3.5" />
+        <span>{label}</span>
+      </div>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  );
+}
+
+function PropertyButton({ children, active = false }) {
+  return (
+    <button
+      type="button"
+      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[13px] text-left border border-transparent transition-colors ${
+        active ? "bg-gray-100 text-gray-900" : "text-gray-700 hover:bg-gray-100"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ---------------- Pickers ---------------- */
+
+function ProjectPicker({ value, projects, onChange }) {
+  const selected = projects.find((p) => p.id === value);
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[13px] text-gray-700 hover:bg-gray-100 max-w-full"
+        >
+          <FolderKanban className="w-3.5 h-3.5 text-gray-400" />
+          <span className="truncate">{selected ? selected.name : "No project"}</span>
+          <ChevronDown className="w-3 h-3 text-gray-400" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 p-1 max-h-80 overflow-y-auto">
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${
+            !value ? "bg-gray-100 font-medium" : ""
+          }`}
+        >
+          No project
+        </button>
+        {projects.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onChange(p.id)}
+            className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 truncate ${
+              value === p.id ? "bg-gray-100 font-medium" : ""
+            }`}
+          >
+            {p.name}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function AssigneePicker({ value, teamMembers, onChange }) {
+  const selected = teamMembers.find((tm) => tm.id === value);
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[13px] text-gray-700 hover:bg-gray-100 max-w-full"
+        >
+          {selected ? (
+            <>
+              <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center shrink-0">
+                {initialsOf(selected.full_name)}
+              </div>
+              <span className="truncate">{selected.full_name}</span>
+            </>
+          ) : (
+            <>
+              <div className="w-5 h-5 rounded-full border border-dashed border-gray-300 flex items-center justify-center text-[10px] text-gray-400">
+                ?
+              </div>
+              <span className="text-gray-500">Unassigned</span>
+            </>
+          )}
+          <ChevronDown className="w-3 h-3 text-gray-400" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 p-1 max-h-64 overflow-y-auto">
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${
+            !value ? "bg-gray-100 font-medium" : ""
+          }`}
+        >
+          Unassigned
+        </button>
+        {teamMembers
+          .filter((tm) => tm.status === "active")
+          .map((tm) => (
+            <button
+              key={tm.id}
+              type="button"
+              onClick={() => onChange(tm.id)}
+              className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 flex items-center gap-2 ${
+                value === tm.id ? "bg-gray-100 font-medium" : ""
+              }`}
+            >
+              <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center shrink-0">
+                {initialsOf(tm.full_name)}
+              </div>
+              <span className="truncate">{tm.full_name}</span>
+            </button>
+          ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/* ---------------- Main form ---------------- */
 
 export default function TaskForm({ task, projects = [], teamMembers = [], onSubmit, onCancel }) {
   const [pendingFiles, setPendingFiles] = useState([]);
-  const [formData, setFormData] = useState(task || {
-    title: "",
-    description: "",
-    project_id: "",
-    assigned_to: "",
-    status: "todo",
-    priority: "medium",
-    estimated_hours: 0,
-    due_date: "",
-    recurrence_enabled: false,
-    recurrence_mode: "on_complete",
-    recurrence_frequency: "weekly",
-    recurrence_interval: 1,
-    recurrence_end_date: "",
-    recurrence_count: "",
-    checklist: [],
-  });
+  const [formData, setFormData] = useState(
+    task || {
+      title: "",
+      description: "",
+      project_id: "",
+      assigned_to: "",
+      status: "todo",
+      priority: "medium",
+      estimated_hours: 0,
+      due_date: "",
+      recurrence_enabled: false,
+      recurrence_mode: "on_complete",
+      recurrence_frequency: "weekly",
+      recurrence_interval: 1,
+      recurrence_end_date: "",
+      recurrence_count: "",
+      checklist: [],
+    },
+  );
   const [newChecklistItem, setNewChecklistItem] = useState("");
+  const [recurrenceOpen, setRecurrenceOpen] = useState(false);
 
   const checklist = Array.isArray(formData.checklist) ? formData.checklist : [];
   const setChecklist = (items) => setFormData({ ...formData, checklist: items });
@@ -37,7 +202,11 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
     if (!trimmed) return;
     setChecklist([
       ...checklist,
-      { id: (crypto?.randomUUID && crypto.randomUUID()) || `${Date.now()}-${Math.random()}`, text: trimmed, done: false },
+      {
+        id: (crypto?.randomUUID && crypto.randomUUID()) || `${Date.now()}-${Math.random()}`,
+        text: trimmed,
+        done: false,
+      },
     ]);
     setNewChecklistItem("");
   };
@@ -48,282 +217,284 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
   const updateChecklistItemText = (id, text) =>
     setChecklist(checklist.map((it) => (it.id === id ? { ...it, text } : it)));
 
+  const statusLabel = STATUS_LIST.find((s) => s.id === formData.status)?.label || "Status";
+  const priorityLabel = PRIORITY_LIST.find((p) => p.id === formData.priority)?.label || "Priority";
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Convert empty strings to null for optional fields
     const cleanedData = {
       ...formData,
       project_id: formData.project_id || null,
       assigned_to: formData.assigned_to || null,
       due_date: formData.due_date || null,
       recurrence_enabled: !!formData.recurrence_enabled,
-      recurrence_mode: formData.recurrence_enabled ? (formData.recurrence_mode || 'on_complete') : 'on_complete',
+      recurrence_mode: formData.recurrence_enabled
+        ? formData.recurrence_mode || "on_complete"
+        : "on_complete",
       recurrence_frequency: formData.recurrence_enabled ? formData.recurrence_frequency : null,
-      recurrence_interval: formData.recurrence_enabled ? Math.max(1, parseInt(formData.recurrence_interval || 1, 10)) : 1,
-      recurrence_end_date: formData.recurrence_enabled && formData.recurrence_end_date ? formData.recurrence_end_date : null,
-      recurrence_count: formData.recurrence_enabled && formData.recurrence_count ? Math.max(1, parseInt(formData.recurrence_count, 10)) : null,
+      recurrence_interval: formData.recurrence_enabled
+        ? Math.max(1, parseInt(formData.recurrence_interval || 1, 10))
+        : 1,
+      recurrence_end_date:
+        formData.recurrence_enabled && formData.recurrence_end_date
+          ? formData.recurrence_end_date
+          : null,
+      recurrence_count:
+        formData.recurrence_enabled && formData.recurrence_count
+          ? Math.max(1, parseInt(formData.recurrence_count, 10))
+          : null,
     };
     onSubmit(cleanedData, pendingFiles);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="title">Task Title *</Label>
-          <Input
-            id="title"
-            value={formData.title}
-            onChange={(e) => setFormData({...formData, title: e.target.value})}
-            required
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Title — big, borderless, Linear-style */}
+      <Textarea
+        value={formData.title}
+        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+        placeholder="Task title"
+        rows={1}
+        required
+        className="border-0 shadow-none focus-visible:ring-0 px-0 text-lg font-semibold leading-tight min-h-[32px] resize-none placeholder:text-gray-300"
+      />
+
+      {/* Property rows */}
+      <div className="space-y-1">
+        <PropertyRow icon={({ className }) => <StatusIcon status={formData.status} size={14} className={className} />} label="Status">
+          <StatusPicker
+            value={formData.status}
+            onChange={(v) => setFormData({ ...formData, status: v })}
+          >
+            <PropertyButton>
+              <StatusIcon status={formData.status} size={14} />
+              <span>{statusLabel}</span>
+              <ChevronDown className="w-3 h-3 text-gray-400" />
+            </PropertyButton>
+          </StatusPicker>
+        </PropertyRow>
+
+        <PropertyRow icon={({ className }) => <PriorityIcon priority={formData.priority} size={14} className={className} />} label="Priority">
+          <PriorityPicker
+            value={formData.priority}
+            onChange={(v) => setFormData({ ...formData, priority: v })}
+          >
+            <PropertyButton>
+              <PriorityIcon priority={formData.priority} size={14} />
+              <span>{priorityLabel}</span>
+              <ChevronDown className="w-3 h-3 text-gray-400" />
+            </PropertyButton>
+          </PriorityPicker>
+        </PropertyRow>
+
+        <PropertyRow icon={UserIcon} label="Assignee">
+          <AssigneePicker
+            value={formData.assigned_to || ""}
+            teamMembers={teamMembers}
+            onChange={(v) => setFormData({ ...formData, assigned_to: v })}
           />
-        </div>
-        <div className="space-y-2">
-          <Label>Description</Label>
-          <RichTextEditor
-            value={formData.description}
-            onChange={(content) => setFormData({ ...formData, description: content })}
+        </PropertyRow>
+
+        <PropertyRow icon={FolderKanban} label="Project">
+          <ProjectPicker
+            value={formData.project_id}
+            projects={projects}
+            onChange={(v) => setFormData({ ...formData, project_id: v })}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="project_id">Project</Label>
-          <Select value={formData.project_id || "none"} onValueChange={(value) => setFormData({...formData, project_id: value === "none" ? null : value})}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select project (optional)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No Project</SelectItem>
-              {projects.map(project => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {teamMembers && teamMembers.length > 0 && (
-          <div className="space-y-2">
-            <Label htmlFor="assigned_to">Assigned To</Label>
-            <Select value={formData.assigned_to || ""} onValueChange={(value) => setFormData({...formData, assigned_to: value})}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select team member" />
-              </SelectTrigger>
-              <SelectContent>
-                {teamMembers.filter(tm => tm.status === 'active').map(tm => (
-                  <SelectItem key={tm.id} value={tm.id}>
-                    {tm.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todo">To Do</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="review">Review</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="priority">Priority</Label>
-            <Select value={formData.priority} onValueChange={(value) => setFormData({...formData, priority: value})}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="estimated_hours">Est. Hours</Label>
-            <Input
-              id="estimated_hours"
-              type="number"
-              step="0.5"
-              value={formData.estimated_hours}
-              onChange={(e) => setFormData({...formData, estimated_hours: parseFloat(e.target.value) || 0})}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="due_date">Due Date</Label>
-            <Input
-              id="due_date"
+        </PropertyRow>
+
+        <PropertyRow icon={CalendarIcon} label="Due date">
+          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-gray-100">
+            <input
               type="date"
               value={formData.due_date || ""}
-              onChange={(e) => setFormData({...formData, due_date: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+              className="bg-transparent text-[13px] text-gray-700 outline-none"
             />
-          </div>
-        </div>
-
-        <div className="space-y-3 rounded-lg border p-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="recurrence_enabled" className="text-sm font-medium">Recurring Task</Label>
-            <input
-              id="recurrence_enabled"
-              type="checkbox"
-              checked={!!formData.recurrence_enabled}
-              onChange={(e) => setFormData({ ...formData, recurrence_enabled: e.target.checked })}
-              className="h-4 w-4"
-            />
-          </div>
-
-          {formData.recurrence_enabled && (
-            <>
-              <div className="space-y-2">
-                <Label>Generation Mode</Label>
-                <Select
-                  value={formData.recurrence_mode || "on_complete"}
-                  onValueChange={(value) => setFormData({ ...formData, recurrence_mode: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="on_complete">Create next when completed</SelectItem>
-                    <SelectItem value="calendar">Calendar schedule (auto-create by date)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Frequency</Label>
-                  <Select
-                    value={formData.recurrence_frequency || "weekly"}
-                    onValueChange={(value) => setFormData({ ...formData, recurrence_frequency: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="yearly">Yearly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Every</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={formData.recurrence_interval || 1}
-                    onChange={(e) => setFormData({ ...formData, recurrence_interval: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>End Date (optional)</Label>
-                  <Input
-                    type="date"
-                    value={formData.recurrence_end_date || ""}
-                    onChange={(e) => setFormData({ ...formData, recurrence_end_date: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Max Occurrences (optional)</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={formData.recurrence_count || ""}
-                    onChange={(e) => setFormData({ ...formData, recurrence_count: e.target.value })}
-                    placeholder="e.g. 12"
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-gray-500">
-                {formData.recurrence_mode === 'calendar'
-                  ? 'Next tasks are generated by schedule (use cron to run generate_scheduled_recurring_tasks).'
-                  : 'Next task is auto-created when this one is marked complete.'}
-              </p>
-            </>
-          )}
-        </div>
-
-        {/* Checklist */}
-        <div className="space-y-2">
-          <Label className="flex items-center gap-1.5">
-            <CheckSquare className="w-3.5 h-3.5 text-gray-400" />
-            Checklist
-            {checklist.length > 0 && (
-              <span className="text-xs text-gray-400 font-normal">
-                ({checklist.filter((i) => i.done).length}/{checklist.length})
-              </span>
+            {formData.due_date && (
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, due_date: "" })}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
             )}
-          </Label>
-          {checklist.length > 0 && (
-            <ul className="space-y-1">
-              {checklist.map((item) => (
-                <li
-                  key={item.id}
-                  className="group flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-50"
-                >
-                  <Checkbox
-                    checked={!!item.done}
-                    onCheckedChange={() => toggleChecklistItem(item.id)}
-                  />
-                  <Input
-                    value={item.text}
-                    onChange={(e) => updateChecklistItemText(item.id, e.target.value)}
-                    className={`h-7 border-none shadow-none focus-visible:ring-0 px-1 text-sm ${
-                      item.done ? "line-through text-gray-400" : ""
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeChecklistItem(item.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 rounded"
-                    title="Remove"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="flex items-center gap-2 pl-2">
-            <Plus className="w-3.5 h-3.5 text-gray-400" />
-            <Input
-              value={newChecklistItem}
-              onChange={(e) => setNewChecklistItem(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addChecklistItem(newChecklistItem);
-                }
-              }}
-              placeholder="Add a subtask and press Enter"
-              className="h-7 border-none shadow-none focus-visible:ring-0 px-1 text-sm"
-            />
           </div>
-        </div>
+        </PropertyRow>
 
-        <TaskAttachments
-          taskId={task?.id || null}
-          pendingFiles={pendingFiles}
-          onPendingChange={setPendingFiles}
+        <PropertyRow icon={Clock} label="Estimate">
+          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-gray-100">
+            <input
+              type="number"
+              step="0.5"
+              min={0}
+              value={formData.estimated_hours ?? 0}
+              onChange={(e) =>
+                setFormData({ ...formData, estimated_hours: parseFloat(e.target.value) || 0 })
+              }
+              className="bg-transparent text-[13px] text-gray-700 outline-none w-16"
+            />
+            <span className="text-[12px] text-gray-500">hrs</span>
+          </div>
+        </PropertyRow>
+
+        <PropertyRow icon={Repeat} label="Repeat">
+          <button
+            type="button"
+            onClick={() => {
+              const next = !formData.recurrence_enabled;
+              setFormData({ ...formData, recurrence_enabled: next });
+              setRecurrenceOpen(next);
+            }}
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[13px] text-gray-700 hover:bg-gray-100"
+          >
+            {formData.recurrence_enabled
+              ? `Every ${formData.recurrence_interval || 1} ${formData.recurrence_frequency || "week"}${(formData.recurrence_interval || 1) > 1 ? "s" : ""}`
+              : "Doesn't repeat"}
+          </button>
+        </PropertyRow>
+
+        {formData.recurrence_enabled && (
+          <div className="ml-28 pl-3 space-y-2 py-2 border-l border-gray-100">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <div className="text-[11px] text-gray-500 mb-1">Mode</div>
+                <select
+                  value={formData.recurrence_mode || "on_complete"}
+                  onChange={(e) => setFormData({ ...formData, recurrence_mode: e.target.value })}
+                  className="w-full text-[13px] px-2 py-1 border border-gray-200 rounded-md"
+                >
+                  <option value="on_complete">Create next when completed</option>
+                  <option value="calendar">Calendar schedule</option>
+                </select>
+              </div>
+              <div>
+                <div className="text-[11px] text-gray-500 mb-1">Frequency</div>
+                <select
+                  value={formData.recurrence_frequency || "weekly"}
+                  onChange={(e) =>
+                    setFormData({ ...formData, recurrence_frequency: e.target.value })
+                  }
+                  className="w-full text-[13px] px-2 py-1 border border-gray-200 rounded-md"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+              <div>
+                <div className="text-[11px] text-gray-500 mb-1">Every</div>
+                <Input
+                  type="number"
+                  min={1}
+                  value={formData.recurrence_interval || 1}
+                  onChange={(e) =>
+                    setFormData({ ...formData, recurrence_interval: e.target.value })
+                  }
+                  className="h-7 text-[13px]"
+                />
+              </div>
+              <div>
+                <div className="text-[11px] text-gray-500 mb-1">Max occurrences</div>
+                <Input
+                  type="number"
+                  min={1}
+                  value={formData.recurrence_count || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, recurrence_count: e.target.value })
+                  }
+                  placeholder="Unlimited"
+                  className="h-7 text-[13px]"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-gray-100" />
+
+      {/* Description */}
+      <div>
+        <div className="text-[11px] uppercase tracking-wider font-semibold text-gray-500 mb-1.5">
+          Description
+        </div>
+        <RichTextEditor
+          value={formData.description}
+          onChange={(content) => setFormData({ ...formData, description: content })}
         />
       </div>
-      <div className="flex justify-end gap-3 pt-4 border-t">
+
+      {/* Checklist */}
+      <div>
+        <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold text-gray-500 mb-1.5">
+          <CheckSquare className="w-3 h-3" />
+          <span>Checklist</span>
+          {checklist.length > 0 && (
+            <span className="normal-case tracking-normal font-normal text-gray-400">
+              · {checklist.filter((i) => i.done).length}/{checklist.length}
+            </span>
+          )}
+        </div>
+        {checklist.length > 0 && (
+          <ul className="space-y-0.5">
+            {checklist.map((item) => (
+              <li
+                key={item.id}
+                className="group flex items-center gap-2 px-1 py-0.5 rounded hover:bg-gray-50"
+              >
+                <Checkbox
+                  checked={!!item.done}
+                  onCheckedChange={() => toggleChecklistItem(item.id)}
+                />
+                <Input
+                  value={item.text}
+                  onChange={(e) => updateChecklistItemText(item.id, e.target.value)}
+                  className={`h-7 border-none shadow-none focus-visible:ring-0 px-1 text-sm ${
+                    item.done ? "line-through text-gray-400" : ""
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeChecklistItem(item.id)}
+                  className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 rounded"
+                  title="Remove"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex items-center gap-2 pl-1">
+          <Plus className="w-3.5 h-3.5 text-gray-400" />
+          <Input
+            value={newChecklistItem}
+            onChange={(e) => setNewChecklistItem(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addChecklistItem(newChecklistItem);
+              }
+            }}
+            placeholder="Add a subtask"
+            className="h-7 border-none shadow-none focus-visible:ring-0 px-1 text-sm"
+          />
+        </div>
+      </div>
+
+      {/* Attachments */}
+      <TaskAttachments
+        taskId={task?.id || null}
+        pendingFiles={pendingFiles}
+        onPendingChange={setPendingFiles}
+      />
+
+      {/* Actions */}
+      <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
