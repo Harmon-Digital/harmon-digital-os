@@ -4,8 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -13,14 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -40,29 +30,19 @@ import {
   Search,
   Trash2,
   ExternalLink,
-  ArrowUpDown,
   Check,
   X,
   PhoneCall,
   Mail,
   Linkedin,
-  Target,
   Trophy,
   TrendingUp,
   Settings,
   MessageSquare,
-  Clock,
-  Filter,
   HelpCircle,
   Info,
   Copy,
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   Popover,
   PopoverContent,
@@ -72,28 +52,28 @@ import { toWeekStart } from "@/config/kpiConfig";
 import { saveEntries } from "@/api/kpiCalculations";
 
 const STATUS_OPTIONS = [
-  { value: "new", label: "New", color: "bg-gray-100 text-gray-700" },
-  { value: "contacted", label: "Contacted", color: "bg-blue-100 text-blue-700" },
-  { value: "responded", label: "Responded", color: "bg-purple-100 text-purple-700" },
-  { value: "call_booked", label: "Call Booked", color: "bg-yellow-100 text-yellow-700" },
-  { value: "call_complete", label: "Call Complete", color: "bg-indigo-100 text-indigo-700" },
-  { value: "signed_up", label: "Signed Up", color: "bg-cyan-100 text-cyan-700" },
-  { value: "partnered", label: "Partnered", color: "bg-green-100 text-green-700" },
-  { value: "dead", label: "Dead", color: "bg-red-100 text-red-700" },
+  { value: "new", label: "New", dot: "bg-gray-400", text: "text-gray-600" },
+  { value: "contacted", label: "Contacted", dot: "bg-blue-500", text: "text-blue-600" },
+  { value: "responded", label: "Responded", dot: "bg-purple-500", text: "text-purple-600" },
+  { value: "call_booked", label: "Call Booked", dot: "bg-yellow-500", text: "text-yellow-700" },
+  { value: "call_complete", label: "Call Complete", dot: "bg-indigo-500", text: "text-indigo-600" },
+  { value: "signed_up", label: "Signed Up", dot: "bg-cyan-500", text: "text-cyan-600" },
+  { value: "partnered", label: "Partnered", dot: "bg-green-500", text: "text-green-600" },
+  { value: "dead", label: "Dead", dot: "bg-red-500", text: "text-red-600" },
 ];
 
 const REACH_OUT_TYPES = [
-  { value: "call", label: "Call", icon: PhoneCall, color: "text-green-600", bg: "bg-green-100" },
-  { value: "email", label: "Email", icon: Mail, color: "text-blue-600", bg: "bg-blue-100" },
-  { value: "linkedin", label: "LinkedIn", icon: Linkedin, color: "text-indigo-600", bg: "bg-indigo-100" },
-  { value: "meeting", label: "Meeting", icon: MessageSquare, color: "text-purple-600", bg: "bg-purple-100" },
+  { value: "call", label: "Call", icon: PhoneCall },
+  { value: "email", label: "Email", icon: Mail },
+  { value: "linkedin", label: "LinkedIn", icon: Linkedin },
+  { value: "meeting", label: "Meeting", icon: MessageSquare },
 ];
 
 const VIEWS = [
-  { id: "all", label: "All Brokers" },
-  { id: "need_contact", label: "New (Never Contacted)" },
-  { id: "needs_follow_up", label: "Needs Follow Up" },
-  { id: "active", label: "Active Pipeline" },
+  { id: "all", label: "All" },
+  { id: "need_contact", label: "New" },
+  { id: "needs_follow_up", label: "Follow Up" },
+  { id: "active", label: "Active" },
   { id: "partners", label: "Partners" },
 ];
 
@@ -174,11 +154,9 @@ export default function BrokerOutreach() {
     }
   };
 
-  // Calculate KPI stats for each team member (sourced from kpi_entries)
   const kpiStats = useMemo(() => {
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    // Monday-based week start to match KPI system
     const weekStartStr = toWeekStart(today);
     const startOfWeek = new Date(weekStartStr + "T00:00:00");
 
@@ -222,7 +200,6 @@ export default function BrokerOutreach() {
 
     setSavingReachOut(true);
     try {
-      // Create activity record
       const { error: activityError } = await supabase.from("broker_activities").insert({
         broker_id: reachOutBroker.id,
         team_member_id: reachOutBy,
@@ -231,7 +208,6 @@ export default function BrokerOutreach() {
       });
       if (activityError) throw activityError;
 
-      // Update broker's last_contact and status
       const updates = {
         last_contact: new Date().toISOString().split("T")[0],
         updated_at: new Date().toISOString(),
@@ -293,7 +269,6 @@ export default function BrokerOutreach() {
   const handleAddBroker = async () => {
     if (!formData.name || !formData.firm) return;
 
-    // Remove last_contact from insert (it's auto-set via reach outs)
     const { last_contact, ...brokerData } = formData;
 
     const { data, error } = await supabase
@@ -323,7 +298,6 @@ export default function BrokerOutreach() {
   const handleInlineCreate = async () => {
     if (!inlineCreate.name || !inlineCreate.firm) return;
 
-    // Remove last_contact from insert (it's auto-set via reach outs)
     const { last_contact, ...brokerData } = inlineCreate;
 
     const { data, error } = await supabase
@@ -369,15 +343,6 @@ export default function BrokerOutreach() {
       console.error("Error deleting broker:", error);
     } else {
       setBrokers(brokers.filter(b => b.id !== brokerId));
-    }
-  };
-
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
     }
   };
 
@@ -440,14 +405,7 @@ export default function BrokerOutreach() {
     return filtered;
   }, [brokers, activeView, searchQuery, sortField, sortDirection, followUpDays]);
 
-  const getStatusBadge = (status) => {
-    const option = STATUS_OPTIONS.find(s => s.value === status);
-    return option ? (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${option.color}`}>
-        {option.label}
-      </span>
-    ) : null;
-  };
+  const getStatusOption = (status) => STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0];
 
   const startEditing = (brokerId, field, currentValue) => {
     setEditingCell({ brokerId, field });
@@ -463,51 +421,6 @@ export default function BrokerOutreach() {
     if (editingCell) {
       handleUpdateField(editingCell.brokerId, editingCell.field, editValue);
     }
-  };
-
-  const SortableHeader = ({ field, children }) => (
-    <TableHead
-      className="cursor-pointer hover:bg-gray-50 select-none"
-      onClick={() => handleSort(field)}
-    >
-      <div className="flex items-center gap-1">
-        {children}
-        <ArrowUpDown className="w-3 h-3 text-gray-400" />
-      </div>
-    </TableHead>
-  );
-
-  const EditableCell = ({ broker, field, type = "text" }) => {
-    const isEditing = editingCell?.brokerId === broker.id && editingCell?.field === field;
-    const value = broker[field];
-
-    if (isEditing) {
-      return (
-        <TableCell className="p-1">
-          <Input
-            type={type === "date" ? "date" : "text"}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            className="h-8 text-sm"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter") saveEditing();
-              if (e.key === "Escape") cancelEditing();
-            }}
-            onBlur={saveEditing}
-          />
-        </TableCell>
-      );
-    }
-
-    return (
-      <TableCell
-        className="cursor-pointer hover:bg-gray-50"
-        onClick={() => startEditing(broker.id, field, value)}
-      >
-        {type === "date" && value ? new Date(value).toLocaleDateString() : value || "—"}
-      </TableCell>
-    );
   };
 
   const viewCounts = useMemo(() => {
@@ -530,11 +443,6 @@ export default function BrokerOutreach() {
     };
   }, [brokers, followUpDays]);
 
-  // Get recent activities for a broker
-  const getBrokerActivities = (brokerId) => {
-    return activities.filter(a => a.broker_id === brokerId).slice(0, 3);
-  };
-
   const partnerPortalUrl = `${window.location.origin}/partner/signup`;
 
   const copyPortalLink = () => {
@@ -542,39 +450,48 @@ export default function BrokerOutreach() {
     alert("Partner portal link copied!");
   };
 
+  const getInitials = (name) => {
+    if (!name) return "?";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  };
+
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Broker Outreach</h1>
-            <p className="text-gray-500 text-sm mt-1">Track and manage broker relationships</p>
-          </div>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Consolidated toolbar */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <span className="text-[15px] font-semibold text-gray-900">Broker Outreach</span>
+
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <HelpCircle className="w-5 h-5 text-gray-400" />
+              <Button variant="ghost" className="h-7 w-7 p-0 text-gray-400 hover:text-gray-900">
+                <HelpCircle className="w-3.5 h-3.5" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80" align="start">
               <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <Info className="w-4 h-4 text-indigo-600" />
+                <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-[13px]">
+                  <Info className="w-4 h-4 text-gray-700" />
                   How Partner Outreach Works
                 </h4>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <p><strong>1. Reach Out</strong> — Contact brokers via call, email, or LinkedIn and log your reach outs.</p>
-                  <p><strong>2. They Sign Up</strong> — Interested brokers sign up at our partner portal to become referral partners.</p>
-                  <p><strong>3. Submit Referrals</strong> — Partners can log in and submit client referrals through their portal.</p>
-                  <p><strong>4. Earn Commissions</strong> — When referrals convert, partners earn commissions tracked in the Partners page.</p>
+                <div className="space-y-2 text-[12px] text-gray-600">
+                  <p><strong>1. Reach Out</strong> — Contact brokers via call, email, or LinkedIn.</p>
+                  <p><strong>2. They Sign Up</strong> — Interested brokers sign up at our partner portal.</p>
+                  <p><strong>3. Submit Referrals</strong> — Partners log in and submit client referrals.</p>
+                  <p><strong>4. Earn Commissions</strong> — When referrals convert, partners earn commissions.</p>
                 </div>
                 <div className="pt-2 border-t">
-                  <p className="text-xs text-gray-500 mb-2">Partner Sign Up Link:</p>
+                  <p className="text-[11px] text-gray-500 mb-2">Partner Sign Up Link</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs bg-gray-100 px-2 py-1 rounded truncate">
+                    <code className="flex-1 text-[11px] bg-gray-100 px-2 py-1 rounded truncate">
                       {partnerPortalUrl}
                     </code>
-                    <Button variant="outline" size="sm" className="h-7 px-2" onClick={copyPortalLink}>
+                    <Button variant="outline" className="h-7 px-2" onClick={copyPortalLink}>
                       <Copy className="w-3 h-3" />
                     </Button>
                   </div>
@@ -582,142 +499,28 @@ export default function BrokerOutreach() {
               </div>
             </PopoverContent>
           </Popover>
-        </div>
-        <Button onClick={() => setShowAddDialog(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Broker
-        </Button>
-      </div>
 
-      {/* KPI Dashboard */}
-      {kpiStats.length > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Target className="w-5 h-5 text-indigo-600" />
-              Team KPIs
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {kpiStats.map(member => (
-              <Card key={member.id} className={`${member.onTrackForBonus ? 'border-green-300 bg-green-50/50' : ''}`}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">{member.full_name}</span>
-                      {member.onTrackForBonus && (
-                        <Trophy className="w-4 h-4 text-yellow-500" />
-                      )}
-                    </div>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openKpiSettings(member)}>
-                      <Settings className="w-3 h-3 text-gray-400" />
-                    </Button>
-                  </div>
-
-                  {/* Daily Progress */}
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-gray-600">Today</span>
-                      <span className="font-medium">{member.todayCount} / {member.dailyGoal}</span>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${member.dailyProgress >= 100 ? 'bg-green-500' : 'bg-indigo-500'}`}
-                        style={{ width: `${member.dailyProgress}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Weekly Progress */}
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-gray-600">This Week</span>
-                      <span className="font-medium">{member.weekCount} / {member.weeklyGoal}</span>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${member.weeklyProgress >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-                        style={{ width: `${member.weeklyProgress}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Bonus Info */}
-                  {member.bonusAmount > 0 && (
-                    <div className={`text-xs px-2 py-1 rounded-full text-center ${member.onTrackForBonus ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {member.onTrackForBonus ? '\u2713 On track for' : 'Goal:'} ${member.bonusAmount} bonus
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+          <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px] ml-2">
+            {VIEWS.map(view => (
+              <button
+                key={view.id}
+                type="button"
+                onClick={() => setActiveView(view.id)}
+                className={`px-2.5 py-1 rounded ${
+                  activeView === view.id
+                    ? "bg-gray-900 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {view.label}
+                <span className="opacity-60 ml-1">({viewCounts[view.id]})</span>
+              </button>
             ))}
-
-            {/* Add KPI Card */}
-            <Card className="border-dashed border-2 border-gray-200 hover:border-gray-300 cursor-pointer" onClick={() => {
-              const membersWithoutKpi = teamMembers.filter(tm => !kpiEntries.find(e => e.team_member_id === tm.id));
-              if (membersWithoutKpi.length > 0) {
-                openKpiSettings(membersWithoutKpi[0]);
-              }
-            }}>
-              <CardContent className="p-4 flex items-center justify-center h-full min-h-[140px]">
-                <div className="text-center text-gray-400">
-                  <Plus className="w-6 h-6 mx-auto mb-1" />
-                  <span className="text-sm">Set Team KPIs</span>
-                </div>
-              </CardContent>
-            </Card>
           </div>
-        </div>
-      )}
 
-      {/* Show setup prompt if no KPIs */}
-      {kpiStats.length === 0 && teamMembers.length > 0 && (
-        <Card className="mb-6 bg-indigo-50 border-indigo-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Target className="w-8 h-8 text-indigo-600" />
-                <div>
-                  <h3 className="font-medium text-gray-900">Set Up Team KPIs</h3>
-                  <p className="text-sm text-gray-600">Track daily and weekly reach out goals with bonus incentives</p>
-                </div>
-              </div>
-              <Button onClick={() => openKpiSettings(teamMembers[0])}>
-                Configure
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Views */}
-      <div className="flex items-center gap-2 mb-4 border-b">
-        <div className="flex gap-2">
-          {VIEWS.map(view => (
-            <button
-              key={view.id}
-              onClick={() => setActiveView(view.id)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                activeView === view.id
-                  ? "border-indigo-600 text-indigo-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {view.label}
-              <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                {viewCounts[view.id]}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* Follow-up days filter - shows when "Needs Follow Up" is selected */}
-        {activeView === "needs_follow_up" && (
-          <div className="flex items-center gap-2 ml-4 pb-2">
-            <Clock className="w-4 h-4 text-gray-400" />
-            <span className="text-sm text-gray-600">Not contacted in:</span>
+          {activeView === "needs_follow_up" && (
             <Select value={followUpDays.toString()} onValueChange={(v) => setFollowUpDays(parseInt(v))}>
-              <SelectTrigger className="w-28 h-8">
+              <SelectTrigger className="w-28 h-8 text-[13px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -728,86 +531,120 @@ export default function BrokerOutreach() {
                 ))}
               </SelectContent>
             </Select>
+          )}
+
+          <div className="relative flex-1 max-w-xs min-w-0 ml-2">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Input
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+            />
+          </div>
+
+          <div className="ml-auto">
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Add Broker
+            </Button>
+          </div>
+        </div>
+
+        {/* KPI metric pills */}
+        {kpiStats.length > 0 && (
+          <div className="flex items-center gap-5 px-4 h-9 border-t border-gray-100 overflow-x-auto">
+            {kpiStats.map(member => (
+              <span
+                key={member.id}
+                className="text-[13px] text-gray-600 flex items-center gap-1.5 shrink-0 group cursor-pointer"
+                onClick={() => openKpiSettings(member)}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${member.onTrackForBonus ? "bg-green-500" : "bg-gray-400"}`} />
+                {member.full_name}
+                {member.onTrackForBonus && <Trophy className="w-3 h-3 text-yellow-500" />}
+                <span className="text-gray-900 font-medium tabular-nums">
+                  {member.weekCount}/{member.weeklyGoal}
+                </span>
+                <span className="text-gray-400 tabular-nums">
+                  · {member.todayCount}/{member.dailyGoal} today
+                </span>
+                <Settings className="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100" />
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                const membersWithoutKpi = teamMembers.filter(tm => !kpiEntries.find(e => e.team_member_id === tm.id));
+                if (membersWithoutKpi.length > 0) {
+                  openKpiSettings(membersWithoutKpi[0]);
+                }
+              }}
+              className="text-[12px] text-gray-500 hover:text-gray-900 flex items-center gap-1 shrink-0"
+            >
+              <Plus className="w-3 h-3" />
+              Set KPI
+            </button>
+          </div>
+        )}
+
+        {kpiStats.length === 0 && teamMembers.length > 0 && (
+          <div className="flex items-center gap-3 px-4 h-9 border-t border-gray-100">
+            <span className="text-[13px] text-gray-600">
+              Track daily and weekly reach out goals with bonus incentives.
+            </span>
+            <Button
+              variant="ghost"
+              onClick={() => openKpiSettings(teamMembers[0])}
+              className="h-7 px-2 text-[13px] ml-auto"
+            >
+              Configure KPIs
+            </Button>
           </div>
         )}
       </div>
 
-      {/* Search */}
-      <div className="flex gap-4 mb-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            placeholder="Search by name, firm, or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
+      {/* List */}
+      <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+        {loading ? (
+          <div className="p-8 text-center text-[13px] text-gray-400">Loading…</div>
+        ) : (
+          <>
+            <div className="h-7 flex items-center px-3 bg-gray-50 border-b border-gray-200">
+              <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                {VIEWS.find(v => v.id === activeView)?.label || "All"} brokers
+              </span>
+              <span className="ml-2 text-[11px] text-gray-400 tabular-nums">
+                {filteredBrokers.length}
+              </span>
+            </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <SortableHeader field="name">Name</SortableHeader>
-              <SortableHeader field="firm">Firm</SortableHeader>
-              <SortableHeader field="email">Email</SortableHeader>
-              <SortableHeader field="status">Status</SortableHeader>
-              <SortableHeader field="last_contact">Last Contact</SortableHeader>
-              <TableHead>Next Action</TableHead>
-              <TableHead>LinkedIn</TableHead>
-              <TableHead>Reach Out</TableHead>
-              <TableHead className="w-10"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredBrokers.map(broker => (
-                <TableRow key={broker.id} className="group">
-                  <EditableCell broker={broker} field="name" />
-                  <EditableCell broker={broker} field="firm" />
-                  <EditableCell broker={broker} field="email" />
-                  <TableCell>
-                    <Select
-                      value={broker.status}
-                      onValueChange={(value) => handleUpdateField(broker.id, "status", value)}
-                    >
-                      <SelectTrigger className="h-8 w-36 border-0 bg-transparent p-0">
-                        <SelectValue>{getStatusBadge(broker.status)}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            <span className={`px-2 py-0.5 rounded-full text-xs ${option.color}`}>
-                              {option.label}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-gray-600">
-                    {broker.last_contact ? (
-                      <span>{new Date(broker.last_contact).toLocaleDateString()}</span>
-                    ) : (
-                      <span className="text-gray-400">Never</span>
-                    )}
-                  </TableCell>
-                  <EditableCell broker={broker} field="next_action" />
-                  <TableCell>
-                    {editingCell?.brokerId === broker.id && editingCell?.field === "linkedin_url" ? (
+            {filteredBrokers.map(broker => {
+              const statusOpt = getStatusOption(broker.status);
+              const isEditingName = editingCell?.brokerId === broker.id && editingCell?.field === "name";
+              const isEditingFirm = editingCell?.brokerId === broker.id && editingCell?.field === "firm";
+              const isEditingEmail = editingCell?.brokerId === broker.id && editingCell?.field === "email";
+              const isEditingNext = editingCell?.brokerId === broker.id && editingCell?.field === "next_action";
+              const isEditingLinkedIn = editingCell?.brokerId === broker.id && editingCell?.field === "linkedin_url";
+
+              return (
+                <div
+                  key={broker.id}
+                  className="group flex items-center gap-3 px-3 py-2 border-b border-gray-100 hover:bg-gray-50"
+                >
+                  <div className="w-6 h-6 shrink-0 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-medium">
+                    {getInitials(broker.name)}
+                  </div>
+
+                  <div className="min-w-0 flex-1 flex items-center gap-2">
+                    {isEditingName ? (
                       <Input
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="h-8 text-sm"
-                        placeholder="https://linkedin.com/in/..."
+                        className="h-7 text-[13px]"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === "Enter") saveEditing();
@@ -815,173 +652,237 @@ export default function BrokerOutreach() {
                         }}
                         onBlur={saveEditing}
                       />
-                    ) : broker.linkedin_url ? (
-                      <a
-                        href={broker.linkedin_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
                     ) : (
                       <span
-                        className="text-gray-400 cursor-pointer hover:text-gray-600"
-                        onClick={() => startEditing(broker.id, "linkedin_url", "")}
+                        className="text-[13px] text-gray-900 font-medium truncate cursor-pointer"
+                        onClick={() => startEditing(broker.id, "name", broker.name)}
                       >
-                        —
+                        {broker.name || "—"}
                       </span>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8"
-                      onClick={() => openReachOutDialog(broker)}
-                    >
-                      <TrendingUp className="w-3 h-3 mr-1" />
-                      Log
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                      onClick={() => handleDeleteBroker(broker.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusOpt.dot}`} />
+                  </div>
 
-            {/* Inline Create Row */}
-            {showInlineCreate ? (
-              <TableRow className="bg-gray-50/50 border-t">
-                <TableCell className="p-1">
-                  <Input
-                    placeholder="Name *"
-                    value={inlineCreate.name}
-                    onChange={(e) => setInlineCreate({ ...inlineCreate, name: e.target.value })}
-                    className="h-8 text-sm"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleInlineCreate();
-                      if (e.key === "Escape") setShowInlineCreate(false);
-                    }}
-                  />
-                </TableCell>
-                <TableCell className="p-1">
-                  <Input
-                    placeholder="Firm *"
-                    value={inlineCreate.firm}
-                    onChange={(e) => setInlineCreate({ ...inlineCreate, firm: e.target.value })}
-                    className="h-8 text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleInlineCreate();
-                      if (e.key === "Escape") setShowInlineCreate(false);
-                    }}
-                  />
-                </TableCell>
-                <TableCell className="p-1">
-                  <Input
-                    placeholder="Email"
-                    value={inlineCreate.email}
-                    onChange={(e) => setInlineCreate({ ...inlineCreate, email: e.target.value })}
-                    className="h-8 text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleInlineCreate();
-                      if (e.key === "Escape") setShowInlineCreate(false);
-                    }}
-                  />
-                </TableCell>
-                <TableCell className="p-1">
-                  <Select
-                    value={inlineCreate.status}
-                    onValueChange={(value) => setInlineCreate({ ...inlineCreate, status: value })}
-                  >
-                    <SelectTrigger className="h-8 w-32 text-sm">
-                      <SelectValue>{getStatusBadge(inlineCreate.status)}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <span className={`px-2 py-0.5 rounded-full text-xs ${option.color}`}>
-                            {option.label}
+                  {isEditingFirm ? (
+                    <Input
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="h-7 text-[13px] w-40"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEditing();
+                        if (e.key === "Escape") cancelEditing();
+                      }}
+                      onBlur={saveEditing}
+                    />
+                  ) : (
+                    <span
+                      className="hidden md:inline text-[12px] text-gray-500 truncate max-w-[160px] cursor-pointer"
+                      onClick={() => startEditing(broker.id, "firm", broker.firm)}
+                    >
+                      {broker.firm || "—"}
+                    </span>
+                  )}
+
+                  {isEditingEmail ? (
+                    <Input
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="h-7 text-[13px] w-48"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEditing();
+                        if (e.key === "Escape") cancelEditing();
+                      }}
+                      onBlur={saveEditing}
+                    />
+                  ) : (
+                    <span
+                      className="hidden lg:inline text-[12px] text-gray-500 truncate max-w-[180px] cursor-pointer"
+                      onClick={() => startEditing(broker.id, "email", broker.email)}
+                    >
+                      {broker.email || "—"}
+                    </span>
+                  )}
+
+                  <div className="shrink-0 w-28">
+                    <Select
+                      value={broker.status}
+                      onValueChange={(value) => handleUpdateField(broker.id, "status", value)}
+                    >
+                      <SelectTrigger className="h-7 w-full border-0 bg-transparent p-0 text-[12px] shadow-none focus:ring-0">
+                        <SelectValue>
+                          <span className={`text-[12px] ${statusOpt.text}`}>
+                            {statusOpt.label}
                           </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell className="text-gray-400 text-sm">
-                  —
-                </TableCell>
-                <TableCell className="p-1">
-                  <Input
-                    placeholder="Next action"
-                    value={inlineCreate.next_action}
-                    onChange={(e) => setInlineCreate({ ...inlineCreate, next_action: e.target.value })}
-                    className="h-8 text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleInlineCreate();
-                      if (e.key === "Escape") setShowInlineCreate(false);
-                    }}
-                  />
-                </TableCell>
-                <TableCell className="p-1">
-                  <Input
-                    placeholder="LinkedIn"
-                    value={inlineCreate.linkedin_url}
-                    onChange={(e) => setInlineCreate({ ...inlineCreate, linkedin_url: e.target.value })}
-                    className="h-8 text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleInlineCreate();
-                      if (e.key === "Escape") setShowInlineCreate(false);
-                    }}
-                  />
-                </TableCell>
-                <TableCell></TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0"
-                      onClick={handleInlineCreate}
-                      disabled={!inlineCreate.name || !inlineCreate.firm}
-                    >
-                      <Check className={`w-4 h-4 ${inlineCreate.name && inlineCreate.firm ? 'text-green-600' : 'text-gray-300'}`} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0"
-                      onClick={() => setShowInlineCreate(false)}
-                    >
-                      <X className="w-4 h-4 text-gray-400" />
-                    </Button>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            <span className="flex items-center gap-2 text-[13px]">
+                              <span className={`w-1.5 h-1.5 rounded-full ${option.dot}`} />
+                              {option.label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </TableCell>
-              </TableRow>
+
+                  <span className="hidden xl:inline text-[12px] text-gray-500 tabular-nums w-24 text-right">
+                    {broker.last_contact
+                      ? new Date(broker.last_contact).toLocaleDateString()
+                      : <span className="text-gray-400">Never</span>}
+                  </span>
+
+                  {isEditingNext ? (
+                    <Input
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="h-7 text-[13px] w-40"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEditing();
+                        if (e.key === "Escape") cancelEditing();
+                      }}
+                      onBlur={saveEditing}
+                    />
+                  ) : (
+                    <span
+                      className="hidden xl:inline text-[12px] text-gray-500 truncate max-w-[140px] cursor-pointer"
+                      onClick={() => startEditing(broker.id, "next_action", broker.next_action)}
+                    >
+                      {broker.next_action || "—"}
+                    </span>
+                  )}
+
+                  {isEditingLinkedIn ? (
+                    <Input
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="h-7 text-[13px] w-48"
+                      placeholder="https://linkedin.com/in/..."
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEditing();
+                        if (e.key === "Escape") cancelEditing();
+                      }}
+                      onBlur={saveEditing}
+                    />
+                  ) : broker.linkedin_url ? (
+                    <a
+                      href={broker.linkedin_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-400 hover:text-gray-900 shrink-0"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-gray-300 hover:text-gray-600 text-[12px] shrink-0"
+                      onClick={() => startEditing(broker.id, "linkedin_url", "")}
+                    >
+                      —
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => openReachOutDialog(broker)}
+                    className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 h-6 rounded border border-gray-200 text-[12px] text-gray-600 hover:text-gray-900 hover:bg-white"
+                  >
+                    <TrendingUp className="w-3 h-3" />
+                    Log
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteBroker(broker.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+
+            {/* Inline create row */}
+            {showInlineCreate ? (
+              <div className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 bg-gray-50/50">
+                <div className="w-6 h-6 shrink-0" />
+                <Input
+                  placeholder="Name *"
+                  value={inlineCreate.name}
+                  onChange={(e) => setInlineCreate({ ...inlineCreate, name: e.target.value })}
+                  className="h-7 text-[13px] flex-1 max-w-[180px]"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleInlineCreate();
+                    if (e.key === "Escape") setShowInlineCreate(false);
+                  }}
+                />
+                <Input
+                  placeholder="Firm *"
+                  value={inlineCreate.firm}
+                  onChange={(e) => setInlineCreate({ ...inlineCreate, firm: e.target.value })}
+                  className="h-7 text-[13px] w-40"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleInlineCreate();
+                    if (e.key === "Escape") setShowInlineCreate(false);
+                  }}
+                />
+                <Input
+                  placeholder="Email"
+                  value={inlineCreate.email}
+                  onChange={(e) => setInlineCreate({ ...inlineCreate, email: e.target.value })}
+                  className="h-7 text-[13px] w-48"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleInlineCreate();
+                    if (e.key === "Escape") setShowInlineCreate(false);
+                  }}
+                />
+                <Input
+                  placeholder="Next action"
+                  value={inlineCreate.next_action}
+                  onChange={(e) => setInlineCreate({ ...inlineCreate, next_action: e.target.value })}
+                  className="h-7 text-[13px] w-40"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleInlineCreate();
+                    if (e.key === "Escape") setShowInlineCreate(false);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleInlineCreate}
+                  disabled={!inlineCreate.name || !inlineCreate.firm}
+                  className="p-1 text-gray-400 hover:text-gray-900 disabled:opacity-40"
+                >
+                  <Check className={`w-3.5 h-3.5 ${inlineCreate.name && inlineCreate.firm ? 'text-green-600' : ''}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowInlineCreate(false)}
+                  className="p-1 text-gray-400 hover:text-gray-900"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             ) : (
-              <TableRow
-                className="hover:bg-gray-50 cursor-pointer border-t"
+              <button
+                type="button"
                 onClick={() => setShowInlineCreate(true)}
+                className="w-full flex items-center gap-2 px-3 py-2 border-b border-gray-100 text-[13px] text-gray-400 hover:text-gray-900 hover:bg-gray-50"
               >
-                <TableCell className="py-3">
-                  <div className="flex items-center gap-2 text-gray-400">
-                    <Plus className="w-4 h-4" />
-                  </div>
-                </TableCell>
-                <TableCell colSpan={8}></TableCell>
-              </TableRow>
+                <Plus className="w-3.5 h-3.5" />
+                Add broker
+              </button>
             )}
-          </TableBody>
-        </Table>
+          </>
+        )}
       </div>
 
       {/* Log Reach Out Dialog */}
@@ -993,8 +894,8 @@ export default function BrokerOutreach() {
           {reachOutBroker && (
             <div className="space-y-4">
               <div className="bg-gray-50 rounded-lg p-3">
-                <p className="font-medium">{reachOutBroker.name}</p>
-                <p className="text-sm text-gray-500">{reachOutBroker.firm}</p>
+                <p className="font-medium text-[13px]">{reachOutBroker.name}</p>
+                <p className="text-[12px] text-gray-500">{reachOutBroker.firm}</p>
               </div>
 
               <div className="space-y-2">
@@ -1004,7 +905,7 @@ export default function BrokerOutreach() {
                     <Button
                       key={type.value}
                       variant={reachOutType === type.value ? "default" : "outline"}
-                      size="sm"
+                      className={reachOutType === type.value ? "bg-gray-900 hover:bg-gray-800 text-white h-8" : "h-8"}
                       onClick={() => setReachOutType(type.value)}
                     >
                       <type.icon className="w-4 h-4 mr-1" />
@@ -1045,7 +946,11 @@ export default function BrokerOutreach() {
             <Button variant="outline" onClick={() => setShowReachOutDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleLogReachOut} disabled={!reachOutBy || savingReachOut}>
+            <Button
+              onClick={handleLogReachOut}
+              disabled={!reachOutBy || savingReachOut}
+              className="bg-gray-900 hover:bg-gray-800 text-white"
+            >
               {savingReachOut ? "Saving..." : "Log Reach Out"}
             </Button>
           </DialogFooter>
@@ -1113,7 +1018,11 @@ export default function BrokerOutreach() {
               <p className="text-xs text-gray-500">Bonus earned when weekly goal is met</p>
             </div>
 
-            <Button className="w-full" onClick={handleSaveKpi} disabled={!kpiMember}>
+            <Button
+              className="w-full bg-gray-900 hover:bg-gray-800 text-white"
+              onClick={handleSaveKpi}
+              disabled={!kpiMember}
+            >
               Save KPI Settings
             </Button>
           </div>
@@ -1202,7 +1111,11 @@ export default function BrokerOutreach() {
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddBroker} disabled={!formData.name || !formData.firm}>
+            <Button
+              onClick={handleAddBroker}
+              disabled={!formData.name || !formData.firm}
+              className="bg-gray-900 hover:bg-gray-800 text-white"
+            >
               Add Broker
             </Button>
           </DialogFooter>

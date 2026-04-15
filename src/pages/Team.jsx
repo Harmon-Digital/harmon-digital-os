@@ -3,7 +3,7 @@ import { TeamMember } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Mail, UserCheck, UserX, Users, Search, Send, Loader2, Trash2, Shield, ShieldCheck, Clock } from "lucide-react";
+import { Plus, Edit, UserCheck, UserX, Users, Search, Send, Loader2, Trash2, Shield, ShieldCheck, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,16 +29,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import TeamMemberForm from "../components/team/TeamMemberForm";
 
 export default function Team() {
@@ -157,12 +147,6 @@ export default function Team() {
         return;
       }
 
-      // Edge function + database trigger handle everything:
-      // - Creates auth user
-      // - Creates user_profile (with invited_at)
-      // - Trigger links/creates team_member
-      // Just reload data to see the changes
-
       setShowInviteDialog(false);
       setInviteData({ email: "", full_name: "", role: "member" });
       loadData();
@@ -205,8 +189,6 @@ export default function Team() {
         return;
       }
 
-      // Edge function handles linking team_member to user
-      // Just reload to see updated status
       loadData();
       alert(result.resent ? `Invitation resent to ${member.email}!` : `Invitation sent to ${member.email}!`);
     } catch (error) {
@@ -258,7 +240,6 @@ export default function Team() {
   const handleChangePortalRole = async (userId, newRole) => {
     if (!userId) return;
 
-    // Prevent changing own role
     if (userId === authUser?.id) {
       alert("You cannot change your own admin status");
       return;
@@ -281,14 +262,6 @@ export default function Team() {
 
   const usersWithoutTeamMember = users.filter(user => !getMemberForUser(user.id));
 
-  const roleColors = {
-    developer: "bg-blue-100 text-blue-800",
-    designer: "bg-purple-100 text-purple-800",
-    project_manager: "bg-green-100 text-green-800",
-    marketing: "bg-orange-100 text-orange-800",
-    sales: "bg-pink-100 text-pink-800"
-  };
-
   const activeMembers = teamMembers.filter(tm => tm.status === 'active');
   const inactiveMembers = teamMembers.filter(tm => tm.status === 'inactive');
 
@@ -308,338 +281,381 @@ export default function Team() {
   const isAdmin = userProfile?.role === "admin";
 
   return (
-    <div className="p-6 lg:p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Team</h1>
-          <p className="text-gray-500 mt-1">Meet the team members</p>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Consolidated toolbar */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <h1 className="text-[15px] font-semibold text-gray-900 shrink-0">Team</h1>
+
+          {isAdmin && (
+            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px] ml-2">
+              <button
+                type="button"
+                onClick={() => setViewTab("team")}
+                className={`px-2.5 py-1 rounded ${
+                  viewTab === "team"
+                    ? "bg-gray-900 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                Members <span className="opacity-60">({teamMembers.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewTab("users")}
+                className={`px-2.5 py-1 rounded ${
+                  viewTab === "users"
+                    ? "bg-gray-900 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                Users <span className="opacity-60">({users.length})</span>
+                {usersWithoutTeamMember.length > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold">
+                    {usersWithoutTeamMember.length}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
+          {viewTab === "team" && (
+            <div className="relative flex-1 max-w-md min-w-0 ml-2">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+              <Input
+                placeholder="Search team"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+              />
+            </div>
+          )}
+
+          {isAdmin && (
+            <div className="ml-auto flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowInviteDialog(true)}
+                className="h-7 px-2 text-[13px]"
+              >
+                <Send className="w-3.5 h-3.5 mr-1" />
+                Invite
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditingMember(null);
+                  setShowDrawer(true);
+                }}
+                size="sm"
+                className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Add Member
+              </Button>
+            </div>
+          )}
         </div>
-        {isAdmin && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowInviteDialog(true)}
+
+        {/* Status sub-tabs (for team view) */}
+        {viewTab === "team" && isAdmin && (
+          <div className="flex items-center gap-5 px-4 h-9 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setStatusTab("active")}
+              className={`relative h-9 text-[13px] font-medium ${
+                statusTab === "active"
+                  ? "text-gray-900 after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-gray-900"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
             >
-              <Send className="w-4 h-4 mr-2" />
-              Invite Member
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingMember(null);
-                setShowDrawer(true);
-              }}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              Active <span className="text-gray-400 tabular-nums ml-1">{activeMembers.length}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusTab("inactive")}
+              className={`relative h-9 text-[13px] font-medium ${
+                statusTab === "inactive"
+                  ? "text-gray-900 after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-gray-900"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Team Member
-            </Button>
+              Inactive <span className="text-gray-400 tabular-nums ml-1">{inactiveMembers.length}</span>
+            </button>
           </div>
         )}
       </div>
 
-      {/* Tabs */}
-      {isAdmin && (
-        <Tabs value={viewTab} onValueChange={setViewTab} className="mb-6">
-          <TabsList>
-            <TabsTrigger value="team">Team Members</TabsTrigger>
-            <TabsTrigger value="users">
-              All Users
-              {usersWithoutTeamMember.length > 0 && (
-                <Badge variant="destructive" className="ml-2">
-                  {usersWithoutTeamMember.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      )}
-
       {/* Team Members View */}
       {viewTab === "team" && (
-        <>
-          <div className="flex items-center justify-between mb-6">
-            <Tabs value={statusTab} onValueChange={setStatusTab}>
-              <TabsList>
-                <TabsTrigger value="active">
-                  Active Members
-                  <Badge variant="secondary" className="ml-2">{activeMembers.length}</Badge>
-                </TabsTrigger>
-                {isAdmin && (
-                  <TabsTrigger value="inactive">
-                    Inactive Members
-                    <Badge variant="secondary" className="ml-2">{inactiveMembers.length}</Badge>
-                  </TabsTrigger>
-                )}
-              </TabsList>
-            </Tabs>
-
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search team..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+        <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+          {loading ? (
+            <div className="p-8 text-center text-sm text-gray-400">Loading…</div>
+          ) : filteredMembers.length === 0 ? (
+            <div className="p-8 text-center text-sm text-gray-400">
+              {searchQuery
+                ? "No team members match your search."
+                : isAdmin
+                  ? 'No team members yet. Click "Add Member" to get started.'
+                  : "Team members will appear here."}
             </div>
-          </div>
+          ) : (
+            <div>
+              <div className="flex items-center gap-2 px-3 h-7 bg-gray-50 border-b border-gray-200">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                  {statusTab === "active" ? "Active members" : "Inactive members"}
+                </span>
+                <span className="text-[11px] text-gray-400 tabular-nums">{filteredMembers.length}</span>
+              </div>
+              {filteredMembers.map((member) => {
+                const linkedUser = getUserForMember(member.user_id);
+                const hasSignedIn = linkedUser?.last_sign_in_at;
+                const isPending = linkedUser && !hasSignedIn;
+                const statusDotColor =
+                  member.status === "active"
+                    ? hasSignedIn
+                      ? "bg-green-500"
+                      : isPending
+                        ? "bg-amber-500"
+                        : "bg-gray-300"
+                    : "bg-gray-300";
 
-          <Card>
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-500">Loading...</p>
-                </div>
-              ) : filteredMembers.length === 0 ? (
-                <div className="text-center py-12">
-                  <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {searchQuery ? "No team members found" : "No team members yet"}
-                  </h3>
-                  <p className="text-gray-500">
-                    {searchQuery ? "Try adjusting your search" : isAdmin ? "Click \"Add Team Member\" to get started" : "Team members will appear here"}
-                  </p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Account</TableHead>
-                      {isAdmin && <TableHead className="w-[100px]">Actions</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredMembers.map((member) => {
-                      const linkedUser = getUserForMember(member.user_id);
-                      return (
-                        <TableRow key={member.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                {member.profile_image_url ? (
-                                  <img
-                                    src={member.profile_image_url}
-                                    alt={member.full_name}
-                                    className="w-full h-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <span className="text-sm font-bold text-white">
-                                    {member.full_name?.charAt(0) || '?'}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="font-medium">{member.full_name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={roleColors[member.role]}>
-                              {member.role?.replace('_', ' ')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-gray-600">{member.email}</TableCell>
-                          <TableCell>
-                            <span className="text-gray-600 capitalize">
-                              {member.employment_type?.replace('_', ' ')}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {linkedUser ? (
-                              // User has an account - check if they've signed in
-                              linkedUser.last_sign_in_at ? (
-                                // Active user - show role dropdown
-                                isAdmin && linkedUser.id !== authUser?.id ? (
-                                  <Select
-                                    value={linkedUser.role}
-                                    onValueChange={(value) => handleChangePortalRole(linkedUser.id, value)}
-                                  >
-                                    <SelectTrigger className="w-[130px] h-8">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="admin">
-                                        <div className="flex items-center gap-2">
-                                          <ShieldCheck className="w-3 h-3 text-amber-600" />
-                                          Admin
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="member">
-                                        <div className="flex items-center gap-2">
-                                          <UserCheck className="w-3 h-3 text-green-600" />
-                                          Member
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="viewer">
-                                        <div className="flex items-center gap-2">
-                                          <Shield className="w-3 h-3 text-gray-500" />
-                                          Viewer
-                                        </div>
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                ) : (
-                                  <div className="flex items-center gap-1">
-                                    {linkedUser.role === 'admin' ? (
-                                      <ShieldCheck className="w-4 h-4 text-amber-600" />
-                                    ) : (
-                                      <UserCheck className="w-4 h-4 text-green-600" />
-                                    )}
-                                    <span className="text-sm capitalize">{linkedUser.role}</span>
+                return (
+                  <div
+                    key={member.id}
+                    className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    <div className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center overflow-hidden">
+                      {member.profile_image_url ? (
+                        <img
+                          src={member.profile_image_url}
+                          alt={member.full_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-[10px] font-semibold text-white">
+                          {member.full_name?.charAt(0) || "?"}
+                        </span>
+                      )}
+                    </div>
+
+                    <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${statusDotColor}`} />
+
+                    <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+                      {member.full_name}
+                    </span>
+
+                    {member.role && (
+                      <span className="hidden md:inline capitalize text-[11px] text-gray-500 shrink-0 w-32 truncate">
+                        {member.role.replace(/_/g, " ")}
+                      </span>
+                    )}
+
+                    {member.email && (
+                      <span className="hidden lg:inline text-[11px] text-gray-500 shrink-0 max-w-[200px] truncate">
+                        {member.email}
+                      </span>
+                    )}
+
+                    {member.employment_type && (
+                      <span className="hidden xl:inline capitalize text-[11px] text-gray-400 shrink-0">
+                        {member.employment_type.replace(/_/g, " ")}
+                      </span>
+                    )}
+
+                    <div className="shrink-0">
+                      {linkedUser ? (
+                        hasSignedIn ? (
+                          isAdmin && linkedUser.id !== authUser?.id ? (
+                            <Select
+                              value={linkedUser.role}
+                              onValueChange={(value) => handleChangePortalRole(linkedUser.id, value)}
+                            >
+                              <SelectTrigger className="w-[110px] h-7 text-[11px] border-gray-200">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="admin">
+                                  <div className="flex items-center gap-2">
+                                    <ShieldCheck className="w-3 h-3 text-amber-600" />
+                                    Admin
                                   </div>
-                                )
+                                </SelectItem>
+                                <SelectItem value="member">
+                                  <div className="flex items-center gap-2">
+                                    <UserCheck className="w-3 h-3 text-green-600" />
+                                    Member
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="viewer">
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="w-3 h-3 text-gray-500" />
+                                    Viewer
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 capitalize">
+                              {linkedUser.role === "admin" ? (
+                                <ShieldCheck className="w-3 h-3 text-amber-600" />
                               ) : (
-                                // Invited but hasn't signed in yet
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    Pending
-                                  </Badge>
-                                  {isAdmin && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleInviteExisting(member)}
-                                      className="h-6 px-2 text-xs text-amber-600 hover:text-amber-700"
-                                    >
-                                      <Send className="w-3 h-3 mr-1" />
-                                      Resend
-                                    </Button>
-                                  )}
-                                </div>
-                              )
-                            ) : isAdmin ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
+                                <UserCheck className="w-3 h-3 text-green-600" />
+                              )}
+                              {linkedUser.role}
+                            </span>
+                          )
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 text-[11px] text-amber-600">
+                              <Clock className="w-3 h-3" />
+                              Pending
+                            </span>
+                            {isAdmin && (
+                              <button
+                                type="button"
                                 onClick={() => handleInviteExisting(member)}
-                                className="h-7 text-xs"
+                                className="text-[11px] text-amber-600 hover:text-amber-700 underline"
                               >
-                                <Send className="w-3 h-3 mr-1" />
-                                Invite
-                              </Button>
-                            ) : (
-                              <span className="text-gray-400">No account</span>
+                                Resend
+                              </button>
                             )}
-                          </TableCell>
-                          {isAdmin && (
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEdit(member)}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setDeleteDialog({ open: true, member })}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </>
+                          </div>
+                        )
+                      ) : isAdmin ? (
+                        <button
+                          type="button"
+                          onClick={() => handleInviteExisting(member)}
+                          className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-700"
+                        >
+                          <Send className="w-3 h-3" />
+                          Invite
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-gray-400">No account</span>
+                      )}
+                    </div>
+
+                    {isAdmin && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(member)}
+                          className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                          title="Edit"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteDialog({ open: true, member })}
+                          className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Users View - Admin Only */}
       {isAdmin && viewTab === "users" && (
-        <div className="space-y-6">
+        <div className="overflow-y-auto flex-1 min-h-0 bg-white">
           {usersWithoutTeamMember.length > 0 && (
-            <Card className="border-orange-200 bg-orange-50">
-              <CardHeader>
-                <CardTitle className="text-orange-900 flex items-center gap-2">
-                  <UserX className="w-5 h-5" />
-                  Users Without Team Profiles
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-orange-700 mb-4">
-                  These users can log in but don't have team member profiles yet. Create profiles to show them on the team page.
-                </p>
-                <div className="space-y-2">
-                  {usersWithoutTeamMember.map(user => (
-                    <div key={user.id} className="flex items-center justify-between bg-white p-3 rounded-lg border">
-                      <div>
-                        <p className="font-medium text-gray-900">{user.full_name}</p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => handleCreateFromUser(user)}
-                        className="bg-indigo-600 hover:bg-indigo-700"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create Team Profile
-                      </Button>
-                    </div>
-                  ))}
+            <>
+              <div className="flex items-center gap-2 px-3 h-7 bg-amber-50 border-b border-amber-200">
+                <UserX className="w-3.5 h-3.5 text-amber-600" />
+                <span className="text-[11px] font-medium uppercase tracking-wide text-amber-800">
+                  Needs team profile
+                </span>
+                <span className="text-[11px] text-amber-600 tabular-nums">{usersWithoutTeamMember.length}</span>
+              </div>
+              {usersWithoutTeamMember.map((user) => (
+                <div
+                  key={user.id}
+                  className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 hover:bg-gray-50"
+                >
+                  <div className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                    <span className="text-[10px] font-semibold text-white">
+                      {user.full_name?.charAt(0) || "?"}
+                    </span>
+                  </div>
+                  <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+                    {user.full_name}
+                  </span>
+                  <span className="hidden md:inline text-[11px] text-gray-500 truncate max-w-[240px]">
+                    {user.email}
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => handleCreateFromUser(user)}
+                    className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Create profile
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+              ))}
+            </>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>All Users</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {users.map(user => {
-                  const teamMember = getMemberForUser(user.id);
-                  return (
-                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
-                          <span className="text-lg font-bold text-white">
-                            {user.full_name?.charAt(0) || '?'}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{user.full_name}</p>
-                          <p className="text-sm text-gray-500">{user.email}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                          {user.role}
-                        </Badge>
-                        {teamMember ? (
-                          <div className="flex items-center gap-2">
-                            <UserCheck className="w-4 h-4 text-green-600" />
-                            <span className="text-sm text-gray-600">{teamMember.role}</span>
-                          </div>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCreateFromUser(user)}
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Create Profile
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+          <div className="flex items-center gap-2 px-3 h-7 bg-gray-50 border-b border-gray-200">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+              All users
+            </span>
+            <span className="text-[11px] text-gray-400 tabular-nums">{users.length}</span>
+          </div>
+          {users.map((user) => {
+            const teamMember = getMemberForUser(user.id);
+            return (
+              <div
+                key={user.id}
+                className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 hover:bg-gray-50"
+              >
+                <div className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <span className="text-[10px] font-semibold text-white">
+                    {user.full_name?.charAt(0) || "?"}
+                  </span>
+                </div>
+                <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+                  {user.full_name}
+                </span>
+                <span className="hidden md:inline text-[11px] text-gray-500 truncate max-w-[240px]">
+                  {user.email}
+                </span>
+                <span className="hidden lg:inline-flex items-center gap-1 capitalize text-[11px] text-gray-500 shrink-0">
+                  {user.role === "admin" ? (
+                    <ShieldCheck className="w-3 h-3 text-amber-600" />
+                  ) : (
+                    <Shield className="w-3 h-3 text-gray-400" />
+                  )}
+                  {user.role}
+                </span>
+                {teamMember ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-green-600 shrink-0">
+                    <UserCheck className="w-3 h-3" />
+                    {teamMember.role?.replace(/_/g, " ")}
+                  </span>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleCreateFromUser(user)}
+                    className="h-7 px-2 text-[13px]"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Create
+                  </Button>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            );
+          })}
         </div>
       )}
 
@@ -690,7 +706,7 @@ export default function Team() {
             </Button>
             <Button
               onClick={handleConfirmSync}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-gray-900 hover:bg-gray-800 text-white"
             >
               Create Profile
             </Button>
@@ -759,7 +775,7 @@ export default function Team() {
             <Button
               onClick={handleInvite}
               disabled={inviting || !inviteData.email || !inviteData.full_name}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-gray-900 hover:bg-gray-800 text-white"
             >
               {inviting ? (
                 <>

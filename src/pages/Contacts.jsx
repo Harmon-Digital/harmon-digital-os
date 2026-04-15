@@ -1,19 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Contact, Account, Activity } from "@/api/entities";
 import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit, Trash2, Mail, Phone, Building2, MessageSquare } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Plus, Search, Edit, Trash2, Mail, Phone, Building2, MessageSquare, Filter } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Sheet,
   SheetContent,
@@ -42,7 +34,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
 import ContactForm from "../components/contacts/ContactForm";
 import ActivityForm from "../components/contacts/ActivityForm";
 
@@ -54,7 +45,7 @@ export default function Contacts() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [accountFilter, setAccountFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -144,22 +135,22 @@ export default function Contacts() {
   };
 
   const filteredContacts = contacts.filter(contact => {
-    const matchesSearch = searchQuery === "" || 
+    const matchesSearch = searchQuery === "" ||
       contact.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contact.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contact.email?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesAccount = accountFilter === "all" || contact.account_id === accountFilter;
     const matchesRole = roleFilter === "all" || contact.role === roleFilter;
-    
+
     return matchesSearch && matchesAccount && matchesRole;
   });
 
-  const roleColors = {
-    primary: "bg-blue-100 text-blue-800",
-    billing: "bg-green-100 text-green-800",
-    technical: "bg-purple-100 text-purple-800",
-    stakeholder: "bg-gray-100 text-gray-800"
+  const roleTextColors = {
+    primary: "text-blue-600",
+    billing: "text-green-600",
+    technical: "text-purple-600",
+    stakeholder: "text-gray-500",
   };
 
   const activityIcons = {
@@ -171,176 +162,230 @@ export default function Contacts() {
     other: "📋"
   };
 
+  const stats = useMemo(() => {
+    const primary = contacts.filter(c => c.role === "primary").length;
+    const billing = contacts.filter(c => c.role === "billing").length;
+    const technical = contacts.filter(c => c.role === "technical").length;
+    return { primary, billing, technical, total: contacts.length };
+  }, [contacts]);
+
+  const activeFilterCount =
+    (accountFilter !== "all" ? 1 : 0) +
+    (roleFilter !== "all" ? 1 : 0);
+
   return (
-    <div className="p-6 lg:p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Contacts</h1>
-          <p className="text-gray-500 mt-1">Manage your contacts and activities</p>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Page header */}
+      <div className="px-4 pt-4 pb-3 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <h1 className="text-[15px] font-semibold text-gray-900">Contacts</h1>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-gray-600">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              Primary <span className="text-gray-900 font-medium">{stats.primary}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Billing <span className="text-gray-900 font-medium">{stats.billing}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+              Technical <span className="text-gray-900 font-medium">{stats.technical}</span>
+            </span>
+            <span>Total <span className="text-gray-900 font-medium">{stats.total}</span></span>
+          </div>
         </div>
-        <Button 
-          onClick={() => {
-            setEditingContact(null);
-            setSelectedContact(null);
-            setShowDrawer(true);
-          }}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Contact
-        </Button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg border shadow-sm p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search contacts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+      {/* Consolidated toolbar */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <div className="relative flex-1 max-w-md min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Input
+              placeholder="Search contacts"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+            />
           </div>
 
-          <Select value={accountFilter} onValueChange={setAccountFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Account" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Accounts</SelectItem>
-              {accounts.map(account => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.company_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 gap-1.5 h-8 text-[13px]">
+                <Filter className="w-3.5 h-3.5" />
+                Filter
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Filters</span>
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    className="text-xs text-indigo-600 hover:text-indigo-700"
+                    onClick={() => {
+                      setAccountFilter("all");
+                      setRoleFilter("all");
+                    }}
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-600">Account</label>
+                <Select value={accountFilter} onValueChange={setAccountFilter}>
+                  <SelectTrigger><SelectValue placeholder="Account" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Accounts</SelectItem>
+                    {accounts.map(account => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.company_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-600">Role</label>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger><SelectValue placeholder="Role" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="primary">Primary Contact</SelectItem>
+                    <SelectItem value="billing">Billing Contact</SelectItem>
+                    <SelectItem value="technical">Technical Contact</SelectItem>
+                    <SelectItem value="stakeholder">Stakeholder</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </PopoverContent>
+          </Popover>
 
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="primary">Primary Contact</SelectItem>
-              <SelectItem value="billing">Billing Contact</SelectItem>
-              <SelectItem value="technical">Technical Contact</SelectItem>
-              <SelectItem value="stakeholder">Stakeholder</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="ml-auto">
+            <Button
+              onClick={() => {
+                setEditingContact(null);
+                setSelectedContact(null);
+                setShowDrawer(true);
+              }}
+              size="sm"
+              className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              New Contact
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Account</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Activities</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : filteredContacts.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                  {contacts.length === 0 ? "No contacts yet. Click \"New Contact\" to get started." : "No contacts match your filters."}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredContacts.map((contact) => {
-                const contactActivities = getContactActivities(contact.id);
-                return (
-                  <TableRow key={contact.id} className="hover:bg-gray-50">
-                    <TableCell>
-                      <div className="font-medium cursor-pointer hover:text-indigo-600" onClick={() => handleViewContact(contact)}>
-                        {contact.first_name} {contact.last_name}
-                      </div>
-                      {contact.title && (
-                        <div className="text-sm text-gray-500">{contact.title}</div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-gray-400" />
-                        {getAccountName(contact.account_id)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <a href={`mailto:${contact.email}`} className="text-gray-600 hover:text-indigo-600 flex items-center gap-2">
-                        <Mail className="w-4 h-4" />
-                        {contact.email}
-                      </a>
-                    </TableCell>
-                    <TableCell>
-                      {contact.phone ? (
-                        <a href={`tel:${contact.phone}`} className="text-gray-600 hover:text-indigo-600 flex items-center gap-2">
-                          <Phone className="w-4 h-4" />
-                          {contact.phone}
-                        </a>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={roleColors[contact.role] || "bg-gray-100 text-gray-800"}>
-                        {(contact.role || '').replace('_', ' ') || '—'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedContact(contact);
-                          setEditingContact(contact);
-                          setShowDrawer(true);
-                        }}
-                        className="text-gray-600 hover:text-indigo-600"
-                      >
-                        <MessageSquare className="w-4 h-4 mr-1" />
-                        {contactActivities.length}
-                      </Button>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewContact(contact)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteDialog({ open: true, contactId: contact.id })}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+      {/* List */}
+      <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+        {loading ? (
+          <div className="p-8 text-center text-sm text-gray-400">Loading…</div>
+        ) : filteredContacts.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-400">
+            {contacts.length === 0
+              ? 'No contacts yet. Click "New Contact" to get started.'
+              : "No contacts match your filters."}
+          </div>
+        ) : (
+          filteredContacts.map((contact) => {
+            const contactActivities = getContactActivities(contact.id);
+            const initials = `${contact.first_name?.[0] || ""}${contact.last_name?.[0] || ""}`.toUpperCase();
+            return (
+              <div
+                key={contact.id}
+                className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                onClick={() => handleViewContact(contact)}
+              >
+                <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                  {initials || "?"}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] text-gray-900 font-medium truncate">
+                    {contact.first_name} {contact.last_name}
+                    {contact.title && <span className="text-gray-400 font-normal ml-1.5">· {contact.title}</span>}
+                  </div>
+                </div>
+
+                <span className="hidden md:inline-flex items-center gap-1 text-[12px] text-gray-500 w-40 truncate">
+                  <Building2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                  <span className="truncate">{getAccountName(contact.account_id)}</span>
+                </span>
+
+                <a
+                  href={`mailto:${contact.email}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="hidden md:inline text-[12px] text-gray-500 hover:text-gray-900 w-52 truncate text-right"
+                >
+                  {contact.email}
+                </a>
+
+                {contact.phone ? (
+                  <a
+                    href={`tel:${contact.phone}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="hidden lg:inline text-[12px] text-gray-500 hover:text-gray-900 w-28 text-right"
+                  >
+                    {contact.phone}
+                  </a>
+                ) : (
+                  <span className="hidden lg:inline text-[12px] text-gray-300 w-28 text-right">—</span>
+                )}
+
+                <span className={`text-[11px] capitalize w-20 text-right ${roleTextColors[contact.role] || "text-gray-500"}`}>
+                  {(contact.role || "").replace("_", " ") || "—"}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedContact(contact);
+                    setEditingContact(contact);
+                    setShowDrawer(true);
+                  }}
+                  className="inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-900 w-10 justify-end"
+                  title="Activities"
+                >
+                  <MessageSquare className="w-3 h-3" />
+                  {contactActivities.length}
+                </button>
+
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewContact(contact);
+                    }}
+                    className="p-1 text-gray-400 hover:text-gray-900"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteDialog({ open: true, contactId: contact.id });
+                    }}
+                    className="p-1 text-gray-400 hover:text-red-600"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Contact Drawer with Tabs */}
@@ -375,101 +420,106 @@ export default function Contacts() {
             </TabsContent>
 
             <TabsContent value="activities" className="mt-6 space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Activity Timeline</h3>
+              <div className="flex items-center">
+                <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">
+                  Activity Timeline
+                </div>
+                <div className="flex-1" />
                 <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => {
                     setEditingActivity(null);
                     setShowActivityDialog(true);
                   }}
-                  className="bg-indigo-600 hover:bg-indigo-700"
+                  className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="w-3.5 h-3.5 mr-1" />
                   Log Activity
                 </Button>
               </div>
 
               {getContactActivities(editingContact?.id).length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p className="text-gray-500 mb-4">No activities logged yet</p>
+                <div className="py-10 text-center border-t border-gray-200">
+                  <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-[13px] text-gray-500 mb-3">No activities logged yet</p>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => {
                       setEditingActivity(null);
                       setShowActivityDialog(true);
                     }}
+                    className="h-7 px-2 text-[13px]"
                   >
-                    <Plus className="w-4 h-4 mr-2" />
+                    <Plus className="w-3.5 h-3.5 mr-1" />
                     Log First Activity
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="border-t border-gray-200">
                   {getContactActivities(editingContact?.id).map((activity) => (
-                    <Card key={activity.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="pt-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-2xl">{activityIcons[activity.type]}</span>
-                              <div>
-                                <h4 className="font-semibold text-gray-900">{activity.subject}</h4>
-                                <p className="text-xs text-gray-500">
-                                  {parseLocalDate(activity.date).toLocaleString()}
-                                  {activity.duration_minutes > 0 && ` • ${activity.duration_minutes} min`}
-                                </p>
-                              </div>
-                            </div>
-                            {activity.description && (
-                              <p className="text-sm text-gray-600 mt-2">{activity.description}</p>
-                            )}
-                            {activity.outcome && (
-                              <Badge variant="outline" className="mt-2">
-                                {activity.outcome.replace('_', ' ')}
-                              </Badge>
-                            )}
-                            {activity.next_action && (
-                              <div className="mt-3 p-2 bg-yellow-50 rounded border border-yellow-200">
-                                <p className="text-xs font-medium text-yellow-800">Next: {activity.next_action}</p>
-                                {activity.next_action_date && (
-                                  <p className="text-xs text-yellow-600">
-                                    Due: {new Date(activity.next_action_date).toLocaleDateString()}
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEditingActivity(activity);
-                                setShowActivityDialog(true);
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={async () => {
-                                if (confirm('Delete this activity?')) {
-                                  await Activity.delete(activity.id);
-                                  loadData();
-                                }
-                              }}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                    <div
+                      key={activity.id}
+                      className="group flex items-start gap-3 px-2 py-3 border-b border-gray-100 hover:bg-gray-50"
+                    >
+                      <span className="text-lg flex-shrink-0 leading-none mt-0.5">
+                        {activityIcons[activity.type]}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] text-gray-900 font-medium truncate">
+                            {activity.subject}
+                          </span>
+                          <span className="text-[11px] text-gray-400">
+                            {parseLocalDate(activity.date).toLocaleString()}
+                            {activity.duration_minutes > 0 && ` · ${activity.duration_minutes} min`}
+                          </span>
                         </div>
-                      </CardContent>
-                    </Card>
+                        {activity.description && (
+                          <p className="text-[12px] text-gray-600 mt-1">{activity.description}</p>
+                        )}
+                        {activity.outcome && (
+                          <span className="inline-block mt-1 text-[11px] text-gray-500 capitalize">
+                            {activity.outcome.replace("_", " ")}
+                          </span>
+                        )}
+                        {activity.next_action && (
+                          <div className="mt-2 text-[12px] text-yellow-700">
+                            Next: {activity.next_action}
+                            {activity.next_action_date && (
+                              <span className="text-yellow-600 ml-1.5">
+                                · Due {new Date(activity.next_action_date).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingActivity(activity);
+                            setShowActivityDialog(true);
+                          }}
+                          className="p-1 text-gray-400 hover:text-gray-900"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (confirm("Delete this activity?")) {
+                              await Activity.delete(activity.id);
+                              loadData();
+                            }
+                          }}
+                          className="p-1 text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

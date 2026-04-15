@@ -3,11 +3,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Lock, Save, Loader2, Upload, Camera, Bell } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Save, Loader2, Upload, Camera } from "lucide-react";
 
 export default function PersonalSettings() {
   const { user, userProfile, refreshProfile } = useAuth();
@@ -55,7 +54,7 @@ export default function PersonalSettings() {
   const loadTeamMember = async () => {
     if (!user?.id) return;
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("team_members")
       .select("*")
       .eq("user_id", user.id)
@@ -121,13 +120,11 @@ export default function PersonalSettings() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       setMessage({ type: "error", text: "Please select an image file" });
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setMessage({ type: "error", text: "Image must be less than 5MB" });
       return;
@@ -137,13 +134,11 @@ export default function PersonalSettings() {
     setMessage({ type: "", text: "" });
 
     try {
-      // Create unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `profile-${user.id}-${Date.now()}.${fileExt}`;
       const filePath = `profiles/${fileName}`;
 
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('uploads')
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -152,14 +147,12 @@ export default function PersonalSettings() {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('uploads')
         .getPublicUrl(filePath);
 
-      // Update state
       setProfileData(prev => ({ ...prev, profile_image_url: publicUrl }));
-      setMessage({ type: "success", text: "Image uploaded! Click Save to update your profile." });
+      setMessage({ type: "success", text: "Image uploaded. Click Save to update your profile." });
     } catch (error) {
       console.error("Error uploading image:", error);
       setMessage({ type: "error", text: error.message || "Failed to upload image" });
@@ -174,7 +167,6 @@ export default function PersonalSettings() {
     setMessage({ type: "", text: "" });
 
     try {
-      // Update user_profiles table
       const { error: profileError } = await supabase
         .from("user_profiles")
         .update({ full_name: profileData.full_name })
@@ -182,7 +174,6 @@ export default function PersonalSettings() {
 
       if (profileError) throw profileError;
 
-      // Update team_members if linked
       if (teamMember) {
         const { error: teamError } = await supabase
           .from("team_members")
@@ -200,7 +191,7 @@ export default function PersonalSettings() {
         await refreshProfile();
       }
 
-      setMessage({ type: "success", text: "Profile updated successfully!" });
+      setMessage({ type: "success", text: "Profile updated successfully." });
     } catch (error) {
       console.error("Error updating profile:", error);
       setMessage({ type: "error", text: error.message || "Failed to update profile" });
@@ -234,7 +225,7 @@ export default function PersonalSettings() {
       if (error) throw error;
 
       setPasswordData({ newPassword: "", confirmPassword: "" });
-      setMessage({ type: "success", text: "Password updated successfully!" });
+      setMessage({ type: "success", text: "Password updated successfully." });
     } catch (error) {
       console.error("Error changing password:", error);
       setMessage({ type: "error", text: error.message || "Failed to change password" });
@@ -244,289 +235,334 @@ export default function PersonalSettings() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Personal Settings</h1>
-        <p className="text-gray-500 mt-1">Manage your account settings and profile</p>
+    <div className="h-full flex flex-col bg-white overflow-hidden settings-form">
+      <style>{`
+        .settings-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+        .settings-form textarea,
+        .settings-form [role="combobox"] {
+          border-color: transparent !important;
+          background-color: transparent !important;
+          box-shadow: none !important;
+          transition: background-color 0.12s ease, border-color 0.12s ease;
+        }
+        .settings-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):hover,
+        .settings-form textarea:hover,
+        .settings-form [role="combobox"]:hover {
+          background-color: rgb(249 250 251) !important;
+        }
+        .settings-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+        .settings-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus-visible,
+        .settings-form textarea:focus,
+        .settings-form textarea:focus-visible,
+        .settings-form [role="combobox"]:focus,
+        .settings-form [role="combobox"][data-state="open"] {
+          background-color: white !important;
+          border-color: rgb(199 210 254) !important;
+          box-shadow: 0 0 0 3px rgb(224 231 255 / 0.45) !important;
+          outline: none !important;
+        }
+        .settings-form input:disabled,
+        .settings-form textarea:disabled {
+          color: rgb(107 114 128) !important;
+        }
+      `}</style>
+
+      {/* Consolidated toolbar */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <h1 className="text-[15px] font-semibold text-gray-900">Personal Settings</h1>
+        </div>
       </div>
 
-      {message.text && (
-        <div className={`mb-6 p-4 rounded-lg ${
-          message.type === "success"
-            ? "bg-green-50 text-green-800 border border-green-200"
-            : "bg-red-50 text-red-800 border border-red-200"
-        }`}>
-          {message.text}
-        </div>
-      )}
+      <div className="overflow-y-auto flex-1 min-h-0">
+        <div className="px-4 lg:px-6 py-4 max-w-3xl">
+          {message.text && (
+            <div className={`mb-4 px-3 py-2 rounded text-[13px] ${
+              message.type === "success"
+                ? "bg-green-50 text-green-800 border border-green-200"
+                : "bg-red-50 text-red-800 border border-red-200"
+            }`}>
+              {message.text}
+            </div>
+          )}
 
-      <div className="space-y-6">
-        {/* Profile Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5" />
-              Profile Information
-            </CardTitle>
-            <CardDescription>
-              Update your personal information displayed to the team
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleProfileUpdate} className="space-y-4">
-              {/* Profile Image Upload */}
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {profileData.profile_image_url ? (
-                      <img
-                        src={profileData.profile_image_url}
-                        alt={profileData.full_name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-3xl font-bold text-white">
-                        {profileData.full_name?.charAt(0) || 'U'}
-                      </span>
-                    )}
+          <Tabs defaultValue="profile" className="space-y-5">
+            <TabsList className="h-9 bg-transparent p-0 border-b border-gray-200 rounded-none w-full justify-start gap-5 px-1">
+              <TabsTrigger
+                value="profile"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+              >
+                Profile
+              </TabsTrigger>
+              <TabsTrigger
+                value="notifications"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+              >
+                Notifications
+              </TabsTrigger>
+              <TabsTrigger
+                value="password"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+              >
+                Password
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="profile" className="space-y-4">
+              <form onSubmit={handleProfileUpdate}>
+                {/* Avatar row */}
+                <div className="flex items-center gap-4 py-3">
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {profileData.profile_image_url ? (
+                        <img
+                          src={profileData.profile_image_url}
+                          alt={profileData.full_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-xl font-semibold text-white">
+                          {profileData.full_name?.charAt(0) || 'U'}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingImage}
+                      className="absolute bottom-0 right-0 w-6 h-6 bg-gray-900 hover:bg-gray-800 rounded-full flex items-center justify-center text-white shadow transition-colors"
+                    >
+                      {uploadingImage ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Camera className="w-3 h-3" />
+                      )}
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingImage}
-                    className="absolute bottom-0 right-0 w-8 h-8 bg-indigo-600 hover:bg-indigo-700 rounded-full flex items-center justify-center text-white shadow-lg transition-colors"
-                  >
-                    {uploadingImage ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Camera className="w-4 h-4" />
-                    )}
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
+                  <div className="flex-1">
+                    <p className="text-[13px] font-medium text-gray-900">Profile photo</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      Click the camera icon to upload. Max 5MB.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingImage}
+                      className="mt-1.5 h-7 px-2 text-[13px]"
+                    >
+                      {uploadingImage ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-3.5 h-3.5 mr-1" />
+                          Upload photo
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-700">Profile Photo</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Click the camera icon to upload a new photo. Max size: 5MB
-                  </p>
+
+                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                  <div className="flex items-center gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Full name</label>
+                    <Input
+                      value={profileData.full_name}
+                      onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
+                      placeholder="Your full name"
+                      className="flex-1 h-8 text-[13px]"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Email</label>
+                    <Input
+                      value={userProfile?.email || ""}
+                      disabled
+                      className="flex-1 h-8 text-[13px]"
+                    />
+                  </div>
+                  <div className="flex items-start gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0 mt-2">Bio</label>
+                    <Textarea
+                      value={profileData.bio}
+                      onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                      placeholder="Tell us a bit about yourself…"
+                      rows={4}
+                      className="flex-1 text-[13px]"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Role</label>
+                    <Input
+                      value={teamMember?.role?.replace(/_/g, ' ') || "N/A"}
+                      disabled
+                      className="flex-1 h-8 text-[13px] capitalize"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Account type</label>
+                    <Input
+                      value={userProfile?.role || "user"}
+                      disabled
+                      className="flex-1 h-8 text-[13px] capitalize"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4">
                   <Button
-                    type="button"
-                    variant="outline"
+                    type="submit"
+                    disabled={loading}
                     size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingImage}
-                    className="mt-2"
+                    className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
                   >
-                    {uploadingImage ? (
+                    {loading ? (
                       <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading...
+                        <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                        Saving...
                       </>
                     ) : (
                       <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload Photo
+                        <Save className="w-3.5 h-3.5 mr-1" />
+                        Save changes
                       </>
                     )}
                   </Button>
                 </div>
-              </div>
+              </form>
+            </TabsContent>
 
-              <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name</Label>
-                <Input
-                  id="full_name"
-                  value={profileData.full_name}
-                  onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
-                  placeholder="Your full name"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  value={userProfile?.email || ""}
-                  disabled
-                  className="bg-gray-50"
-                />
-                <p className="text-xs text-gray-500">Email cannot be changed</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={profileData.bio}
-                  onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                  placeholder="Tell us a bit about yourself..."
-                  rows={4}
-                />
-                <p className="text-xs text-gray-500">This will be displayed on your team profile</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Role</Label>
-                  <Input
-                    value={teamMember?.role?.replace('_', ' ') || "N/A"}
-                    disabled
-                    className="bg-gray-50 capitalize"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Account Type</Label>
-                  <Input
-                    value={userProfile?.role || "user"}
-                    disabled
-                    className="bg-gray-50 capitalize"
-                  />
-                </div>
-              </div>
-
-              <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700">
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Notification Preferences */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="w-5 h-5" />
-              Notification Preferences
-            </CardTitle>
-            <CardDescription>
-              Control which events notify you in-app and by email.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border p-3">
+            <TabsContent value="notifications" className="space-y-4">
               <div>
-                <p className="font-medium text-sm">Email notifications</p>
-                <p className="text-xs text-gray-500">Master switch for all notification emails</p>
-              </div>
-              <Switch
-                checked={notificationPrefs.email_enabled}
-                onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, email_enabled: checked }))}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {[
-                ["task_enabled", "Tasks"],
-                ["crm_enabled", "CRM"],
-                ["social_kpi_enabled", "Social + KPI"],
-                ["referral_enabled", "Referrals"],
-                ["finance_enabled", "Finance"],
-                ["system_enabled", "System / Integrations"],
-              ].map(([key, label]) => (
-                <div key={key} className="flex items-center justify-between rounded-lg border p-3">
-                  <p className="text-sm font-medium">{label}</p>
-                  <Switch
-                    checked={!!notificationPrefs[key]}
-                    onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, [key]: checked }))}
-                  />
+                <div className="h-7 flex items-center">
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">General</span>
                 </div>
-              ))}
-            </div>
+                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                  <div className="flex items-center gap-3 py-2.5">
+                    <div className="flex-1">
+                      <p className="text-[13px] font-medium text-gray-900">Email notifications</p>
+                      <p className="text-[11px] text-gray-500">Master switch for all notification emails</p>
+                    </div>
+                    <Switch
+                      checked={notificationPrefs.email_enabled}
+                      onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, email_enabled: checked }))}
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 py-2.5">
+                    <div className="flex-1">
+                      <p className="text-[13px] font-medium text-gray-900">Daily digest</p>
+                      <p className="text-[11px] text-gray-500">Use digest mode for lower-noise notifications</p>
+                    </div>
+                    <Switch
+                      checked={notificationPrefs.daily_digest_enabled}
+                      onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, daily_digest_enabled: checked }))}
+                    />
+                  </div>
+                </div>
+              </div>
 
-            <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
-                <p className="font-medium text-sm">Daily digest (non-urgent)</p>
-                <p className="text-xs text-gray-500">Use digest mode for lower-noise notifications</p>
-              </div>
-              <Switch
-                checked={notificationPrefs.daily_digest_enabled}
-                onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, daily_digest_enabled: checked }))}
-              />
-            </div>
-
-            <Button onClick={saveNotificationPreferences} disabled={savingNotifications} className="bg-indigo-600 hover:bg-indigo-700">
-              {savingNotifications ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Notification Preferences
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Change Password */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5" />
-              Change Password
-            </CardTitle>
-            <CardDescription>
-              Update your password to keep your account secure
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePasswordChange} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                  placeholder="Enter new password"
-                />
+                <div className="h-7 flex items-center">
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Categories</span>
+                </div>
+                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                  {[
+                    ["task_enabled", "Tasks"],
+                    ["crm_enabled", "CRM"],
+                    ["social_kpi_enabled", "Social + KPI"],
+                    ["referral_enabled", "Referrals"],
+                    ["finance_enabled", "Finance"],
+                    ["system_enabled", "System / Integrations"],
+                  ].map(([key, label]) => (
+                    <div key={key} className="flex items-center gap-3 py-2.5">
+                      <p className="flex-1 text-[13px] text-gray-900">{label}</p>
+                      <Switch
+                        checked={!!notificationPrefs[key]}
+                        onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, [key]: checked }))}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                  placeholder="Confirm new password"
-                />
+              <div className="pt-2">
+                <Button
+                  onClick={saveNotificationPreferences}
+                  disabled={savingNotifications}
+                  size="sm"
+                  className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+                >
+                  {savingNotifications ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5 mr-1" />
+                      Save preferences
+                    </>
+                  )}
+                </Button>
               </div>
+            </TabsContent>
 
-              <Button type="submit" disabled={passwordLoading} variant="outline">
-                {passwordLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-4 h-4 mr-2" />
-                    Update Password
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            <TabsContent value="password" className="space-y-4">
+              <form onSubmit={handlePasswordChange}>
+                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                  <div className="flex items-center gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">New password</label>
+                    <Input
+                      type="password"
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                      placeholder="Enter new password"
+                      className="flex-1 h-8 text-[13px]"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Confirm password</label>
+                    <Input
+                      type="password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                      placeholder="Confirm new password"
+                      className="flex-1 h-8 text-[13px]"
+                    />
+                  </div>
+                </div>
+                <div className="pt-4">
+                  <Button
+                    type="submit"
+                    disabled={passwordLoading}
+                    size="sm"
+                    className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+                  >
+                    {passwordLoading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update password"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   );

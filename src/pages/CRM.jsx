@@ -5,9 +5,8 @@ import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -18,8 +17,6 @@ import {
 import {
   Plus,
   Building2,
-  DollarSign,
-  Calendar,
   User,
   Search,
   Filter,
@@ -27,7 +24,6 @@ import {
   List,
   ChevronDown,
   ChevronRight,
-  Clock,
   AlertCircle,
   Flame,
   Thermometer,
@@ -37,8 +33,8 @@ import {
   PhoneCall,
   CalendarPlus,
   MessageSquare,
-  X,
   Trash2,
+  Calendar,
 } from "lucide-react";
 import {
   Sheet,
@@ -55,14 +51,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -72,9 +60,9 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import LeadForm from "../components/crm/LeadForm";
 
 const PRIORITY_OPTIONS = [
-  { value: "hot", label: "Hot", icon: Flame, color: "text-red-500", bg: "bg-red-100" },
-  { value: "warm", label: "Warm", icon: Thermometer, color: "text-orange-500", bg: "bg-orange-100" },
-  { value: "cold", label: "Cold", icon: Snowflake, color: "text-blue-500", bg: "bg-blue-100" },
+  { value: "hot", label: "Hot", icon: Flame, color: "text-red-500" },
+  { value: "warm", label: "Warm", icon: Thermometer, color: "text-orange-500" },
+  { value: "cold", label: "Cold", icon: Snowflake, color: "text-blue-500" },
 ];
 
 const ACTIVITY_TYPES = [
@@ -91,8 +79,7 @@ export default function CRM() {
   const [viewMode, setViewMode] = useState("kanban");
   const [collapsedColumns, setCollapsedColumns] = useState({ won: false, lost: false });
   const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState({ source: "", assignedTo: "", priority: "" });
-  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({ source: "all", assignedTo: "all", priority: "all" });
 
   // Lead detail sheet
   const [selectedLead, setSelectedLead] = useState(null);
@@ -254,13 +241,13 @@ export default function CRM() {
   };
 
   const columns = [
-    { id: "new", label: "New", color: "bg-purple-500", textColor: "text-purple-500", bgLight: "bg-purple-50" },
-    { id: "contacted", label: "Contacted", color: "bg-blue-500", textColor: "text-blue-500", bgLight: "bg-blue-50" },
-    { id: "qualified", label: "Qualified", color: "bg-indigo-500", textColor: "text-indigo-500", bgLight: "bg-indigo-50" },
-    { id: "proposal", label: "Proposal", color: "bg-yellow-500", textColor: "text-yellow-500", bgLight: "bg-yellow-50" },
-    { id: "negotiation", label: "Negotiation", color: "bg-orange-500", textColor: "text-orange-500", bgLight: "bg-orange-50" },
-    { id: "won", label: "Won", color: "bg-green-500", textColor: "text-green-500", bgLight: "bg-green-50" },
-    { id: "lost", label: "Lost", color: "bg-red-500", textColor: "text-red-500", bgLight: "bg-red-50" },
+    { id: "new", label: "New", color: "bg-purple-500" },
+    { id: "contacted", label: "Contacted", color: "bg-blue-500" },
+    { id: "qualified", label: "Qualified", color: "bg-indigo-500" },
+    { id: "proposal", label: "Proposal", color: "bg-yellow-500" },
+    { id: "negotiation", label: "Negotiation", color: "bg-orange-500" },
+    { id: "won", label: "Won", color: "bg-green-500" },
+    { id: "lost", label: "Lost", color: "bg-red-500" },
   ];
 
   const filteredLeads = useMemo(() => {
@@ -310,7 +297,12 @@ export default function CRM() {
 
   const toggleColumn = (columnId) => setCollapsedColumns(prev => ({ ...prev, [columnId]: !prev[columnId] }));
 
-  // Simplified Lead Card
+  const activeFilterCount =
+    (filters.source !== "all" ? 1 : 0) +
+    (filters.assignedTo !== "all" ? 1 : 0) +
+    (filters.priority !== "all" ? 1 : 0);
+
+  // Dense kanban card
   const LeadCard = ({ lead, isDragging }) => {
     const stale = isStale(lead);
     const partnerReferral = isPartnerReferral(lead);
@@ -318,184 +310,251 @@ export default function CRM() {
     const PriorityIcon = priority?.icon;
 
     return (
-      <Card
+      <div
         onClick={() => handleOpenLeadDetail(lead)}
-        className={`cursor-pointer hover:shadow-md transition-all
-          ${stale ? 'border-amber-300 bg-amber-50/50' : ''}
-          ${lead.status === 'won' ? 'bg-green-50 border-green-200' : ''}
-          ${lead.status === 'lost' ? 'bg-red-50 border-red-200' : ''}
-          ${isDragging ? 'shadow-xl ring-2 ring-indigo-400 rotate-1' : ''}
+        className={`cursor-pointer bg-white border border-gray-200 rounded p-2 hover:border-gray-300 transition-colors
+          ${stale ? "border-amber-300 bg-amber-50/30" : ""}
+          ${isDragging ? "ring-1 ring-indigo-400" : ""}
         `}
       >
-        <CardContent className="p-3">
-          {/* Row 1: Company + Value */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              {PriorityIcon && <PriorityIcon className={`w-4 h-4 flex-shrink-0 ${priority.color}`} />}
-              <span className="font-medium text-gray-900 truncate">{lead.company_name}</span>
-            </div>
-            {lead.estimated_value > 0 && (
-              <Badge className="bg-green-100 text-green-700 flex-shrink-0">
-                ${(lead.estimated_value / 1000).toFixed(0)}k
-              </Badge>
-            )}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {PriorityIcon && <PriorityIcon className={`w-3 h-3 flex-shrink-0 ${priority.color}`} />}
+            <span className="text-[13px] text-gray-900 font-medium truncate">{lead.company_name}</span>
           </div>
-
-          {/* Row 2: Contact */}
-          <div className="flex items-center gap-1 mt-1.5 text-sm text-gray-500">
-            <User className="w-3 h-3" />
-            <span className="truncate">{lead.contact_name}</span>
-          </div>
-
-          {/* Row 3: Badges */}
-          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+          {lead.estimated_value > 0 && (
+            <span className="text-[11px] text-gray-900 font-medium tabular-nums flex-shrink-0">
+              ${(lead.estimated_value / 1000).toFixed(0)}k
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 mt-1 text-[11px] text-gray-500">
+          <User className="w-3 h-3" />
+          <span className="truncate">{lead.contact_name}</span>
+        </div>
+        {(partnerReferral || stale || lead.next_action_date) && (
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             {partnerReferral && (
-              <Badge className="bg-purple-100 text-purple-700 text-xs">
-                <Users className="w-3 h-3 mr-0.5" />
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-purple-600">
+                <Users className="w-2.5 h-2.5" />
                 Partner
-              </Badge>
+              </span>
             )}
             {stale && (
-              <Badge className="bg-amber-100 text-amber-700 text-xs">
-                <AlertCircle className="w-3 h-3 mr-0.5" />
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-600">
+                <AlertCircle className="w-2.5 h-2.5" />
                 {getStageAge(lead)}d
-              </Badge>
+              </span>
             )}
             {lead.next_action_date && (
-              <span className="text-xs text-gray-400 flex items-center gap-0.5">
-                <Calendar className="w-3 h-3" />
-                {new Date(lead.next_action_date).toLocaleDateString()}
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-400">
+                <Calendar className="w-2.5 h-2.5" />
+                {new Date(lead.next_action_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
               </span>
             )}
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
     );
   };
 
-  // List View Row
-  const ListViewRow = ({ lead }) => {
+  // Dense list row
+  const ListRow = ({ lead }) => {
     const stale = isStale(lead);
     const column = columns.find(c => c.id === lead.status);
+    const priority = PRIORITY_OPTIONS.find(p => p.value === lead.priority);
+    const PriorityIcon = priority?.icon;
+    const initials = (lead.company_name || "?")
+      .split(" ")
+      .map((w) => w[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
 
     return (
-      <TableRow
-        className={`cursor-pointer hover:bg-gray-50 ${stale ? "bg-amber-50" : ""}`}
+      <div
         onClick={() => handleOpenLeadDetail(lead)}
+        className={`group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${stale ? "bg-amber-50/30" : ""}`}
       >
-        <TableCell>
-          <div className="font-medium">{lead.company_name}</div>
-          <div className="text-sm text-gray-500">{lead.contact_name}</div>
-        </TableCell>
-        <TableCell>{lead.email}</TableCell>
-        <TableCell>
-          <Badge className={`${column?.bgLight} ${column?.textColor}`}>{column?.label}</Badge>
-        </TableCell>
-        <TableCell>{lead.estimated_value ? `$${lead.estimated_value.toLocaleString()}` : "—"}</TableCell>
-        <TableCell>
-          {lead.next_action_date ? new Date(lead.next_action_date).toLocaleDateString() : "—"}
-        </TableCell>
-      </TableRow>
+        <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+          {initials}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            {PriorityIcon && <PriorityIcon className={`w-3 h-3 flex-shrink-0 ${priority.color}`} />}
+            <span className="text-[13px] text-gray-900 font-medium truncate">{lead.company_name}</span>
+            {lead.contact_name && (
+              <span className="text-gray-400 text-[12px] ml-1 truncate">· {lead.contact_name}</span>
+            )}
+          </div>
+        </div>
+
+        <span className="hidden md:inline text-[12px] text-gray-500 w-48 truncate text-right">
+          {lead.email || "—"}
+        </span>
+
+        <span className="inline-flex items-center gap-1.5 w-24 justify-end">
+          {column && <span className={`w-1.5 h-1.5 rounded-full ${column.color}`} />}
+          <span className="text-[11px] text-gray-500">{column?.label || lead.status}</span>
+        </span>
+
+        <span className="text-[13px] text-gray-900 font-medium w-20 text-right tabular-nums">
+          {lead.estimated_value ? `$${lead.estimated_value.toLocaleString()}` : "—"}
+        </span>
+
+        <span className="hidden md:inline text-[12px] text-gray-500 w-24 text-right">
+          {lead.next_action_date ? new Date(lead.next_action_date).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—"}
+        </span>
+
+        {stale && (
+          <span className="inline-flex items-center gap-0.5 text-[11px] text-amber-600 w-10 justify-end">
+            <AlertCircle className="w-3 h-3" />
+            {getStageAge(lead)}d
+          </span>
+        )}
+      </div>
     );
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="border-b bg-white shadow-sm">
-        <div className="p-6 lg:p-8">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Sales Pipeline</h1>
-              <p className="text-gray-500 mt-1">Track leads through your sales process</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="hidden lg:flex items-center gap-6">
-                <div>
-                  <p className="text-sm text-gray-600">Pipeline</p>
-                  <p className="text-xl font-bold text-indigo-600">${stats.pipelineValue.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Won</p>
-                  <p className="text-xl font-bold text-green-600">${stats.wonValue.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Active</p>
-                  <p className="text-xl font-bold text-gray-900">{stats.activeLeads}</p>
-                </div>
-                {stats.staleLeads > 0 && (
-                  <div>
-                    <p className="text-sm text-amber-600">Stale</p>
-                    <p className="text-xl font-bold text-amber-600">{stats.staleLeads}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm text-gray-600">Win Rate</p>
-                  <p className="text-xl font-bold text-gray-900">{stats.conversionRate.toFixed(0)}%</p>
-                </div>
-              </div>
-              <Button onClick={() => { setEditingLead(null); setShowLeadForm(true); }} className="bg-indigo-600 hover:bg-indigo-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Lead
-              </Button>
-            </div>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Page header with inline metric strip */}
+      <div className="px-4 pt-4 pb-3 border-b border-gray-200">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+          <h1 className="text-[15px] font-semibold text-gray-900">Sales Pipeline</h1>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-gray-600">
+            <span>Pipeline <span className="text-gray-900 font-medium">${stats.pipelineValue.toLocaleString()}</span></span>
+            <span>Won <span className="text-gray-900 font-medium">${stats.wonValue.toLocaleString()}</span></span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+              Active <span className="text-gray-900 font-medium">{stats.activeLeads}</span>
+            </span>
+            {stats.staleLeads > 0 && (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                Stale <span className="text-amber-600 font-medium">{stats.staleLeads}</span>
+              </span>
+            )}
+            <span>Win rate <span className="text-gray-900 font-medium">{stats.conversionRate.toFixed(0)}%</span></span>
           </div>
-
-          {/* Search & Filters */}
-          <div className="flex items-center gap-4 mt-6">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input placeholder="Search leads..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
-            </div>
-            <Button variant={showFilters ? "default" : "outline"} onClick={() => setShowFilters(!showFilters)}>
-              <Filter className="w-4 h-4 mr-2" />
-              Filters
-            </Button>
-            <div className="flex items-center border rounded-lg overflow-hidden">
-              <Button variant={viewMode === "kanban" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("kanban")} className="rounded-none">
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-              <Button variant={viewMode === "list" ? "default" : "ghost"} size="sm" onClick={() => setViewMode("list")} className="rounded-none">
-                <List className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          {showFilters && (
-            <div className="flex items-center gap-4 mt-4 p-4 bg-gray-50 rounded-lg">
-              <Select value={filters.source} onValueChange={(value) => setFilters({ ...filters, source: value })}>
-                <SelectTrigger className="w-40"><SelectValue placeholder="Source" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sources</SelectItem>
-                  <SelectItem value="referral">Referral</SelectItem>
-                  <SelectItem value="website">Website</SelectItem>
-                  <SelectItem value="linkedin">LinkedIn</SelectItem>
-                  <SelectItem value="cold_outreach">Cold Outreach</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filters.priority} onValueChange={(value) => setFilters({ ...filters, priority: value })}>
-                <SelectTrigger className="w-40"><SelectValue placeholder="Priority" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
-                  {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {(filters.source && filters.source !== "all" || filters.priority && filters.priority !== "all") && (
-                <Button variant="ghost" size="sm" onClick={() => setFilters({ source: "all", assignedTo: "all", priority: "all" })}>
-                  <X className="w-4 h-4 mr-1" /> Clear
-                </Button>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
+      {/* Consolidated toolbar */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <div className="relative flex-1 max-w-md min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Input
+              placeholder="Search leads"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+            />
+          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 gap-1.5 h-8 text-[13px]">
+                <Filter className="w-3.5 h-3.5" />
+                Filter
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Filters</span>
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    className="text-xs text-indigo-600 hover:text-indigo-700"
+                    onClick={() => setFilters({ source: "all", assignedTo: "all", priority: "all" })}
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-600">Source</label>
+                <Select value={filters.source} onValueChange={(value) => setFilters({ ...filters, source: value })}>
+                  <SelectTrigger><SelectValue placeholder="Source" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sources</SelectItem>
+                    <SelectItem value="referral">Referral</SelectItem>
+                    <SelectItem value="website">Website</SelectItem>
+                    <SelectItem value="linkedin">LinkedIn</SelectItem>
+                    <SelectItem value="cold_outreach">Cold Outreach</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-600">Priority</label>
+                <Select value={filters.priority} onValueChange={(value) => setFilters({ ...filters, priority: value })}>
+                  <SelectTrigger><SelectValue placeholder="Priority" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    {PRIORITY_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-600">Assignee</label>
+                <Select value={filters.assignedTo} onValueChange={(value) => setFilters({ ...filters, assignedTo: value })}>
+                  <SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Team</SelectItem>
+                    {teamMembers.map(tm => (
+                      <SelectItem key={tm.id} value={tm.id}>{tm.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <div className="ml-auto flex items-center gap-1.5">
+            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode("kanban")}
+                className={`p-1 rounded ${viewMode === "kanban" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                title="Kanban"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`p-1 rounded ${viewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                title="List"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <Button
+              onClick={() => { setEditingLead(null); setShowLeadForm(true); }}
+              size="sm"
+              className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              New Lead
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 overflow-hidden min-h-0">
         {viewMode === "kanban" ? (
           <DragDropContext onDragEnd={handleDragEnd}>
             <div className="h-full overflow-x-auto">
-              <div className="inline-flex h-full gap-4 p-6 lg:p-8 min-w-full">
+              <div className="inline-flex h-full gap-3 p-4 min-w-full">
                 {columns.map((column) => {
                   const columnLeads = getLeadsByStatus(column.id);
                   const columnValue = columnLeads.reduce((sum, lead) => sum + (lead.estimated_value || 0), 0);
@@ -504,34 +563,44 @@ export default function CRM() {
 
                   if (isCollapsed) {
                     return (
-                      <div key={column.id} className="flex-shrink-0 w-12 cursor-pointer" onClick={() => toggleColumn(column.id)}>
-                        <div className={`h-full ${column.bgLight} rounded-xl flex flex-col items-center py-4`}>
-                          <div className={`w-3 h-3 rounded-full ${column.color} mb-2`} />
-                          <span className="text-xs font-medium text-gray-600" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>
+                      <div key={column.id} className="flex-shrink-0 w-10 cursor-pointer" onClick={() => toggleColumn(column.id)}>
+                        <div className="h-full border border-gray-200 rounded flex flex-col items-center py-3 bg-gray-50 hover:bg-gray-100">
+                          <div className={`w-2 h-2 rounded-full ${column.color} mb-2`} />
+                          <span className="text-[11px] text-gray-600" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>
                             {column.label} ({columnLeads.length})
                           </span>
-                          <ChevronRight className="w-4 h-4 text-gray-400 mt-2" />
+                          <ChevronRight className="w-3 h-3 text-gray-400 mt-2" />
                         </div>
                       </div>
                     );
                   }
 
                   return (
-                    <div key={column.id} className="flex-shrink-0 w-72 flex flex-col">
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2.5 h-2.5 rounded-full ${column.color}`} />
-                            <h3 className="font-semibold text-gray-900 text-sm">{column.label}</h3>
-                            <Badge variant="secondary" className="bg-gray-100 text-xs">{columnLeads.length}</Badge>
-                          </div>
+                    <div key={column.id} className="flex-shrink-0 w-64 flex flex-col">
+                      <div className="flex items-center justify-between px-1 pb-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div className={`w-2 h-2 rounded-full ${column.color}`} />
+                          <span className="text-[11px] font-medium uppercase tracking-wide text-gray-700 truncate">
+                            {column.label}
+                          </span>
+                          <span className="text-[11px] text-gray-400 tabular-nums">{columnLeads.length}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {columnValue > 0 && (
+                            <span className="text-[11px] text-gray-500 tabular-nums">
+                              ${(columnValue / 1000).toFixed(0)}k
+                            </span>
+                          )}
                           {canCollapse && (
-                            <Button variant="ghost" size="sm" onClick={() => toggleColumn(column.id)} className="h-6 w-6 p-0">
-                              <ChevronDown className="w-4 h-4" />
-                            </Button>
+                            <button
+                              type="button"
+                              onClick={() => toggleColumn(column.id)}
+                              className="text-gray-400 hover:text-gray-700"
+                            >
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500">${columnValue.toLocaleString()}</p>
                       </div>
 
                       <Droppable droppableId={column.id}>
@@ -539,9 +608,9 @@ export default function CRM() {
                           <div
                             ref={provided.innerRef}
                             {...provided.droppableProps}
-                            className={`flex-1 rounded-xl transition-colors ${snapshot.isDraggingOver ? column.bgLight : 'bg-gray-50/50'} p-2 overflow-y-auto`}
+                            className={`flex-1 rounded transition-colors ${snapshot.isDraggingOver ? "bg-gray-100" : "bg-gray-50"} p-1.5 overflow-y-auto`}
                           >
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                               {columnLeads.map((lead, index) => (
                                 <Draggable key={lead.id} draggableId={lead.id} index={index}>
                                   {(provided, snapshot) => (
@@ -553,9 +622,9 @@ export default function CRM() {
                               ))}
                               {provided.placeholder}
                               {columnLeads.length === 0 && (
-                                <div className="text-center py-8 text-gray-400">
-                                  <Building2 className="w-6 h-6 mx-auto mb-1 opacity-50" />
-                                  <p className="text-xs">No leads</p>
+                                <div className="text-center py-6 text-gray-400">
+                                  <Building2 className="w-5 h-5 mx-auto mb-1 opacity-50" />
+                                  <p className="text-[11px]">No leads</p>
                                 </div>
                               )}
                             </div>
@@ -569,25 +638,14 @@ export default function CRM() {
             </div>
           </DragDropContext>
         ) : (
-          <div className="p-6 lg:p-8 overflow-auto h-full">
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Company</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Value</TableHead>
-                      <TableHead>Next Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLeads.map(lead => <ListViewRow key={lead.id} lead={lead} />)}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+          <div className="overflow-y-auto h-full bg-white">
+            {filteredLeads.length === 0 ? (
+              <div className="p-8 text-center text-sm text-gray-400">
+                {leads.length === 0 ? 'No leads yet. Click "New Lead" to get started.' : "No leads match your filters."}
+              </div>
+            ) : (
+              filteredLeads.map(lead => <ListRow key={lead.id} lead={lead} />)
+            )}
           </div>
         )}
       </div>
@@ -600,17 +658,16 @@ export default function CRM() {
               <SheetHeader>
                 <div className="flex items-start justify-between">
                   <div>
-                    <SheetTitle className="text-xl">{selectedLead.company_name}</SheetTitle>
-                    <p className="text-gray-500 mt-1">{selectedLead.contact_name}</p>
+                    <SheetTitle className="text-[15px] font-semibold">{selectedLead.company_name}</SheetTitle>
+                    <p className="text-[13px] text-gray-500 mt-0.5">{selectedLead.contact_name}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {/* Priority Selector */}
+                  <div className="flex items-center gap-1">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm">
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-[13px]">
                           {(() => {
                             const p = PRIORITY_OPTIONS.find(p => p.value === selectedLead.priority);
-                            return p ? <p.icon className={`w-4 h-4 ${p.color}`} /> : <Thermometer className="w-4 h-4 text-gray-400" />;
+                            return p ? <p.icon className={`w-3.5 h-3.5 ${p.color}`} /> : <Thermometer className="w-3.5 h-3.5 text-gray-400" />;
                           })()}
                         </Button>
                       </DropdownMenuTrigger>
@@ -622,72 +679,61 @@ export default function CRM() {
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button variant="outline" size="sm" onClick={() => { setEditingLead(selectedLead); setShowLeadForm(true); }}>
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-[13px]" onClick={() => { setEditingLead(selectedLead); setShowLeadForm(true); }}>
                       Edit
                     </Button>
-                    <Button variant="outline" size="sm" className="text-red-600" onClick={() => setDeleteDialog({ open: true, leadId: selectedLead.id })}>
-                      <Trash2 className="w-4 h-4" />
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-400 hover:text-red-600" onClick={() => setDeleteDialog({ open: true, leadId: selectedLead.id })}>
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </div>
               </SheetHeader>
 
-              {/* Lead Info */}
-              <div className="mt-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Value</p>
-                    <p className="font-medium">${selectedLead.estimated_value?.toLocaleString() || 0}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Status</p>
-                    <p className="font-medium capitalize">{selectedLead.status}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Email</p>
-                    <p className="font-medium text-sm truncate">{selectedLead.email || "—"}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Phone</p>
-                    <p className="font-medium">{selectedLead.phone || "—"}</p>
-                  </div>
-                </div>
-
-                {selectedLead.next_action && (
-                  <div className="bg-indigo-50 rounded-lg p-3">
-                    <p className="text-xs text-indigo-600 font-medium">Next Action</p>
-                    <p className="text-sm mt-1">{selectedLead.next_action}</p>
-                    {selectedLead.next_action_date && (
-                      <p className="text-xs text-indigo-500 mt-1">Due: {new Date(selectedLead.next_action_date).toLocaleDateString()}</p>
-                    )}
-                  </div>
-                )}
-
-                {isPartnerReferral(selectedLead) && (
-                  <div className="bg-purple-50 rounded-lg p-3">
-                    <p className="text-xs text-purple-600 font-medium flex items-center gap-1">
-                      <Users className="w-3 h-3" /> Partner Referral
-                    </p>
-                    <p className="text-sm mt-1">{selectedLead.source}</p>
-                  </div>
-                )}
+              {/* Inline metric strip */}
+              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
+                <span>Value <span className="text-gray-900 font-medium">${selectedLead.estimated_value?.toLocaleString() || 0}</span></span>
+                <span>Status <span className="text-gray-900 font-medium capitalize">{selectedLead.status}</span></span>
+                <span>Email <span className="text-gray-900 font-medium">{selectedLead.email || "—"}</span></span>
+                <span>Phone <span className="text-gray-900 font-medium">{selectedLead.phone || "—"}</span></span>
               </div>
 
+              {selectedLead.next_action && (
+                <div className="mt-4 border-t border-gray-200 pt-3">
+                  <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">Next action</div>
+                  <p className="text-[13px] text-gray-900">{selectedLead.next_action}</p>
+                  {selectedLead.next_action_date && (
+                    <p className="text-[11px] text-gray-500 mt-0.5">Due: {new Date(selectedLead.next_action_date).toLocaleDateString()}</p>
+                  )}
+                </div>
+              )}
+
+              {isPartnerReferral(selectedLead) && (
+                <div className="mt-4 border-t border-gray-200 pt-3">
+                  <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center gap-1">
+                    <Users className="w-3 h-3" /> Partner Referral
+                  </div>
+                  <p className="text-[13px] text-gray-900">{selectedLead.source}</p>
+                </div>
+              )}
+
               {/* Log Activity */}
-              <div className="mt-6 border-t pt-6">
-                <h3 className="font-medium text-gray-900 mb-3">Log Activity</h3>
-                <div className="flex gap-2 mb-3">
+              <div className="mt-5 border-t border-gray-200 pt-4">
+                <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">Log activity</div>
+                <div className="flex gap-1 mb-2 mt-1">
                   {ACTIVITY_TYPES.map(type => (
-                    <Button
+                    <button
                       key={type.value}
-                      variant={activityType === type.value ? "default" : "outline"}
-                      size="sm"
+                      type="button"
                       onClick={() => setActivityType(type.value)}
-                      className={activityType === type.value ? "" : ""}
+                      className={`inline-flex items-center gap-1 h-7 px-2 rounded text-[13px] ${
+                        activityType === type.value
+                          ? "bg-gray-900 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
                     >
-                      <type.icon className="w-4 h-4 mr-1" />
+                      <type.icon className="w-3.5 h-3.5" />
                       {type.label}
-                    </Button>
+                    </button>
                   ))}
                 </div>
                 <Textarea
@@ -695,41 +741,46 @@ export default function CRM() {
                   value={activityDescription}
                   onChange={(e) => setActivityDescription(e.target.value)}
                   rows={2}
+                  className="text-[13px]"
                 />
-                <Button className="mt-2" onClick={handleLogActivity} disabled={savingActivity || !activityDescription.trim()}>
-                  {savingActivity ? "Saving..." : "Log Activity"}
+                <Button
+                  className="mt-2 bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+                  onClick={handleLogActivity}
+                  disabled={savingActivity || !activityDescription.trim()}
+                >
+                  {savingActivity ? "Saving…" : "Log Activity"}
                 </Button>
               </div>
 
               {/* Activity Timeline */}
-              <div className="mt-6 border-t pt-6">
-                <h3 className="font-medium text-gray-900 mb-3">Activity Timeline</h3>
+              <div className="mt-5 border-t border-gray-200 pt-4">
+                <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">Activity timeline</div>
                 {loadingActivities ? (
                   <div className="text-center py-4">
-                    <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mx-auto" />
                   </div>
                 ) : activities.length === 0 ? (
-                  <p className="text-gray-500 text-sm text-center py-4">No activities yet</p>
+                  <p className="text-[13px] text-gray-500 text-center py-4">No activities yet</p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="border-t border-gray-200">
                     {activities.map((activity) => {
                       const typeInfo = ACTIVITY_TYPES.find(t => t.value === activity.type);
                       const Icon = typeInfo?.icon || MessageSquare;
                       return (
-                        <div key={activity.id} className="flex gap-3">
-                          <div className={`w-8 h-8 rounded-full ${typeInfo?.bg || 'bg-gray-100'} flex items-center justify-center flex-shrink-0`}>
-                            <Icon className={`w-4 h-4 ${typeInfo?.color || 'text-gray-600'}`} />
+                        <div key={activity.id} className="flex items-start gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50">
+                          <div className={`w-6 h-6 rounded-full ${typeInfo?.bg || "bg-gray-100"} flex items-center justify-center flex-shrink-0`}>
+                            <Icon className={`w-3.5 h-3.5 ${typeInfo?.color || "text-gray-600"}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">{typeInfo?.label || activity.type}</span>
-                              <span className="text-xs text-gray-400">
-                                {new Date(activity.created_at).toLocaleDateString()} at {new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              <span className="text-[13px] text-gray-900 font-medium">{typeInfo?.label || activity.type}</span>
+                              <span className="text-[11px] text-gray-400">
+                                {new Date(activity.created_at).toLocaleDateString()} at {new Date(activity.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-600 mt-0.5">{activity.description}</p>
+                            <p className="text-[12px] text-gray-600 mt-0.5">{activity.description}</p>
                             {activity.user_profiles?.full_name && (
-                              <p className="text-xs text-gray-400 mt-1">by {activity.user_profiles.full_name}</p>
+                              <p className="text-[11px] text-gray-400 mt-0.5">by {activity.user_profiles.full_name}</p>
                             )}
                           </div>
                         </div>

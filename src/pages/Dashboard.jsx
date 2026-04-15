@@ -1,22 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Task, Project, TimeEntry, Lead, TeamMember, Account } from "@/api/entities";
+import { Task, Project, TimeEntry, Lead, TeamMember } from "@/api/entities";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { createPageUrl, parseLocalDate } from "@/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Clock, 
-  CheckSquare, 
-  AlertCircle, 
-  TrendingUp, 
-  Calendar,
-  FolderKanban,
-  Target,
-  ArrowRight,
-  Plus
-} from "lucide-react";
+import { Clock, CheckSquare, FolderKanban, Plus, ArrowRight } from "lucide-react";
 
 export default function Dashboard() {
   const { user: authUser, userProfile } = useAuth();
@@ -58,10 +46,10 @@ export default function Dashboard() {
   };
 
   // My Tasks
-  const myTasks = currentTeamMember 
+  const myTasks = currentTeamMember
     ? tasks.filter(t => t.assigned_to === currentTeamMember.id && t.status !== 'completed')
     : [];
-  
+
   const myOverdueTasks = myTasks.filter(t => {
     if (!t.due_date) return false;
     const today = new Date();
@@ -83,7 +71,7 @@ export default function Dashboard() {
   const getWeekStart = () => {
     const now = new Date();
     const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
     return new Date(now.getFullYear(), now.getMonth(), diff);
   };
 
@@ -102,294 +90,302 @@ export default function Dashboard() {
     : [];
 
   // Recent Activity
-  const recentTasks = myTasks.slice(0, 5);
+  const recentTasks = myTasks.slice(0, 8);
 
-  // Team Stats (visible to all)
+  // Team Stats
   const activeProjects = projects.filter(p => p.status === 'active').length;
   const activeLeads = leads.filter(l => l.status !== 'won' && l.status !== 'lost').length;
+  const allActiveTasks = tasks.filter(t => t.status !== 'completed').length;
 
   const getProjectName = (projectId) => {
     const project = projects.find(p => p.id === projectId);
     return project?.name || "Unknown";
   };
 
-  const priorityColors = {
-    low: "bg-gray-100 text-gray-600",
-    medium: "bg-blue-100 text-blue-700",
-    high: "bg-orange-100 text-orange-700",
-    urgent: "bg-red-100 text-red-700"
+  const priorityDot = {
+    low: "bg-gray-400",
+    medium: "bg-blue-500",
+    high: "bg-orange-500",
+    urgent: "bg-red-500"
   };
 
-  const statusColors = {
-    todo: "bg-gray-100 text-gray-800",
-    in_progress: "bg-blue-100 text-blue-800",
-    blocked: "bg-red-100 text-red-800",
-    review: "bg-yellow-100 text-yellow-800",
-    completed: "bg-green-100 text-green-800"
+  const statusDot = {
+    todo: "bg-gray-400",
+    in_progress: "bg-blue-500",
+    blocked: "bg-red-500",
+    review: "bg-yellow-500",
+    completed: "bg-green-500"
   };
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="animate-pulse space-y-8">
-          <div className="h-12 bg-gray-200 rounded w-64"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
-          </div>
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-64"></div>
+          <div className="h-8 bg-gray-200 rounded"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
         </div>
       </div>
     );
   }
 
+  const firstName = userProfile?.full_name?.split(' ')[0] || 'there';
+
   return (
-    <div className="p-6 lg:p-8 space-y-8">
+    <div className="p-6 lg:p-8 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Welcome back, {userProfile?.full_name?.split(' ')[0] || 'there'}! 👋
-        </h1>
-        <p className="text-gray-500 mt-1">Here's what's on your plate today</p>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('Tasks'))}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">My Active Tasks</CardTitle>
-            <CheckSquare className="w-5 h-5 text-indigo-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{myTasks.length}</div>
-            {myOverdueTasks.length > 0 && (
-              <p className="text-sm text-red-600 mt-1">
-                {myOverdueTasks.length} overdue
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('Tasks'))}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Due This Week</CardTitle>
-            <Calendar className="w-5 h-5 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-600">{myTasksDueThisWeek.length}</div>
-            <p className="text-sm text-gray-500 mt-1">tasks need attention</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('TimeTracking'))}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Hours This Week</CardTitle>
-            <Clock className="w-5 h-5 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{myTimeThisWeek.toFixed(1)}</div>
-            <p className="text-sm text-gray-500 mt-1">hours logged</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('Projects'))}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">My Projects</CardTitle>
-            <FolderKanban className="w-5 h-5 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">{myProjects.length}</div>
-            <p className="text-sm text-gray-500 mt-1">active projects</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* My Tasks */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>My Tasks</CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(createPageUrl('Tasks'))}
-            >
-              View All <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {recentTasks.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <CheckSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No active tasks</p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-3"
-                  onClick={() => navigate(createPageUrl('Tasks'))}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Task
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentTasks.map(task => (
-                  <div
-                    key={task.id}
-                    className="flex items-start justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate(createPageUrl('Tasks'))}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-medium text-gray-900">{task.title}</h4>
-                        <Badge className={priorityColors[task.priority]}>
-                          {task.priority}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-600">{getProjectName(task.project_id)}</p>
-                      {task.due_date && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Due: {parseLocalDate(task.due_date).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                    <Badge className={statusColors[task.status]}>
-                      {task.status.replace('_', ' ')}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions & Stats */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                className="w-full justify-start"
-                variant="outline"
-                onClick={() => navigate(createPageUrl('Tasks'))}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Task
-              </Button>
-              <Button
-                className="w-full justify-start"
-                variant="outline"
-                onClick={() => navigate(createPageUrl('TimeTracking'))}
-              >
-                <Clock className="w-4 h-4 mr-2" />
-                Log Time
-              </Button>
-              <Button
-                className="w-full justify-start"
-                variant="outline"
-                onClick={() => navigate(createPageUrl('Projects'))}
-              >
-                <FolderKanban className="w-4 h-4 mr-2" />
-                View Projects
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Team Overview */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Team Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FolderKanban className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Active Projects</span>
-                </div>
-                <span className="font-semibold text-gray-900">{activeProjects}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Active Leads</span>
-                </div>
-                <span className="font-semibold text-gray-900">{activeLeads}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckSquare className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">All Active Tasks</span>
-                </div>
-                <span className="font-semibold text-gray-900">
-                  {tasks.filter(t => t.status !== 'completed').length}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Overdue Alert */}
-          {myOverdueTasks.length > 0 && (
-            <Card className="border-red-200 bg-red-50">
-              <CardHeader>
-                <CardTitle className="text-base text-red-900 flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5" />
-                  Overdue Tasks
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-red-700 mb-3">
-                  You have {myOverdueTasks.length} overdue task{myOverdueTasks.length !== 1 ? 's' : ''} that need attention.
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full border-red-300 hover:bg-red-100"
-                  onClick={() => navigate(createPageUrl('Tasks'))}
-                >
-                  View Overdue Tasks
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-[15px] font-semibold text-gray-900">Welcome back, {firstName}</h1>
+          <p className="text-[12px] text-gray-500 mt-0.5">Here's what's on your plate today</p>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+            onClick={() => navigate(createPageUrl('TimeTracking'))}
+          >
+            <Clock className="w-3.5 h-3.5 mr-1.5" />
+            Log time
+          </Button>
+          <Button
+            size="sm"
+            className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+            onClick={() => navigate(createPageUrl('Tasks'))}
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            New task
+          </Button>
         </div>
       </div>
 
-      {/* My Projects */}
-      {myProjects.length > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>My Active Projects</CardTitle>
+      {/* Metric pill strip */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-b border-gray-200 py-2.5">
+        <button
+          onClick={() => navigate(createPageUrl('Tasks'))}
+          className="flex items-center gap-2 text-[13px] text-gray-600 hover:text-gray-900"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+          <span>My tasks</span>
+          <span className="text-gray-900 font-medium">{myTasks.length}</span>
+        </button>
+        <button
+          onClick={() => navigate(createPageUrl('Tasks'))}
+          className="flex items-center gap-2 text-[13px] text-gray-600 hover:text-gray-900"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+          <span>Overdue</span>
+          <span className={`font-medium ${myOverdueTasks.length > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+            {myOverdueTasks.length}
+          </span>
+        </button>
+        <button
+          onClick={() => navigate(createPageUrl('Tasks'))}
+          className="flex items-center gap-2 text-[13px] text-gray-600 hover:text-gray-900"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+          <span>Due this week</span>
+          <span className="text-gray-900 font-medium">{myTasksDueThisWeek.length}</span>
+        </button>
+        <button
+          onClick={() => navigate(createPageUrl('TimeTracking'))}
+          className="flex items-center gap-2 text-[13px] text-gray-600 hover:text-gray-900"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          <span>Hours this week</span>
+          <span className="text-gray-900 font-medium">{myTimeThisWeek.toFixed(1)}</span>
+        </button>
+        <button
+          onClick={() => navigate(createPageUrl('Projects'))}
+          className="flex items-center gap-2 text-[13px] text-gray-600 hover:text-gray-900"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+          <span>My projects</span>
+          <span className="text-gray-900 font-medium">{myProjects.length}</span>
+        </button>
+      </div>
+
+      {/* Main grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* My Tasks list */}
+        <div className="lg:col-span-2">
+          <div className="flex items-center justify-between h-7 mb-1">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">My Tasks</div>
             <Button
-              variant="ghost"
               size="sm"
-              onClick={() => navigate(createPageUrl('Projects'))}
+              variant="ghost"
+              className="h-6 px-2 text-[12px] text-gray-700 hover:bg-gray-100"
+              onClick={() => navigate(createPageUrl('Tasks'))}
             >
-              View All <ArrowRight className="w-4 h-4 ml-2" />
+              View all
+              <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {myProjects.slice(0, 6).map(project => (
+          </div>
+          {recentTasks.length === 0 ? (
+            <div className="border border-gray-200 rounded-md px-3 py-8 text-center">
+              <div className="text-[13px] text-gray-600 mb-2">No active tasks</div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+                onClick={() => navigate(createPageUrl('Tasks'))}
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                Create task
+              </Button>
+            </div>
+          ) : (
+            <div className="border border-gray-200 rounded-md">
+              {recentTasks.map((task, idx) => (
                 <div
-                  key={project.id}
-                  className="p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => navigate(createPageUrl(`ProjectDetail?id=${project.id}`))}
+                  key={task.id}
+                  onClick={() => navigate(createPageUrl('Tasks'))}
+                  className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer ${
+                    idx !== recentTasks.length - 1 ? 'border-b border-gray-100' : ''
+                  }`}
                 >
-                  <h4 className="font-medium text-gray-900 mb-2">{project.name}</h4>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 capitalize">{project.billing_type}</span>
-                    <Badge variant="outline">{project.status}</Badge>
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${priorityDot[task.priority] || 'bg-gray-400'}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] text-gray-900 truncate">{task.title}</div>
+                    <div className="text-[12px] text-gray-500 truncate">{getProjectName(task.project_id)}</div>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {task.due_date && (
+                      <span className="text-[12px] text-gray-500">
+                        {parseLocalDate(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-1.5 min-w-[80px]">
+                      <span className={`w-1.5 h-1.5 rounded-full ${statusDot[task.status] || 'bg-gray-400'}`} />
+                      <span className="text-[12px] text-gray-600 capitalize">{task.status.replace('_', ' ')}</span>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-6">
+          {/* Quick actions */}
+          <div>
+            <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">
+              Quick actions
+            </div>
+            <div className="border border-gray-200 rounded-md">
+              <button
+                onClick={() => navigate(createPageUrl('Tasks'))}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50 border-b border-gray-100"
+              >
+                <Plus className="w-3.5 h-3.5 text-gray-400" />
+                <span>Create task</span>
+              </button>
+              <button
+                onClick={() => navigate(createPageUrl('TimeTracking'))}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50 border-b border-gray-100"
+              >
+                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                <span>Log time</span>
+              </button>
+              <button
+                onClick={() => navigate(createPageUrl('Projects'))}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50"
+              >
+                <FolderKanban className="w-3.5 h-3.5 text-gray-400" />
+                <span>View projects</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Team overview */}
+          <div>
+            <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">
+              Team overview
+            </div>
+            <div className="border border-gray-200 rounded-md">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
+                <span className="text-[13px] text-gray-600">Active projects</span>
+                <span className="text-[13px] text-gray-900 font-medium">{activeProjects}</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
+                <span className="text-[13px] text-gray-600">Active leads</span>
+                <span className="text-[13px] text-gray-900 font-medium">{activeLeads}</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="text-[13px] text-gray-600">All active tasks</span>
+                <span className="text-[13px] text-gray-900 font-medium">{allActiveTasks}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Overdue alert */}
+          {myOverdueTasks.length > 0 && (
+            <div>
+              <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">
+                Attention
+              </div>
+              <div className="border border-gray-200 rounded-md px-3 py-2.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  <span className="text-[13px] text-gray-900 font-medium">
+                    {myOverdueTasks.length} overdue task{myOverdueTasks.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <p className="text-[12px] text-gray-500 mb-2">
+                  Tasks past their due date that need attention.
+                </p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-[12px] text-gray-700 hover:bg-gray-100"
+                  onClick={() => navigate(createPageUrl('Tasks'))}
+                >
+                  View overdue
+                  <ArrowRight className="w-3 h-3 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* My active projects */}
+      {myProjects.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between h-7 mb-1">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">My Active Projects</div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-[12px] text-gray-700 hover:bg-gray-100"
+              onClick={() => navigate(createPageUrl('Projects'))}
+            >
+              View all
+              <ArrowRight className="w-3 h-3 ml-1" />
+            </Button>
+          </div>
+          <div className="border border-gray-200 rounded-md">
+            {myProjects.slice(0, 8).map((project, idx) => (
+              <div
+                key={project.id}
+                onClick={() => navigate(createPageUrl(`ProjectDetail?id=${project.id}`))}
+                className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer ${
+                  idx !== Math.min(myProjects.length, 8) - 1 ? 'border-b border-gray-100' : ''
+                }`}
+              >
+                <FolderKanban className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0 text-[13px] text-gray-900 truncate">{project.name}</div>
+                <span className="text-[12px] text-gray-500 capitalize flex-shrink-0">{project.billing_type}</span>
+                <div className="flex items-center gap-1.5 min-w-[70px] flex-shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  <span className="text-[12px] text-gray-600 capitalize">{project.status}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

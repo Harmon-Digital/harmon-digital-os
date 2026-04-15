@@ -4,16 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Edit, Users, Search, DollarSign, TrendingUp, UserCheck } from "lucide-react";
+import { Plus, Edit, Search } from "lucide-react";
 
 export default function Partners() {
   const { userProfile, invitePartner } = useAuth();
@@ -205,14 +195,24 @@ export default function Partners() {
     );
   });
 
+  const getInitials = (name) => {
+    if (!name) return "?";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  };
+
   if (!isAdmin) {
     return (
-      <div className="p-8">
-        <div className="text-center py-12">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+      <div className="h-full flex items-center justify-center bg-white">
+        <div className="text-center">
+          <h2 className="text-[15px] font-semibold text-gray-900 mb-1">
             Admin Access Required
           </h2>
-          <p className="text-gray-500">
+          <p className="text-[13px] text-gray-500">
             You need administrator privileges to view this page.
           </p>
         </div>
@@ -221,189 +221,159 @@ export default function Partners() {
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Partners</h1>
-          <p className="text-gray-500">Manage referral partners and commissions</p>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Consolidated toolbar */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <span className="text-[15px] font-semibold text-gray-900">Partners</span>
+
+          <div className="relative flex-1 max-w-md min-w-0 ml-2">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Input
+              placeholder="Search partners"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+            />
+          </div>
+
+          <div className="ml-auto">
+            <Button
+              onClick={() => setInviteDialog(true)}
+              className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Invite Partner
+            </Button>
+          </div>
         </div>
-        <Button
-          onClick={() => setInviteDialog(true)}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Invite Partner
-        </Button>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 rounded-lg">
-                <UserCheck className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Active Partners</p>
-                <p className="text-2xl font-bold">{stats.totalPartners}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Active Referrals</p>
-                <p className="text-2xl font-bold">{stats.activeReferrals}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <DollarSign className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Paid</p>
-                <p className="text-2xl font-bold">${stats.totalPaid.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <DollarSign className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Pending Payouts</p>
-                <p className="text-2xl font-bold">${stats.pendingPayouts.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            placeholder="Search partners..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        {/* Metric pill strip */}
+        <div className="flex items-center gap-5 px-4 h-9 border-t border-gray-100">
+          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+            Active partners
+            <span className="text-gray-900 font-medium tabular-nums">{stats.totalPartners}</span>
+          </span>
+          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            Active referrals
+            <span className="text-gray-900 font-medium tabular-nums">{stats.activeReferrals}</span>
+          </span>
+          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Total paid
+            <span className="text-gray-900 font-medium tabular-nums">${stats.totalPaid.toLocaleString()}</span>
+          </span>
+          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            Pending payouts
+            <span className="text-gray-900 font-medium tabular-nums">${stats.pendingPayouts.toLocaleString()}</span>
+          </span>
+          <span className="text-[12px] text-gray-400 ml-auto tabular-nums">
+            {filteredPartners.length} {filteredPartners.length === 1 ? "partner" : "partners"}
+          </span>
         </div>
-        <span className="text-sm text-gray-500">
-          {filteredPartners.length} partner{filteredPartners.length !== 1 ? "s" : ""}
-        </span>
       </div>
 
-      {/* Partners Table */}
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="py-12 text-center">
-              <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+      {/* List */}
+      <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+        {loading ? (
+          <div className="p-8 text-center text-[13px] text-gray-400">Loading…</div>
+        ) : filteredPartners.length === 0 ? (
+          <div className="p-10 text-center text-[13px] text-gray-400">
+            <p>No partners yet</p>
+            <p className="text-[12px]">Invite your first partner to get started</p>
+          </div>
+        ) : (
+          <>
+            <div className="h-7 flex items-center px-3 bg-gray-50 border-b border-gray-200">
+              <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                All partners
+              </span>
+              <span className="ml-2 text-[11px] text-gray-400 tabular-nums">
+                {filteredPartners.length}
+              </span>
             </div>
-          ) : filteredPartners.length === 0 ? (
-            <div className="py-12 text-center text-gray-500">
-              <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No partners yet</p>
-              <p className="text-sm">Invite your first partner to get started</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Partner</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Commission</TableHead>
-                  <TableHead>Referrals</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPartners.map((partner) => {
-                  const activeRefs = partner.referrals?.filter(r => r.status === "active").length || 0;
-                  const pendingRefs = partner.referrals?.filter(r => r.status === "pending").length || 0;
+            {filteredPartners.map((partner) => {
+              const activeRefs = partner.referrals?.filter(r => r.status === "active").length || 0;
+              const pendingRefs = partner.referrals?.filter(r => r.status === "pending").length || 0;
+              const isActive = partner.status === "active";
 
-                  return (
-                    <TableRow key={partner.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{partner.contact_name}</div>
-                          {partner.company_name && (
-                            <div className="text-sm text-gray-500">
-                              {partner.company_name}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{partner.email}</TableCell>
-                      <TableCell>
-                        {partner.commission_rate}% / {partner.commission_months}mo
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="text-green-600 font-medium">{activeRefs} active</span>
-                          {pendingRefs > 0 && (
-                            <span className="text-amber-600 text-sm">({pendingRefs} in pipeline)</span>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPartner(partner);
-                              setReferralDialog(true);
-                            }}
-                            title="Link project manually"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={
-                            partner.status === "active"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }
-                        >
-                          {partner.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingPartner({ ...partner });
-                            setEditSheet(true);
-                          }}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+              return (
+                <div
+                  key={partner.id}
+                  className="group flex items-center gap-3 px-3 py-2 border-b border-gray-100 hover:bg-gray-50"
+                >
+                  <div className="w-6 h-6 shrink-0 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-medium">
+                    {getInitials(partner.contact_name)}
+                  </div>
+
+                  <div className="min-w-0 flex-1 flex items-center gap-2">
+                    <span className="text-[13px] text-gray-900 font-medium truncate">
+                      {partner.contact_name}
+                    </span>
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        isActive ? "bg-green-500" : "bg-gray-300"
+                      }`}
+                      title={partner.status}
+                    />
+                    {partner.company_name && (
+                      <span className="text-[12px] text-gray-500 truncate">
+                        {partner.company_name}
+                      </span>
+                    )}
+                  </div>
+
+                  <span className="hidden md:inline text-[12px] text-gray-500 truncate max-w-[200px]">
+                    {partner.email}
+                  </span>
+
+                  <span className="hidden lg:inline text-[12px] text-gray-500 shrink-0 tabular-nums w-24 text-right">
+                    {partner.commission_rate}% · {partner.commission_months}mo
+                  </span>
+
+                  <div className="flex items-center gap-1.5 shrink-0 w-32 justify-end">
+                    <span className="text-[12px] text-gray-900 tabular-nums">
+                      {activeRefs} active
+                    </span>
+                    {pendingRefs > 0 && (
+                      <span className="text-[11px] text-amber-600 tabular-nums">
+                        · {pendingRefs} pipeline
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedPartner(partner);
+                        setReferralDialog(true);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-900"
+                      title="Link project"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingPartner({ ...partner });
+                      setEditSheet(true);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-900"
+                    title="Edit"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </>
+        )}
+      </div>
 
       {/* Invite Dialog */}
       <Dialog open={inviteDialog} onOpenChange={setInviteDialog}>
@@ -459,7 +429,7 @@ export default function Partners() {
             <Button
               onClick={handleInvite}
               disabled={inviting || !inviteData.email || !inviteData.contactName}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-gray-900 hover:bg-gray-800 text-white"
             >
               {inviting ? "Sending..." : "Send Invitation"}
             </Button>
@@ -573,33 +543,43 @@ export default function Partners() {
                 <Button variant="outline" onClick={() => setEditSheet(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleUpdatePartner}>Save Changes</Button>
+                <Button
+                  onClick={handleUpdatePartner}
+                  className="bg-gray-900 hover:bg-gray-800 text-white"
+                >
+                  Save Changes
+                </Button>
               </div>
 
               {/* Partner's Referrals */}
               {editingPartner.referrals?.length > 0 && (
                 <div className="pt-6 border-t">
-                  <h4 className="font-medium mb-3">Referrals</h4>
-                  <div className="space-y-2">
-                    {editingPartner.referrals.map((ref) => (
-                      <div
-                        key={ref.id}
-                        className="text-sm p-3 bg-gray-50 rounded-lg flex justify-between items-center"
-                      >
-                        <span>{ref.projects?.name || ref.client_name || "Pending"}</span>
-                        <Badge
-                          className={
-                            ref.status === "active"
-                              ? "bg-green-100 text-green-700"
-                              : ref.status === "pending"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-gray-100 text-gray-700"
-                          }
+                  <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">
+                    Referrals
+                  </div>
+                  <div className="mt-2">
+                    {editingPartner.referrals.map((ref) => {
+                      const dotColor =
+                        ref.status === "active"
+                          ? "bg-green-500"
+                          : ref.status === "pending"
+                          ? "bg-amber-500"
+                          : "bg-gray-300";
+                      return (
+                        <div
+                          key={ref.id}
+                          className="flex items-center gap-2 px-2 py-2 border-b border-gray-100 text-[13px]"
                         >
-                          {ref.status}
-                        </Badge>
-                      </div>
-                    ))}
+                          <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                          <span className="flex-1 truncate text-gray-900">
+                            {ref.projects?.name || ref.client_name || "Pending"}
+                          </span>
+                          <span className="text-[12px] text-gray-500 capitalize">
+                            {ref.status}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -675,6 +655,7 @@ export default function Partners() {
             <Button
               onClick={handleAddReferral}
               disabled={!referralData.project_id}
+              className="bg-gray-900 hover:bg-gray-800 text-white"
             >
               Link Project
             </Button>

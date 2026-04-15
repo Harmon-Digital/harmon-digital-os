@@ -3,17 +3,7 @@ import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, DollarSign, Check } from "lucide-react";
+import { Plus, Check } from "lucide-react";
 
 export default function ReferralPayouts() {
   const { userProfile } = useAuth();
@@ -203,20 +193,26 @@ export default function ReferralPayouts() {
     .filter((p) => p.status === "pending")
     .reduce((sum, p) => sum + (p.amount || 0), 0);
 
-  const statusColors = {
-    pending: "bg-orange-100 text-orange-800",
-    paid: "bg-green-100 text-green-800",
-    cancelled: "bg-gray-100 text-gray-800",
+  const statusDot = {
+    pending: "bg-amber-500",
+    paid: "bg-green-500",
+    cancelled: "bg-gray-300",
+  };
+
+  const statusText = {
+    pending: "text-amber-600",
+    paid: "text-green-600",
+    cancelled: "text-gray-500",
   };
 
   if (!isAdmin) {
     return (
-      <div className="p-8">
-        <div className="text-center py-12">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+      <div className="h-full flex items-center justify-center bg-white">
+        <div className="text-center">
+          <h2 className="text-[15px] font-semibold text-gray-900 mb-1">
             Admin Access Required
           </h2>
-          <p className="text-gray-500">
+          <p className="text-[13px] text-gray-500">
             You need administrator privileges to view this page.
           </p>
         </div>
@@ -224,172 +220,187 @@ export default function ReferralPayouts() {
     );
   }
 
+  const currentMonthLabel = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Referral Payouts</h1>
-          <p className="text-gray-500">Process partner commission payments</p>
-        </div>
-        <Button
-          onClick={() => {
-            setGenerateDialog(true);
-            generateMonthlyPayouts();
-          }}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Generate Monthly Payouts
-        </Button>
-      </div>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Consolidated toolbar */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <span className="text-[15px] font-semibold text-gray-900">Referral Payouts</span>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-gray-500">Total Pending</div>
-            <div className="text-2xl font-bold text-orange-600">
-              ${totalPending.toLocaleString()}
+          <div className="ml-4">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-36 h-8 text-[13px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2 text-[12px] text-gray-600">
+              <span className="font-medium text-gray-900">{selectedIds.length} selected</span>
+              <Button
+                size="sm"
+                onClick={() => setMarkPaidDialog(true)}
+                className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+              >
+                <Check className="w-3 h-3 mr-1" />
+                Mark Paid
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setSelectedIds([])}
+                className="h-7 px-2 text-[13px]"
+              >
+                Clear
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-gray-500">Active Referrals</div>
-            <div className="text-2xl font-bold">{referrals.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-gray-500">This Month</div>
-            <div className="text-2xl font-bold">
-              {new Date().toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
 
-      {/* Filters & Bulk Actions */}
-      <div className="flex items-center gap-4">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {selectedIds.length > 0 && (
-          <div className="flex items-center gap-3 p-2 bg-gray-100 rounded-lg">
-            <span className="text-sm font-medium">{selectedIds.length} selected</span>
-            <Button size="sm" onClick={() => setMarkPaidDialog(true)}>
-              <Check className="w-3 h-3 mr-1" />
-              Mark Paid
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
-              Clear
+          <div className="ml-auto">
+            <Button
+              onClick={() => {
+                setGenerateDialog(true);
+                generateMonthlyPayouts();
+              }}
+              className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Generate Monthly
             </Button>
           </div>
-        )}
+        </div>
+
+        {/* Metric pill strip */}
+        <div className="flex items-center gap-5 px-4 h-9 border-t border-gray-100">
+          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            Total pending
+            <span className="text-gray-900 font-medium tabular-nums">
+              ${totalPending.toLocaleString()}
+            </span>
+          </span>
+          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            Active referrals
+            <span className="text-gray-900 font-medium tabular-nums">{referrals.length}</span>
+          </span>
+          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+            Period
+            <span className="text-gray-900 font-medium">{currentMonthLabel}</span>
+          </span>
+          <span className="text-[12px] text-gray-400 ml-auto tabular-nums">
+            {filteredPayouts.length} {filteredPayouts.length === 1 ? "payout" : "payouts"}
+          </span>
+        </div>
       </div>
 
-      {/* Payouts Table */}
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="py-12 text-center">
-              <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+      {/* List */}
+      <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+        {loading ? (
+          <div className="p-8 text-center text-[13px] text-gray-400">Loading…</div>
+        ) : filteredPayouts.length === 0 ? (
+          <div className="p-10 text-center text-[13px] text-gray-400">
+            <p>No payouts found</p>
+          </div>
+        ) : (
+          <>
+            <div className="h-7 flex items-center px-3 bg-gray-50 border-b border-gray-200">
+              <div className="w-6 flex justify-center">
+                <Checkbox
+                  checked={
+                    selectedIds.length === filteredPayouts.length &&
+                    filteredPayouts.length > 0
+                  }
+                  onCheckedChange={toggleSelectAll}
+                />
+              </div>
+              <span className="ml-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                {statusFilter === "all" ? "All payouts" : `${statusFilter} payouts`}
+              </span>
+              <span className="ml-2 text-[11px] text-gray-400 tabular-nums">
+                {filteredPayouts.length}
+              </span>
             </div>
-          ) : filteredPayouts.length === 0 ? (
-            <div className="py-12 text-center text-gray-500">
-              <DollarSign className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No payouts found</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">
+            {filteredPayouts.map((payout) => {
+              const checked = selectedIds.includes(payout.id);
+              return (
+                <div
+                  key={payout.id}
+                  className={`flex items-center gap-3 px-3 py-2 border-b border-gray-100 hover:bg-gray-50 ${
+                    checked ? "bg-gray-50" : ""
+                  }`}
+                >
+                  <div className="w-6 flex justify-center shrink-0">
                     <Checkbox
-                      checked={
-                        selectedIds.length === filteredPayouts.length &&
-                        filteredPayouts.length > 0
-                      }
-                      onCheckedChange={toggleSelectAll}
+                      checked={checked}
+                      onCheckedChange={() => toggleSelect(payout.id)}
                     />
-                  </TableHead>
-                  <TableHead>Partner</TableHead>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Period</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Reference</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPayouts.map((payout) => (
-                  <TableRow
-                    key={payout.id}
-                    className={selectedIds.includes(payout.id) ? "bg-gray-50" : ""}
-                  >
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.includes(payout.id)}
-                        onCheckedChange={() => toggleSelect(payout.id)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {payout.referrals?.referral_partners?.contact_name || "—"}
-                        </div>
-                        {payout.referrals?.referral_partners?.company_name && (
-                          <div className="text-sm text-gray-500">
-                            {payout.referrals.referral_partners.company_name}
-                          </div>
-                        )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px] text-gray-900 font-medium truncate">
+                      {payout.referrals?.referral_partners?.contact_name || "—"}
+                    </div>
+                    {payout.referrals?.referral_partners?.company_name && (
+                      <div className="text-[12px] text-gray-500 truncate">
+                        {payout.referrals.referral_partners.company_name}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {payout.referrals?.projects?.name || "—"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {payout.period_start
-                        ? new Date(payout.period_start).toLocaleDateString("en-US", {
-                            month: "short",
-                            year: "numeric",
-                          })
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="capitalize">
-                      {payout.payout_type?.replace("_", " ")}
-                    </TableCell>
-                    <TableCell className="font-semibold">
-                      ${payout.amount?.toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={statusColors[payout.status]}>
-                        {payout.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {payout.payment_reference || "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                    )}
+                  </div>
+
+                  <span className="hidden md:inline text-[13px] text-gray-700 truncate max-w-[200px]">
+                    {payout.referrals?.projects?.name || "—"}
+                  </span>
+
+                  <span className="hidden lg:inline text-[12px] text-gray-500 tabular-nums w-24 text-right">
+                    {payout.period_start
+                      ? new Date(payout.period_start).toLocaleDateString("en-US", {
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : "—"}
+                  </span>
+
+                  <span className="hidden lg:inline text-[12px] text-gray-500 capitalize w-20 text-right">
+                    {payout.payout_type?.replace("_", " ") || "—"}
+                  </span>
+
+                  <span className="text-[13px] text-gray-900 font-medium tabular-nums w-24 text-right">
+                    ${payout.amount?.toLocaleString()}
+                  </span>
+
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[12px] w-20 shrink-0 ${
+                      statusText[payout.status] || "text-gray-500"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${statusDot[payout.status] || "bg-gray-300"}`}
+                    />
+                    <span className="capitalize">{payout.status}</span>
+                  </span>
+
+                  <span className="hidden xl:inline text-[12px] text-gray-400 truncate max-w-[120px]">
+                    {payout.payment_reference || "—"}
+                  </span>
+                </div>
+              );
+            })}
+          </>
+        )}
+      </div>
 
       {/* Generate Payouts Dialog */}
       <Dialog open={generateDialog} onOpenChange={setGenerateDialog}>
@@ -403,7 +414,7 @@ export default function ReferralPayouts() {
           <div className="py-4">
             {generating ? (
               <div className="text-center py-4">
-                <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                <div className="w-6 h-6 border-2 border-gray-900 border-t-transparent rounded-full animate-spin mx-auto" />
                 <p className="text-sm text-gray-500 mt-2">Calculating...</p>
               </div>
             ) : generatedPayouts.length === 0 ? (
@@ -415,7 +426,7 @@ export default function ReferralPayouts() {
                 <p className="text-sm text-gray-600 mb-3">
                   {generatedPayouts.length} payout(s) will be created:
                 </p>
-                <div className="max-h-60 overflow-y-auto space-y-2">
+                <div className="max-h-60 overflow-y-auto">
                   {generatedPayouts.map((payout, idx) => {
                     const referral = referrals.find(
                       (r) => r.id === payout.referral_id
@@ -423,18 +434,18 @@ export default function ReferralPayouts() {
                     return (
                       <div
                         key={idx}
-                        className="flex justify-between items-center p-2 bg-gray-50 rounded text-sm"
+                        className="flex items-center gap-3 px-2 py-2 border-b border-gray-100 text-[13px]"
                       >
-                        <div>
-                          <span className="font-medium">
+                        <span className="flex-1 min-w-0 truncate">
+                          <span className="text-gray-900 font-medium">
                             {referral?.referral_partners?.contact_name}
                           </span>
                           <span className="text-gray-500">
-                            {" "}
-                            - {referral?.projects?.name}
+                            {" · "}
+                            {referral?.projects?.name}
                           </span>
-                        </div>
-                        <span className="font-semibold">
+                        </span>
+                        <span className="text-gray-900 font-medium tabular-nums shrink-0">
                           ${payout.amount.toLocaleString()}
                         </span>
                       </div>
@@ -442,9 +453,9 @@ export default function ReferralPayouts() {
                   })}
                 </div>
                 <div className="pt-2 border-t mt-4">
-                  <div className="flex justify-between font-semibold">
-                    <span>Total:</span>
-                    <span>
+                  <div className="flex justify-between text-[13px] font-medium">
+                    <span>Total</span>
+                    <span className="tabular-nums">
                       $
                       {generatedPayouts
                         .reduce((sum, p) => sum + p.amount, 0)
@@ -462,6 +473,7 @@ export default function ReferralPayouts() {
             <Button
               onClick={confirmGeneratePayouts}
               disabled={generatedPayouts.length === 0}
+              className="bg-gray-900 hover:bg-gray-800 text-white"
             >
               Create Payouts
             </Button>
@@ -491,7 +503,7 @@ export default function ReferralPayouts() {
             </div>
             <div className="text-sm text-gray-600">
               Total:{" "}
-              <span className="font-semibold">
+              <span className="font-semibold tabular-nums">
                 $
                 {payouts
                   .filter((p) => selectedIds.includes(p.id))
@@ -504,7 +516,12 @@ export default function ReferralPayouts() {
             <Button variant="outline" onClick={() => setMarkPaidDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleMarkPaid}>Confirm Payment</Button>
+            <Button
+              onClick={handleMarkPaid}
+              className="bg-gray-900 hover:bg-gray-800 text-white"
+            >
+              Confirm Payment
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

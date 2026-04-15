@@ -1,6 +1,5 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, DollarSign, Clock, Users } from "lucide-react";
+import { Clock } from "lucide-react";
 
 export default function ProjectAccountingView({
   projectId,
@@ -34,6 +33,7 @@ export default function ProjectAccountingView({
   const revenue = isRetainer ? retainerRevenue : hourlyRevenue;
   const profit = revenue - totalPayroll;
   const profitMargin = revenue > 0 ? (profit / revenue) * 100 : 0;
+  const effectiveRate = totalHours > 0 ? (profit / totalHours) : 0;
 
   // Team breakdown
   const teamBreakdown = teamMembers
@@ -46,119 +46,71 @@ export default function ProjectAccountingView({
     .filter(m => m.hours > 0)
     .sort((a, b) => b.hours - a.hours);
 
-  return (
-    <div className="space-y-6">
-      {/* Key Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-              <Clock className="w-4 h-4" />
-              Total Hours
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{totalHours.toFixed(1)}h</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-              <TrendingUp className="w-4 h-4" />
-              {isRetainer ? 'Monthly Retainer' : 'Billable Revenue'}
-            </div>
-            <div className="text-2xl font-bold text-green-600">
-              ${revenue.toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-              <TrendingDown className="w-4 h-4" />
-              Labor Cost
-            </div>
-            <div className="text-2xl font-bold text-red-600">
-              ${totalPayroll.toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-              <DollarSign className="w-4 h-4" />
-              Net Profit
-            </div>
-            <div className={`text-2xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${profit.toLocaleString()}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">{profitMargin.toFixed(0)}% margin</div>
-          </CardContent>
-        </Card>
+  if (timeEntries.length === 0) {
+    return (
+      <div className="py-16 text-center">
+        <Clock className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+        <p className="text-[13px] text-gray-500">No time entries to analyze yet</p>
       </div>
+    );
+  }
 
-      {/* Profitability Indicator */}
-      <Card className={profit >= 0 ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-700">Project Profitability</p>
-              <p className={`text-lg font-bold ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                {profit >= 0 ? 'Profitable' : 'Unprofitable'}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600">Effective Rate</p>
-              <p className="text-lg font-bold text-gray-900">
-                ${totalHours > 0 ? ((revenue - totalPayroll) / totalHours).toFixed(0) : 0}/hr
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+  return (
+    <div className="space-y-5">
+      {/* Inline metric pill strip */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
+        <span>
+          Hours <span className="text-gray-900 font-medium tabular-nums">{totalHours.toFixed(1)}h</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          {isRetainer ? 'Retainer' : 'Revenue'} <span className="text-gray-900 font-medium tabular-nums">${revenue.toLocaleString()}</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+          Labor <span className="text-gray-900 font-medium tabular-nums">${totalPayroll.toLocaleString()}</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${profit >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+          Profit <span className={`font-medium tabular-nums ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>${profit.toLocaleString()}</span>
+          <span className="text-gray-400">· {profitMargin.toFixed(0)}%</span>
+        </span>
+        <span>
+          Effective rate <span className="text-gray-900 font-medium tabular-nums">${effectiveRate.toFixed(0)}/hr</span>
+        </span>
+        <span className={profit >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+          {profit >= 0 ? 'Profitable' : 'Unprofitable'}
+        </span>
+      </div>
 
       {/* Team Cost Breakdown */}
       {teamBreakdown.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Users className="w-4 h-4" />
-              Team Cost Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {teamBreakdown.map(member => (
-                <div key={member.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-indigo-600">
-                        {member.full_name?.charAt(0) || '?'}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{member.full_name}</p>
-                      <p className="text-xs text-gray-500">{member.hours.toFixed(1)}h @ ${member.hourly_rate || 0}/hr</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-red-600">${member.cost.toLocaleString()}</p>
-                  </div>
+        <div>
+          <div className="h-7 flex items-center text-[11px] font-medium uppercase tracking-wide text-gray-500">
+            Team cost breakdown
+          </div>
+          <div className="border-t border-gray-200">
+            {teamBreakdown.map(member => (
+              <div
+                key={member.id}
+                className="flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50"
+              >
+                <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                  {member.full_name?.charAt(0) || '?'}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {timeEntries.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Clock className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-gray-500">No time entries to analyze yet</p>
-          </CardContent>
-        </Card>
+                <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+                  {member.full_name}
+                </span>
+                <span className="text-[12px] text-gray-500 tabular-nums w-28 text-right">
+                  {member.hours.toFixed(1)}h @ ${member.hourly_rate || 0}/hr
+                </span>
+                <span className="text-[13px] font-medium text-gray-900 tabular-nums w-24 text-right">
+                  ${member.cost.toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

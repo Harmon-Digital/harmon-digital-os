@@ -1,43 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { 
-  Invoice, 
-  TimeEntry, 
-  Project, 
-  Account, 
-  Task, 
-  Lead, 
+import {
+  Invoice,
+  TimeEntry,
+  Project,
+  Account,
+  Task,
+  Lead,
   TeamMember,
   Payment,
   Transaction,
   StripeSubscription
 } from "@/api/entities";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { createPageUrl, parseLocalDate } from "@/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { 
-  DollarSign, 
-  TrendingUp, 
-  Users, 
-  FolderKanban,
-  Clock,
-  AlertTriangle,
-  Target,
-  CreditCard,
-  ArrowRight,
-  ArrowUp,
-  ArrowDown
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronRight } from "lucide-react";
 
 export default function AdminDashboard() {
   const { user: authUser, userProfile } = useAuth();
@@ -61,7 +39,6 @@ export default function AdminDashboard() {
   const loadAdminData = async () => {
     setLoading(true);
     try {
-      // Check if admin
       if (userProfile?.role !== 'admin') {
         navigate(createPageUrl('Dashboard'));
         return;
@@ -143,7 +120,7 @@ export default function AdminDashboard() {
     .filter(te => te.billable && !te.client_billed)
     .reduce((sum, te) => sum + (te.hours || 0), 0);
 
-  const unbilledRevenue = unbilledHours * 150; // Assuming avg rate
+  const unbilledRevenue = unbilledHours * 150;
 
   // Project Metrics
   const activeProjects = projects.filter(p => p.status === 'active').length;
@@ -164,10 +141,8 @@ export default function AdminDashboard() {
     return parseLocalDate(inv.due_date) < new Date();
   });
 
-  // Recent Payments
   const recentPayments = payments.slice(0, 5);
 
-  // Team Utilization
   const getTeamMemberName = (teamMemberId) => {
     const tm = teamMembers.find(t => t.id === teamMemberId);
     return tm?.full_name || 'Unknown';
@@ -180,284 +155,320 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="animate-pulse space-y-8">
-          <div className="h-12 bg-gray-200 rounded w-64"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
+      <div className="h-full flex flex-col bg-white">
+        <div className="border-b border-gray-200 bg-white">
+          <div className="flex items-center gap-3 px-4 h-12">
+            <h1 className="text-[15px] font-semibold text-gray-900">Admin Dashboard</h1>
           </div>
+        </div>
+        <div className="flex items-center justify-center flex-1">
+          <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
         </div>
       </div>
     );
   }
 
+  const completedTasks = tasks.filter(t => t.status === 'completed').length;
+
   return (
-    <div className="p-6 lg:p-8 space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-500 mt-1">Executive overview of your agency</p>
-      </div>
-
-      {/* Financial KPIs */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Financial Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('Accounting'))}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
-              <DollarSign className="w-5 h-5 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">${totalRevenue.toLocaleString()}</div>
-              <p className="text-sm text-gray-500 mt-1">from paid invoices</p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('Accounting'))}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Pending Revenue</CardTitle>
-              <TrendingUp className="w-5 h-5 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-orange-600">${pendingRevenue.toLocaleString()}</div>
-              <p className="text-sm text-gray-500 mt-1">{overdueInvoices.length} overdue invoices</p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('Accounting'))}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Monthly Recurring</CardTitle>
-              <CreditCard className="w-5 h-5 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-600">${monthlyRecurring.toLocaleString()}</div>
-              <p className="text-sm text-gray-500 mt-1">{subscriptions.filter(s => s.status === 'active').length} active subscriptions</p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('TimeTracking'))}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Unbilled Hours</CardTitle>
-              <Clock className="w-5 h-5 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-red-600">{unbilledHours.toFixed(0)}</div>
-              <p className="text-sm text-gray-500 mt-1">~${unbilledRevenue.toLocaleString()} potential</p>
-            </CardContent>
-          </Card>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-3 px-4 h-12">
+          <h1 className="text-[15px] font-semibold text-gray-900">Admin Dashboard</h1>
+          <span className="text-[13px] text-gray-500">Executive overview</span>
         </div>
       </div>
 
-      {/* Operations KPIs */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Operations Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('Projects'))}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Active Projects</CardTitle>
-              <FolderKanban className="w-5 h-5 text-indigo-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{activeProjects}</div>
-              {projectsAtRisk > 0 && (
-                <p className="text-sm text-red-600 mt-1">{projectsAtRisk} at risk</p>
+      <div className="overflow-y-auto flex-1 min-h-0">
+        <div className="p-4 lg:p-6 space-y-4">
+          {/* Financial metric strip */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+              Revenue <span className="text-gray-900 font-medium">${totalRevenue.toLocaleString()}</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+              Pending <span className="text-gray-900 font-medium">${pendingRevenue.toLocaleString()}</span>
+              {overdueInvoices.length > 0 && (
+                <span className="text-red-600">({overdueInvoices.length} overdue)</span>
               )}
-            </CardContent>
-          </Card>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+              MRR <span className="text-gray-900 font-medium">${monthlyRecurring.toLocaleString()}</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+              Unbilled <span className="text-gray-900 font-medium">{unbilledHours.toFixed(0)}h</span>
+              <span className="text-gray-400">(~${unbilledRevenue.toLocaleString()})</span>
+            </span>
+          </div>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('Accounts'))}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Active Accounts</CardTitle>
-              <Users className="w-5 h-5 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{activeAccounts}</div>
-              {accountsAtRisk > 0 && (
-                <p className="text-sm text-red-600 mt-1">{accountsAtRisk} at risk</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('Team'))}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Team Members</CardTitle>
-              <Users className="w-5 h-5 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{activeTeamMembers}</div>
-              <p className="text-sm text-gray-500 mt-1">{totalHoursThisMonth.toFixed(0)}h this month</p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(createPageUrl('CRM'))}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Sales Pipeline</CardTitle>
-              <Target className="w-5 h-5 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-600">${pipelineValue.toLocaleString()}</div>
-              <p className="text-sm text-gray-500 mt-1">{activePipeline.length} active leads</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Overdue Invoices Alert */}
-        {overdueInvoices.length > 0 && (
-          <Card className="lg:col-span-2 border-red-200 bg-red-50">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-red-900 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5" />
-                Overdue Invoices ({overdueInvoices.length})
-              </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-red-300 hover:bg-red-100"
+          {/* Financial panels */}
+          <div>
+            <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">
+              Financial Overview
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <button
                 onClick={() => navigate(createPageUrl('Accounting'))}
+                className="text-left border border-gray-200 rounded-md p-3 hover:border-gray-300 transition-colors"
               >
-                View All
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {overdueInvoices.slice(0, 3).map(invoice => (
-                  <div key={invoice.id} className="flex items-center justify-between p-3 bg-white border border-red-200 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{getAccountName(invoice.account_id)}</p>
-                      <p className="text-sm text-gray-600">
-                        Due: {parseLocalDate(invoice.due_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-red-600">${invoice.total?.toLocaleString()}</p>
-                      <Badge variant="destructive" className="mt-1">Overdue</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                <div className="text-[11px] uppercase tracking-wide text-gray-500">Total Revenue</div>
+                <div className="text-[22px] font-semibold text-gray-900 tabular-nums mt-0.5">
+                  ${totalRevenue.toLocaleString()}
+                </div>
+                <div className="text-[12px] text-gray-500 mt-0.5">from paid invoices</div>
+              </button>
 
-        {/* Recent Payments */}
-        <Card className={overdueInvoices.length > 0 ? '' : 'lg:col-span-2'}>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Payments</CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(createPageUrl('Accounting'))}
-            >
-              View All <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {recentPayments.length === 0 ? (
-              <p className="text-center py-8 text-gray-500">No payments yet</p>
-            ) : (
-              <div className="space-y-3">
-                {recentPayments.map(payment => (
-                  <div key={payment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{getTeamMemberName(payment.team_member_id)}</p>
-                      <p className="text-sm text-gray-600">
-                        {parseLocalDate(payment.payment_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-gray-900">${payment.amount?.toLocaleString()}</p>
-                      <Badge className={payment.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                        {payment.status}
-                      </Badge>
-                    </div>
+              <button
+                onClick={() => navigate(createPageUrl('Accounting'))}
+                className="text-left border border-gray-200 rounded-md p-3 hover:border-gray-300 transition-colors"
+              >
+                <div className="text-[11px] uppercase tracking-wide text-gray-500">Pending Revenue</div>
+                <div className="text-[22px] font-semibold text-gray-900 tabular-nums mt-0.5">
+                  ${pendingRevenue.toLocaleString()}
+                </div>
+                <div className="text-[12px] text-gray-500 mt-0.5">{overdueInvoices.length} overdue invoices</div>
+              </button>
+
+              <button
+                onClick={() => navigate(createPageUrl('Accounting'))}
+                className="text-left border border-gray-200 rounded-md p-3 hover:border-gray-300 transition-colors"
+              >
+                <div className="text-[11px] uppercase tracking-wide text-gray-500">Monthly Recurring</div>
+                <div className="text-[22px] font-semibold text-gray-900 tabular-nums mt-0.5">
+                  ${monthlyRecurring.toLocaleString()}
+                </div>
+                <div className="text-[12px] text-gray-500 mt-0.5">
+                  {subscriptions.filter(s => s.status === 'active').length} active subscriptions
+                </div>
+              </button>
+
+              <button
+                onClick={() => navigate(createPageUrl('TimeTracking'))}
+                className="text-left border border-gray-200 rounded-md p-3 hover:border-gray-300 transition-colors"
+              >
+                <div className="text-[11px] uppercase tracking-wide text-gray-500">Unbilled Hours</div>
+                <div className="text-[22px] font-semibold text-gray-900 tabular-nums mt-0.5">
+                  {unbilledHours.toFixed(0)}
+                </div>
+                <div className="text-[12px] text-gray-500 mt-0.5">~${unbilledRevenue.toLocaleString()} potential</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Operations panels */}
+          <div>
+            <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">
+              Operations
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <button
+                onClick={() => navigate(createPageUrl('Projects'))}
+                className="text-left border border-gray-200 rounded-md p-3 hover:border-gray-300 transition-colors"
+              >
+                <div className="text-[11px] uppercase tracking-wide text-gray-500">Active Projects</div>
+                <div className="text-[22px] font-semibold text-gray-900 tabular-nums mt-0.5">{activeProjects}</div>
+                {projectsAtRisk > 0 && (
+                  <div className="text-[12px] text-red-600 mt-0.5">{projectsAtRisk} at risk</div>
+                )}
+              </button>
+
+              <button
+                onClick={() => navigate(createPageUrl('Accounts'))}
+                className="text-left border border-gray-200 rounded-md p-3 hover:border-gray-300 transition-colors"
+              >
+                <div className="text-[11px] uppercase tracking-wide text-gray-500">Active Accounts</div>
+                <div className="text-[22px] font-semibold text-gray-900 tabular-nums mt-0.5">{activeAccounts}</div>
+                {accountsAtRisk > 0 && (
+                  <div className="text-[12px] text-red-600 mt-0.5">{accountsAtRisk} at risk</div>
+                )}
+              </button>
+
+              <button
+                onClick={() => navigate(createPageUrl('Team'))}
+                className="text-left border border-gray-200 rounded-md p-3 hover:border-gray-300 transition-colors"
+              >
+                <div className="text-[11px] uppercase tracking-wide text-gray-500">Team Members</div>
+                <div className="text-[22px] font-semibold text-gray-900 tabular-nums mt-0.5">{activeTeamMembers}</div>
+                <div className="text-[12px] text-gray-500 mt-0.5">{totalHoursThisMonth.toFixed(0)}h this month</div>
+              </button>
+
+              <button
+                onClick={() => navigate(createPageUrl('CRM'))}
+                className="text-left border border-gray-200 rounded-md p-3 hover:border-gray-300 transition-colors"
+              >
+                <div className="text-[11px] uppercase tracking-wide text-gray-500">Sales Pipeline</div>
+                <div className="text-[22px] font-semibold text-gray-900 tabular-nums mt-0.5">
+                  ${pipelineValue.toLocaleString()}
+                </div>
+                <div className="text-[12px] text-gray-500 mt-0.5">{activePipeline.length} active leads</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Two-column: Lists | This Month */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Overdue Invoices */}
+            {overdueInvoices.length > 0 && (
+              <div className="lg:col-span-2 border border-gray-200 rounded-md">
+                <div className="flex items-center justify-between px-3 h-9 border-b border-gray-100">
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                    Overdue Invoices ({overdueInvoices.length})
                   </div>
-                ))}
+                  <button
+                    onClick={() => navigate(createPageUrl('Accounting'))}
+                    className="text-[12px] text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                  >
+                    View all <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+                <div>
+                  {overdueInvoices.slice(0, 5).map(invoice => (
+                    <div
+                      key={invoice.id}
+                      className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 hover:bg-gray-50 last:border-b-0"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] text-gray-900 font-medium truncate">
+                          {getAccountName(invoice.account_id)}
+                        </div>
+                        <div className="text-[12px] text-gray-500">
+                          Due {parseLocalDate(invoice.due_date).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="text-[13px] font-medium text-gray-900 tabular-nums">
+                        ${invoice.total?.toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Quick Stats */}
-        <Card className={overdueInvoices.length > 0 ? 'lg:col-span-1' : 'lg:col-span-1'}>
-          <CardHeader>
-            <CardTitle>This Month</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Transactions</span>
-              <span className="font-bold text-green-600">${thisMonthTransactions.toLocaleString()}</span>
+            {/* Recent Payments */}
+            <div className={overdueInvoices.length > 0 ? 'border border-gray-200 rounded-md' : 'lg:col-span-2 border border-gray-200 rounded-md'}>
+              <div className="flex items-center justify-between px-3 h-9 border-b border-gray-100">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                  Recent Payments
+                </div>
+                <button
+                  onClick={() => navigate(createPageUrl('Accounting'))}
+                  className="text-[12px] text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                >
+                  View all <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+              <div>
+                {recentPayments.length === 0 ? (
+                  <p className="text-center py-6 text-[13px] text-gray-500">No payments yet</p>
+                ) : (
+                  recentPayments.map(payment => (
+                    <div
+                      key={payment.id}
+                      className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 hover:bg-gray-50 last:border-b-0"
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                          payment.status === 'paid' ? 'bg-green-500' : 'bg-amber-500'
+                        }`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] text-gray-900 font-medium truncate">
+                          {getTeamMemberName(payment.team_member_id)}
+                        </div>
+                        <div className="text-[12px] text-gray-500">
+                          {parseLocalDate(payment.payment_date).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="text-[13px] font-medium text-gray-900 tabular-nums">
+                        ${payment.amount?.toLocaleString()}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Hours Logged</span>
-              <span className="font-bold text-gray-900">{totalHoursThisMonth.toFixed(0)}</span>
+
+            {/* This Month */}
+            <div className="border border-gray-200 rounded-md">
+              <div className="px-3 h-9 border-b border-gray-100 flex items-center">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                  This Month
+                </div>
+              </div>
+              <div className="p-3 space-y-2.5">
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-gray-600">Transactions</span>
+                  <span className="text-gray-900 font-medium tabular-nums">
+                    ${thisMonthTransactions.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-gray-600">Hours Logged</span>
+                  <span className="text-gray-900 font-medium tabular-nums">{totalHoursThisMonth.toFixed(0)}</span>
+                </div>
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-gray-600">Tasks Completed</span>
+                  <span className="text-gray-900 font-medium tabular-nums">{completedTasks}</span>
+                </div>
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-gray-600">Deals Won</span>
+                  <span className="text-gray-900 font-medium tabular-nums">{wonDeals}</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Tasks Completed</span>
-              <span className="font-bold text-gray-900">
-                {tasks.filter(t => t.status === 'completed').length}
-              </span>
+          </div>
+
+          {/* Risk Alerts */}
+          {(projectsAtRisk > 0 || accountsAtRisk > 0) && (
+            <div>
+              <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                Risk Alerts
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {projectsAtRisk > 0 && (
+                  <div className="border border-gray-200 rounded-md p-3">
+                    <div className="text-[13px] font-medium text-gray-900">High Risk Projects</div>
+                    <div className="text-[12px] text-gray-500 mt-0.5 mb-2">
+                      {projectsAtRisk} project{projectsAtRisk !== 1 ? 's' : ''} marked as high risk
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[12px]"
+                      onClick={() => navigate(createPageUrl('Projects'))}
+                    >
+                      Review Projects <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </div>
+                )}
+                {accountsAtRisk > 0 && (
+                  <div className="border border-gray-200 rounded-md p-3">
+                    <div className="text-[13px] font-medium text-gray-900">High Risk Accounts</div>
+                    <div className="text-[12px] text-gray-500 mt-0.5 mb-2">
+                      {accountsAtRisk} account{accountsAtRisk !== 1 ? 's' : ''} marked as high risk
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[12px]"
+                      onClick={() => navigate(createPageUrl('Accounts'))}
+                    >
+                      Review Accounts <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Deals Won</span>
-              <span className="font-bold text-gray-900">{wonDeals}</span>
-            </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
-
-      {/* Risk Alerts */}
-      {(projectsAtRisk > 0 || accountsAtRisk > 0) && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="text-orange-900 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5" />
-              Risk Alerts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {projectsAtRisk > 0 && (
-                <div className="p-4 bg-white border border-orange-200 rounded-lg">
-                  <p className="font-medium text-gray-900 mb-2">High Risk Projects</p>
-                  <p className="text-sm text-gray-600 mb-3">
-                    {projectsAtRisk} project{projectsAtRisk !== 1 ? 's' : ''} marked as high risk
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => navigate(createPageUrl('Projects'))}
-                  >
-                    Review Projects
-                  </Button>
-                </div>
-              )}
-              {accountsAtRisk > 0 && (
-                <div className="p-4 bg-white border border-orange-200 rounded-lg">
-                  <p className="font-medium text-gray-900 mb-2">High Risk Accounts</p>
-                  <p className="text-sm text-gray-600 mb-3">
-                    {accountsAtRisk} account{accountsAtRisk !== 1 ? 's' : ''} marked as high risk
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => navigate(createPageUrl('Accounts'))}
-                  >
-                    Review Accounts
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

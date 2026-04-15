@@ -1,21 +1,12 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Account, Contact } from "@/api/entities";
 import { useAuth } from "@/contexts/AuthContext";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Building2, Search, Edit, Trash2, Mail, Phone, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Plus, Building2, Search, Edit, Trash2, Mail, Phone, Users, Filter, ExternalLink } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Sheet,
   SheetContent,
@@ -38,12 +29,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import AccountForm from "../components/accounts/AccountForm";
 
 export default function Accounts() {
@@ -53,7 +38,7 @@ export default function Accounts() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [industryFilter, setIndustryFilter] = useState("all");
@@ -120,220 +105,253 @@ export default function Accounts() {
   };
 
   const filteredAccounts = accounts.filter(account => {
-    const matchesSearch = searchQuery === "" || 
+    const matchesSearch = searchQuery === "" ||
       account.company_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       account.website?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesStatus = statusFilter === "all" || account.status === statusFilter;
     const matchesIndustry = industryFilter === "all" || account.industry === industryFilter;
-    
+
     return matchesSearch && matchesStatus && matchesIndustry;
   });
 
-  const statusColors = {
-    active: "bg-green-100 text-green-800",
-    inactive: "bg-gray-100 text-gray-800",
-    paused: "bg-yellow-100 text-yellow-800"
+  const stats = useMemo(() => {
+    const active = accounts.filter(a => a.status === "active").length;
+    const paused = accounts.filter(a => a.status === "paused").length;
+    const inactive = accounts.filter(a => a.status === "inactive").length;
+    return { active, paused, inactive, total: accounts.length };
+  }, [accounts]);
+
+  const statusTextColors = {
+    active: "text-green-600",
+    inactive: "text-gray-500",
+    paused: "text-yellow-600",
   };
 
+  const activeFilterCount =
+    (statusFilter !== "all" ? 1 : 0) +
+    (industryFilter !== "all" ? 1 : 0);
+
   return (
-    <div className="p-6 lg:p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Accounts</h1>
-          <p className="text-gray-500 mt-1">Manage your client accounts</p>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Page header */}
+      <div className="px-4 pt-4 pb-3 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <h1 className="text-[15px] font-semibold text-gray-900">Accounts</h1>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-gray-600">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Active <span className="text-gray-900 font-medium">{stats.active}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+              Paused <span className="text-gray-900 font-medium">{stats.paused}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+              Inactive <span className="text-gray-900 font-medium">{stats.inactive}</span>
+            </span>
+            <span>Total <span className="text-gray-900 font-medium">{stats.total}</span></span>
+          </div>
         </div>
-        <Button 
-          onClick={() => {
-            setEditingAccount(null);
-            setShowDrawer(true);
-          }}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Account
-        </Button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg border shadow-sm p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search accounts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+      {/* Consolidated toolbar */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <div className="relative flex-1 max-w-md min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Input
+              placeholder="Search accounts"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+            />
           </div>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="paused">Paused</SelectItem>
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 gap-1.5 h-8 text-[13px]">
+                <Filter className="w-3.5 h-3.5" />
+                Filter
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Filters</span>
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    className="text-xs text-indigo-600 hover:text-indigo-700"
+                    onClick={() => {
+                      setStatusFilter("all");
+                      setIndustryFilter("all");
+                    }}
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-600">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="paused">Paused</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-600">Industry</label>
+                <Select value={industryFilter} onValueChange={setIndustryFilter}>
+                  <SelectTrigger><SelectValue placeholder="Industry" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Industries</SelectItem>
+                    <SelectItem value="technology">Technology</SelectItem>
+                    <SelectItem value="finance">Finance</SelectItem>
+                    <SelectItem value="healthcare">Healthcare</SelectItem>
+                    <SelectItem value="retail">Retail</SelectItem>
+                    <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                    <SelectItem value="education">Education</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </PopoverContent>
+          </Popover>
 
-          <Select value={industryFilter} onValueChange={setIndustryFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Industry" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Industries</SelectItem>
-              <SelectItem value="technology">Technology</SelectItem>
-              <SelectItem value="finance">Finance</SelectItem>
-              <SelectItem value="healthcare">Healthcare</SelectItem>
-              <SelectItem value="retail">Retail</SelectItem>
-              <SelectItem value="manufacturing">Manufacturing</SelectItem>
-              <SelectItem value="education">Education</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="ml-auto">
+            <Button
+              onClick={() => {
+                setEditingAccount(null);
+                setShowDrawer(true);
+              }}
+              size="sm"
+              className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              New Account
+            </Button>
+          </div>
         </div>
-        
-        {(searchQuery || statusFilter !== "all" || industryFilter !== "all") && (
-          <div className="mt-4 flex items-center gap-2">
-            <span className="text-sm text-gray-600">Active filters:</span>
-            <div className="flex gap-2 flex-wrap">
-              {searchQuery && (
-                <Badge variant="secondary" className="cursor-pointer" onClick={() => setSearchQuery("")}>
-                  Search: {searchQuery} ×
-                </Badge>
-              )}
-              {statusFilter !== "all" && (
-                <Badge variant="secondary" className="cursor-pointer" onClick={() => setStatusFilter("all")}>
-                  Status: {statusFilter} ×
-                </Badge>
-              )}
-              {industryFilter !== "all" && (
-                <Badge variant="secondary" className="cursor-pointer" onClick={() => setIndustryFilter("all")}>
-                  Industry: {industryFilter} ×
-                </Badge>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
-      <div className="bg-white rounded-lg border shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Account</TableHead>
-              <TableHead>Industry</TableHead>
-              <TableHead>Contacts</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : filteredAccounts.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                  {accounts.length === 0 ? "No accounts yet. Click \"New Account\" to get started." : "No accounts match your filters."}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredAccounts.map((account) => {
-                const accountContacts = getAccountContacts(account.id);
-                return (
-                  <TableRow key={account.id} className="hover:bg-gray-50">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {account.logo_url ? (
-                          <img 
-                            src={account.logo_url} 
-                            alt={account.company_name} 
-                            className="w-10 h-10 rounded object-contain bg-gray-50 p-1 border"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              if (e.target.nextSibling) {
-                                e.target.nextSibling.style.display = 'flex';
-                              }
-                            }}
-                          />
-                        ) : null}
-                        <div 
-                          className={`w-10 h-10 bg-indigo-100 rounded flex items-center justify-center ${account.logo_url ? 'hidden' : ''}`}
-                        >
-                          <Building2 className="w-5 h-5 text-indigo-600" />
-                        </div>
-                        <div>
-                          <div className="font-medium">{account.company_name}</div>
-                          {account.website && (
-                            <a 
-                              href={account.website} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-xs text-gray-500 hover:text-indigo-600"
-                            >
-                              {account.website}
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="capitalize">
-                      {account.industry || '—'}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewContacts(account)}
-                        className="text-gray-600 hover:text-indigo-600"
+      {/* List */}
+      <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+        {loading ? (
+          <div className="p-8 text-center text-sm text-gray-400">Loading…</div>
+        ) : filteredAccounts.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-400">
+            {accounts.length === 0
+              ? 'No accounts yet. Click "New Account" to get started.'
+              : "No accounts match your filters."}
+          </div>
+        ) : (
+          filteredAccounts.map((account) => {
+            const accountContacts = getAccountContacts(account.id);
+            const initials = (account.company_name || "?")
+              .split(" ")
+              .map((w) => w[0])
+              .filter(Boolean)
+              .slice(0, 2)
+              .join("")
+              .toUpperCase();
+            return (
+              <div
+                key={account.id}
+                className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50"
+              >
+                {account.logo_url ? (
+                  <img
+                    src={account.logo_url}
+                    alt={account.company_name}
+                    className="w-6 h-6 rounded object-contain bg-gray-50 border border-gray-100 flex-shrink-0"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      if (e.target.nextSibling) {
+                        e.target.nextSibling.style.display = "flex";
+                      }
+                    }}
+                  />
+                ) : null}
+                <div
+                  className={`w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium flex-shrink-0 ${account.logo_url ? "hidden" : ""}`}
+                >
+                  {initials || <Building2 className="w-3.5 h-3.5" />}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] text-gray-900 font-medium truncate">
+                    {account.company_name}
+                    {account.website && (
+                      <a
+                        href={account.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-gray-400 font-normal ml-1.5 hover:text-gray-700"
                       >
-                        <Users className="w-4 h-4 mr-1" />
-                        {accountContacts.length} contact{accountContacts.length !== 1 ? 's' : ''}
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={statusColors[account.status]}>
-                        {account.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingAccount(account);
-                            setShowDrawer(true);
-                          }}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteDialog({ open: true, accountId: account.id })}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+                        · {account.website.replace(/^https?:\/\//, "")}
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                <span className="hidden md:inline text-[11px] capitalize text-gray-500 w-28 text-right truncate">
+                  {account.industry || "—"}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewContacts(account);
+                  }}
+                  className="hidden md:inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-900 w-24 justify-end"
+                >
+                  <Users className="w-3 h-3" />
+                  {accountContacts.length}
+                </button>
+
+                <span className={`text-[11px] capitalize w-16 text-right ${statusTextColors[account.status] || "text-gray-500"}`}>
+                  {account.status || "—"}
+                </span>
+
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingAccount(account);
+                      setShowDrawer(true);
+                    }}
+                    className="p-1 text-gray-400 hover:text-gray-900"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteDialog({ open: true, accountId: account.id });
+                    }}
+                    className="p-1 text-gray-400 hover:text-red-600"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Account Form Drawer */}
@@ -367,63 +385,72 @@ export default function Accounts() {
               View all contacts associated with this account
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+
+          <div className="border-t border-gray-200">
             {getAccountContacts(selectedAccount?.id).length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>No contacts for this account yet</p>
+              <div className="py-10 text-center">
+                <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-[13px] text-gray-500">No contacts for this account yet</p>
                 <Link to={createPageUrl("Contacts")}>
-                  <Button variant="outline" size="sm" className="mt-4">
-                    <Plus className="w-4 h-4 mr-2" />
+                  <Button variant="ghost" className="mt-3 h-7 px-2 text-[13px]">
+                    <Plus className="w-3.5 h-3.5 mr-1" />
                     Add Contact
                   </Button>
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-3">
-                {getAccountContacts(selectedAccount?.id).map((contact) => (
-                  <Card key={contact.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900">
-                            {contact.first_name} {contact.last_name}
-                          </h3>
-                          <p className="text-sm text-gray-600">{contact.title}</p>
-                          <div className="mt-3 space-y-2">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Mail className="w-4 h-4" />
-                              <a href={`mailto:${contact.email}`} className="hover:text-indigo-600">
-                                {contact.email}
-                              </a>
-                            </div>
-                            {contact.phone && (
-                              <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <Phone className="w-4 h-4" />
-                                <a href={`tel:${contact.phone}`} className="hover:text-indigo-600">
-                                  {contact.phone}
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="capitalize">
-                          {contact.role}
-                        </Badge>
+              getAccountContacts(selectedAccount?.id).map((contact) => {
+                const initials = `${contact.first_name?.[0] || ""}${contact.last_name?.[0] || ""}`.toUpperCase();
+                return (
+                  <div
+                    key={contact.id}
+                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                      {initials || "?"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] text-gray-900 truncate">
+                        {contact.first_name} {contact.last_name}
+                        {contact.title && <span className="text-gray-400 font-normal ml-1.5">· {contact.title}</span>}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                    </div>
+                    <a
+                      href={`mailto:${contact.email}`}
+                      className="text-[12px] text-gray-500 hover:text-gray-900 w-52 truncate text-right"
+                    >
+                      {contact.email}
+                    </a>
+                    {contact.phone ? (
+                      <a
+                        href={`tel:${contact.phone}`}
+                        className="text-[12px] text-gray-500 hover:text-gray-900 w-28 text-right"
+                      >
+                        {contact.phone}
+                      </a>
+                    ) : (
+                      <span className="text-[12px] text-gray-300 w-28 text-right">—</span>
+                    )}
+                    <span className="text-[11px] capitalize text-gray-500 w-20 text-right">
+                      {contact.role || "—"}
+                    </span>
+                  </div>
+                );
+              })
             )}
           </div>
+
           <DialogFooter>
             <Link to={createPageUrl("Contacts")}>
-              <Button variant="outline">
+              <Button variant="outline" size="sm" className="h-8 text-[13px]">
                 Manage Contacts
               </Button>
             </Link>
-            <Button onClick={() => setShowContactsDialog(false)}>
+            <Button
+              size="sm"
+              className="bg-gray-900 hover:bg-gray-800 text-white h-8 text-[13px]"
+              onClick={() => setShowContactsDialog(false)}
+            >
               Close
             </Button>
           </DialogFooter>

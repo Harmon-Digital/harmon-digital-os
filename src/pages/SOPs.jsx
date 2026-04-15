@@ -3,16 +3,15 @@ import React, { useState, useEffect } from "react";
 import { api } from "@/api/legacyClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit, Trash2, FileText, Eye } from "lucide-react";
+import { Plus, Search, Edit, Trash2, FileText, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Sheet,
   SheetContent,
@@ -91,13 +90,13 @@ export default function SOPs() {
   };
 
   const filteredSOPs = sops.filter(sop => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       sop.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sop.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesCategory = categoryFilter === "all" || sop.category === categoryFilter;
     const matchesStatus = statusFilter === "all" || sop.status === statusFilter;
-    
+
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -115,158 +114,227 @@ export default function SOPs() {
     archived: "bg-red-100 text-red-700"
   };
 
+  const statusDotColors = {
+    draft: "bg-gray-300",
+    published: "bg-green-500",
+    archived: "bg-red-400",
+  };
+
+  const activeFilterCount =
+    (categoryFilter !== "all" ? 1 : 0) +
+    (statusFilter !== "all" ? 1 : 0);
+
+  // Group SOPs by category
+  const grouped = filteredSOPs.reduce((acc, sop) => {
+    const cat = sop.category || "uncategorized";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(sop);
+    return acc;
+  }, {});
+
   return (
-    <div className="p-6 lg:p-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Standard Operating Procedures</h1>
-          <p className="text-gray-500 mt-1">Document and manage your processes</p>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Consolidated toolbar */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <h1 className="text-[15px] font-semibold text-gray-900 shrink-0">SOPs</h1>
+
+          <div className="relative flex-1 max-w-md min-w-0 ml-2">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Input
+              placeholder="Search SOPs"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+            />
+          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 gap-1.5 h-8 text-[13px]">
+                <Filter className="w-3.5 h-3.5" />
+                Filter
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Filters</span>
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    className="text-xs text-indigo-600 hover:text-indigo-700"
+                    onClick={() => {
+                      setCategoryFilter("all");
+                      setStatusFilter("all");
+                    }}
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-600">Category</label>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-600">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <div className="ml-auto">
+            <Button
+              onClick={() => {
+                setEditingSOP(null);
+                setShowDrawer(true);
+              }}
+              size="sm"
+              className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              New SOP
+            </Button>
+          </div>
         </div>
-        <Button 
-          onClick={() => {
-            setEditingSOP(null);
-            setShowDrawer(true);
-          }}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New SOP
-        </Button>
       </div>
 
-      {/* Filters */}
-      <Card className="mb-8">
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search SOPs..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Category</Label>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="published">Published</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      {/* SOPs list */}
+      <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+        {loading ? (
+          <div className="p-8 text-center text-sm text-gray-400">Loading…</div>
+        ) : filteredSOPs.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-400">
+            {searchQuery || categoryFilter !== "all" || statusFilter !== "all"
+              ? "No SOPs match your filters."
+              : 'No SOPs yet. Click "New SOP" to get started.'}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* SOPs Grid */}
-      {loading ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Loading SOPs...</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSOPs.length === 0 ? (
-            <div className="col-span-full text-center py-12">
-              <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No SOPs Found</h3>
-              <p className="text-gray-500 mb-4">
-                {searchQuery || categoryFilter !== "all" || statusFilter !== "all"
-                  ? "Try adjusting your filters" 
-                  : "Get started by creating your first SOP"}
-              </p>
-            </div>
-          ) : (
-            filteredSOPs.map((sop) => (
-              <Card 
-                key={sop.id} 
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => setViewingSOP(sop)}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3 flex-1">
-                      <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base mb-2 truncate">{sop.title}</CardTitle>
-                        <div className="flex gap-2 flex-wrap">
-                          <Badge variant="outline" className="capitalize">
-                            {categories.find(c => c.value === sop.category)?.label || sop.category}
-                          </Badge>
-                          <Badge className={statusColors[sop.status]}>
-                            {sop.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">{sop.description || "No description"}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">
-                      v{sop.version || 1} • {new Date(sop.created_at).toLocaleDateString()}
+        ) : (
+          <>
+            {categories.map((cat) => {
+              const groupSops = grouped[cat.value] || [];
+              if (groupSops.length === 0) return null;
+              return (
+                <div key={cat.value}>
+                  <div className="flex items-center gap-2 px-3 h-7 bg-gray-50 border-b border-gray-200">
+                    <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                      {cat.label}
                     </span>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                    <span className="text-[11px] text-gray-400 tabular-nums">{groupSops.length}</span>
+                  </div>
+                  {groupSops.map((sop) => (
+                    <div
+                      key={sop.id}
+                      className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+                      onClick={() => setViewingSOP(sop)}
+                    >
+                      <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+
+                      <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${statusDotColors[sop.status] || "bg-gray-300"}`} />
+
+                      <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+                        {sop.title}
+                      </span>
+
+                      {sop.description && (
+                        <span className="hidden md:inline text-[11px] text-gray-500 shrink-0 max-w-[280px] truncate">
+                          {sop.description}
+                        </span>
+                      )}
+
+                      <span className="hidden lg:inline text-[11px] text-gray-400 shrink-0 tabular-nums">
+                        v{sop.version || 1}
+                      </span>
+
+                      <span className="hidden lg:inline text-[11px] text-gray-400 shrink-0 tabular-nums w-20 text-right">
+                        {new Date(sop.created_at).toLocaleDateString()}
+                      </span>
+
+                      <Badge className={`${statusColors[sop.status]} capitalize text-[10px] shrink-0`}>
+                        {sop.status}
+                      </Badge>
+
+                      <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setEditingSOP(sop);
                           setShowDrawer(true);
                         }}
+                        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                        title="Edit"
                       >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setDeleteDialog({ open: true, sopId: sop.id });
                         }}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        title="Delete"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
+                  ))}
+                </div>
+              );
+            })}
+            {/* Uncategorized */}
+            {grouped.uncategorized?.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 px-3 h-7 bg-gray-50 border-b border-gray-200">
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                    Uncategorized
+                  </span>
+                  <span className="text-[11px] text-gray-400 tabular-nums">{grouped.uncategorized.length}</span>
+                </div>
+                {grouped.uncategorized.map((sop) => (
+                  <div
+                    key={sop.id}
+                    className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+                    onClick={() => setViewingSOP(sop)}
+                  >
+                    <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${statusDotColors[sop.status] || "bg-gray-300"}`} />
+                    <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+                      {sop.title}
+                    </span>
+                    <Badge className={`${statusColors[sop.status]} capitalize text-[10px] shrink-0`}>
+                      {sop.status}
+                    </Badge>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* SOP Form Drawer */}
       <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
@@ -374,13 +442,12 @@ function SOPForm({ sop, categories, onSubmit, onCancel }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Increment version if editing and content changed
+
     const updatedData = { ...formData };
     if (sop && sop.content !== formData.content) {
       updatedData.version = (sop.version || 1) + 1;
     }
-    
+
     onSubmit(updatedData);
   };
 
@@ -431,8 +498,8 @@ function SOPForm({ sop, categories, onSubmit, onCancel }) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="category">Category *</Label>
-          <Select 
-            value={formData.category} 
+          <Select
+            value={formData.category}
             onValueChange={(value) => setFormData({ ...formData, category: value })}
           >
             <SelectTrigger>
@@ -450,8 +517,8 @@ function SOPForm({ sop, categories, onSubmit, onCancel }) {
 
         <div className="space-y-2">
           <Label htmlFor="status">Status *</Label>
-          <Select 
-            value={formData.status} 
+          <Select
+            value={formData.status}
             onValueChange={(value) => setFormData({ ...formData, status: value })}
           >
             <SelectTrigger>
@@ -485,7 +552,7 @@ function SOPForm({ sop, categories, onSubmit, onCancel }) {
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
+        <Button type="submit" className="bg-gray-900 hover:bg-gray-800 text-white">
           {sop ? "Update SOP" : "Create SOP"}
         </Button>
       </div>

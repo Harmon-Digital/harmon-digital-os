@@ -3,11 +3,9 @@ import { BrandingSettings } from "@/api/entities";
 import { api } from "@/api/legacyClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, Image as ImageIcon, Palette, Type, Save, RefreshCw } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Upload, Save, RefreshCw } from "lucide-react";
 
 export default function Branding() {
   const [settings, setSettings] = useState(null);
@@ -27,7 +25,6 @@ export default function Branding() {
       if (data.length > 0) {
         setSettings(data[0]);
       } else {
-        // Create default settings
         const defaultSettings = await BrandingSettings.create({
           logo_url: "",
           primary_color: "#4F46E5",
@@ -52,14 +49,11 @@ export default function Branding() {
   const handleFileUpload = async (field, file) => {
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
       const response = await api.integrations.Core.UploadFile({ file });
       const fileUrl = response.file_url;
 
       handleChange(field, fileUrl);
-      setSuccessMessage(`${field.replace('_', ' ')} uploaded successfully!`);
+      setSuccessMessage(`${field.replace('_', ' ')} uploaded successfully.`);
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -73,7 +67,7 @@ export default function Branding() {
     setSaving(true);
     try {
       await BrandingSettings.update(settings.id, settings);
-      setSuccessMessage("Branding settings saved successfully!");
+      setSuccessMessage("Branding settings saved successfully.");
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -85,335 +79,352 @@ export default function Branding() {
 
   if (loading) {
     return (
-      <div className="p-6 lg:p-8">
-        <div className="text-center py-12">
-          <RefreshCw className="w-12 h-12 mx-auto text-gray-400 animate-spin mb-4" />
-          <p className="text-gray-500">Loading branding settings...</p>
+      <div className="h-full flex flex-col bg-white overflow-hidden">
+        <div className="border-b border-gray-200 bg-white">
+          <div className="flex items-center gap-2 px-4 h-12">
+            <h1 className="text-[15px] font-semibold text-gray-900">Branding</h1>
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <RefreshCw className="w-8 h-8 text-gray-400 animate-spin mb-3" />
+          <p className="text-sm text-gray-500">Loading branding settings…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Branding</h1>
-          <p className="text-gray-500 mt-1">Manage your brand identity and assets</p>
+    <div className="h-full flex flex-col bg-white overflow-hidden settings-form">
+      <style>{`
+        .settings-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]),
+        .settings-form textarea,
+        .settings-form [role="combobox"] {
+          border-color: transparent !important;
+          background-color: transparent !important;
+          box-shadow: none !important;
+          transition: background-color 0.12s ease, border-color 0.12s ease;
+        }
+        .settings-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):hover,
+        .settings-form textarea:hover,
+        .settings-form [role="combobox"]:hover {
+          background-color: rgb(249 250 251) !important;
+        }
+        .settings-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):focus,
+        .settings-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):focus-visible,
+        .settings-form textarea:focus,
+        .settings-form textarea:focus-visible,
+        .settings-form [role="combobox"]:focus,
+        .settings-form [role="combobox"][data-state="open"] {
+          background-color: white !important;
+          border-color: rgb(199 210 254) !important;
+          box-shadow: 0 0 0 3px rgb(224 231 255 / 0.45) !important;
+          outline: none !important;
+        }
+      `}</style>
+
+      {/* Consolidated toolbar */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <h1 className="text-[15px] font-semibold text-gray-900">Branding</h1>
+          <div className="ml-auto">
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              size="sm"
+              className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
+            >
+              <Save className="w-3.5 h-3.5 mr-1" />
+              {saving ? "Saving..." : "Save changes"}
+            </Button>
+          </div>
         </div>
-        <Button 
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {saving ? "Saving..." : "Save Changes"}
-        </Button>
       </div>
 
-      {successMessage && (
-        <Alert className="mb-6 bg-green-50 border-green-200">
-          <AlertDescription className="text-green-800">
-            {successMessage}
-          </AlertDescription>
-        </Alert>
-      )}
+      <div className="overflow-y-auto flex-1 min-h-0">
+        <div className="px-4 lg:px-6 py-4 max-w-4xl">
+          {successMessage && (
+            <div className="mb-4 px-3 py-2 rounded text-[13px] bg-green-50 text-green-800 border border-green-200">
+              {successMessage}
+            </div>
+          )}
 
-      <div className="space-y-6">
-        {/* Logos Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ImageIcon className="w-5 h-5" />
-              Logos & Images
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Main Logo */}
-            <div className="space-y-2">
-              <Label>Main Logo</Label>
-              <div className="flex items-center gap-4">
-                {settings?.logo_url && (
-                  <div className="w-24 h-24 border rounded-lg flex items-center justify-center bg-gray-50">
-                    <img 
-                      src={settings.logo_url} 
-                      alt="Logo" 
-                      className="max-w-full max-h-full object-contain p-2"
+          <Tabs defaultValue="identity" className="space-y-5">
+            <TabsList className="h-9 bg-transparent p-0 border-b border-gray-200 rounded-none w-full justify-start gap-5 px-1">
+              <TabsTrigger
+                value="identity"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+              >
+                Identity
+              </TabsTrigger>
+              <TabsTrigger
+                value="logos"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+              >
+                Logos
+              </TabsTrigger>
+              <TabsTrigger
+                value="colors"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+              >
+                Colors
+              </TabsTrigger>
+              <TabsTrigger
+                value="typography"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+              >
+                Typography
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Identity Tab */}
+            <TabsContent value="identity" className="space-y-4">
+              <div>
+                <div className="h-7 flex items-center">
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Company</span>
+                </div>
+                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                  <div className="flex items-center gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Company name</label>
+                    <Input
+                      value={settings?.company_name || ""}
+                      onChange={(e) => handleChange("company_name", e.target.value)}
+                      placeholder="Harmon Digital"
+                      className="flex-1 h-8 text-[13px]"
                     />
                   </div>
-                )}
-                <div className="flex-1">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileUpload('logo_url', file);
-                    }}
-                    disabled={uploading}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Recommended: Square format, 512x512px or larger
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Dark Mode Logo */}
-            <div className="space-y-2">
-              <Label>Dark Mode Logo (Optional)</Label>
-              <div className="flex items-center gap-4">
-                {settings?.logo_dark_url && (
-                  <div className="w-24 h-24 border rounded-lg flex items-center justify-center bg-gray-900">
-                    <img 
-                      src={settings.logo_dark_url} 
-                      alt="Dark Logo" 
-                      className="max-w-full max-h-full object-contain p-2"
+                  <div className="flex items-center gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Tagline</label>
+                    <Input
+                      value={settings?.tagline || ""}
+                      onChange={(e) => handleChange("tagline", e.target.value)}
+                      placeholder="Your company tagline"
+                      className="flex-1 h-8 text-[13px]"
                     />
                   </div>
-                )}
-                <div className="flex-1">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileUpload('logo_dark_url', file);
-                    }}
-                    disabled={uploading}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Light-colored logo for dark backgrounds
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Favicon */}
-            <div className="space-y-2">
-              <Label>Favicon (Optional)</Label>
-              <div className="flex items-center gap-4">
-                {settings?.favicon_url && (
-                  <div className="w-12 h-12 border rounded flex items-center justify-center bg-gray-50">
-                    <img 
-                      src={settings.favicon_url} 
-                      alt="Favicon" 
-                      className="max-w-full max-h-full object-contain"
+                  <div className="flex items-center gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Website</label>
+                    <Input
+                      value={settings?.website || ""}
+                      onChange={(e) => handleChange("website", e.target.value)}
+                      placeholder="https://yourcompany.com"
+                      className="flex-1 h-8 text-[13px]"
                     />
                   </div>
-                )}
-                <div className="flex-1">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileUpload('favicon_url', file);
-                    }}
-                    disabled={uploading}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Browser tab icon, 32x32px or 64x64px
-                  </p>
+                  <div className="flex items-start gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0 mt-2">Notes</label>
+                    <Textarea
+                      value={settings?.notes || ""}
+                      onChange={(e) => handleChange("notes", e.target.value)}
+                      placeholder="Branding guidelines, usage notes, or other important information…"
+                      rows={4}
+                      className="flex-1 text-[13px]"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </TabsContent>
 
-        {/* Colors Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="w-5 h-5" />
-              Brand Colors
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <Label>Primary Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
+            {/* Logos Tab */}
+            <TabsContent value="logos" className="space-y-4">
+              <div>
+                <div className="h-7 flex items-center">
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Logos & icons</span>
+                </div>
+                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                  <LogoRow
+                    label="Main logo"
+                    hint="Square format, 512×512px or larger"
+                    src={settings?.logo_url}
+                    bgClass="bg-gray-50"
+                    onFile={(file) => handleFileUpload('logo_url', file)}
+                    uploading={uploading}
+                    size="lg"
+                  />
+                  <LogoRow
+                    label="Dark logo"
+                    hint="Light-colored logo for dark backgrounds"
+                    src={settings?.logo_dark_url}
+                    bgClass="bg-gray-900"
+                    onFile={(file) => handleFileUpload('logo_dark_url', file)}
+                    uploading={uploading}
+                    size="lg"
+                  />
+                  <LogoRow
+                    label="Favicon"
+                    hint="Browser tab icon, 32×32px or 64×64px"
+                    src={settings?.favicon_url}
+                    bgClass="bg-gray-50"
+                    onFile={(file) => handleFileUpload('favicon_url', file)}
+                    uploading={uploading}
+                    size="sm"
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Colors Tab */}
+            <TabsContent value="colors" className="space-y-4">
+              <div>
+                <div className="h-7 flex items-center">
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Brand colors</span>
+                </div>
+                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                  <ColorRow
+                    label="Primary"
                     value={settings?.primary_color || "#4F46E5"}
-                    onChange={(e) => handleChange("primary_color", e.target.value)}
-                    className="w-16 h-10 p-1"
+                    onChange={(v) => handleChange("primary_color", v)}
                   />
-                  <Input
-                    type="text"
-                    value={settings?.primary_color || "#4F46E5"}
-                    onChange={(e) => handleChange("primary_color", e.target.value)}
-                    placeholder="#4F46E5"
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Secondary Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
+                  <ColorRow
+                    label="Secondary"
                     value={settings?.secondary_color || "#3B82F6"}
-                    onChange={(e) => handleChange("secondary_color", e.target.value)}
-                    className="w-16 h-10 p-1"
+                    onChange={(v) => handleChange("secondary_color", v)}
                   />
-                  <Input
-                    type="text"
-                    value={settings?.secondary_color || "#3B82F6"}
-                    onChange={(e) => handleChange("secondary_color", e.target.value)}
-                    placeholder="#3B82F6"
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Accent Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
+                  <ColorRow
+                    label="Accent"
                     value={settings?.accent_color || "#10B981"}
-                    onChange={(e) => handleChange("accent_color", e.target.value)}
-                    className="w-16 h-10 p-1"
-                  />
-                  <Input
-                    type="text"
-                    value={settings?.accent_color || "#10B981"}
-                    onChange={(e) => handleChange("accent_color", e.target.value)}
-                    placeholder="#10B981"
-                    className="flex-1"
+                    onChange={(v) => handleChange("accent_color", v)}
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Color Preview */}
-            <div className="mt-6 p-4 border rounded-lg">
-              <p className="text-sm font-medium text-gray-700 mb-3">Preview</p>
-              <div className="flex gap-4">
-                <div className="flex-1 space-y-2">
-                  <div 
-                    className="h-16 rounded-lg"
-                    style={{ backgroundColor: settings?.primary_color || "#4F46E5" }}
-                  />
-                  <p className="text-xs text-center text-gray-600">Primary</p>
+              <div>
+                <div className="h-7 flex items-center">
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Preview</span>
                 </div>
-                <div className="flex-1 space-y-2">
-                  <div 
-                    className="h-16 rounded-lg"
-                    style={{ backgroundColor: settings?.secondary_color || "#3B82F6" }}
-                  />
-                  <p className="text-xs text-center text-gray-600">Secondary</p>
-                </div>
-                <div className="flex-1 space-y-2">
-                  <div 
-                    className="h-16 rounded-lg"
-                    style={{ backgroundColor: settings?.accent_color || "#10B981" }}
-                  />
-                  <p className="text-xs text-center text-gray-600">Accent</p>
+                <div className="pt-3 flex gap-3">
+                  <div className="flex-1 space-y-1.5">
+                    <div
+                      className="h-12 rounded-md"
+                      style={{ backgroundColor: settings?.primary_color || "#4F46E5" }}
+                    />
+                    <p className="text-[11px] text-gray-500 text-center">Primary</p>
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <div
+                      className="h-12 rounded-md"
+                      style={{ backgroundColor: settings?.secondary_color || "#3B82F6" }}
+                    />
+                    <p className="text-[11px] text-gray-500 text-center">Secondary</p>
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <div
+                      className="h-12 rounded-md"
+                      style={{ backgroundColor: settings?.accent_color || "#10B981" }}
+                    />
+                    <p className="text-[11px] text-gray-500 text-center">Accent</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </TabsContent>
 
-        {/* Typography Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Type className="w-5 h-5" />
-              Typography
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Font Family</Label>
-              <Input
-                value={settings?.font_family || "Inter"}
-                onChange={(e) => handleChange("font_family", e.target.value)}
-                placeholder="Inter, Arial, sans-serif"
-              />
-              <p className="text-xs text-gray-500">
-                System fonts: Inter, Arial, Helvetica, etc.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Custom Font File (Optional)</Label>
-              <Input
-                type="file"
-                accept=".woff,.woff2,.ttf,.otf"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFileUpload('font_url', file);
-                }}
-                disabled={uploading}
-              />
-              <p className="text-xs text-gray-500">
-                Upload a custom font file (.woff, .woff2, .ttf, .otf)
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Company Info Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Company Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Company Name</Label>
-              <Input
-                value={settings?.company_name || ""}
-                onChange={(e) => handleChange("company_name", e.target.value)}
-                placeholder="Harmon Digital"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tagline</Label>
-              <Input
-                value={settings?.tagline || ""}
-                onChange={(e) => handleChange("tagline", e.target.value)}
-                placeholder="Your company tagline"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Website</Label>
-              <Input
-                value={settings?.website || ""}
-                onChange={(e) => handleChange("website", e.target.value)}
-                placeholder="https://yourcompany.com"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Branding Notes & Guidelines</Label>
-              <Textarea
-                value={settings?.notes || ""}
-                onChange={(e) => handleChange("notes", e.target.value)}
-                placeholder="Add any branding guidelines, usage notes, or other important information..."
-                rows={4}
-              />
-            </div>
-          </CardContent>
-        </Card>
+            {/* Typography Tab */}
+            <TabsContent value="typography" className="space-y-4">
+              <div>
+                <div className="h-7 flex items-center">
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Typography</span>
+                </div>
+                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                  <div className="flex items-center gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Font family</label>
+                    <Input
+                      value={settings?.font_family || "Inter"}
+                      onChange={(e) => handleChange("font_family", e.target.value)}
+                      placeholder="Inter, Arial, sans-serif"
+                      className="flex-1 h-8 text-[13px]"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 py-2">
+                    <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Custom font</label>
+                    <div className="flex-1 flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1.5 px-2 h-7 rounded border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer text-[13px] text-gray-700">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>{uploading ? "Uploading…" : "Upload font"}</span>
+                        <input
+                          type="file"
+                          accept=".woff,.woff2,.ttf,.otf"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload('font_url', file);
+                          }}
+                          disabled={uploading}
+                          className="hidden"
+                        />
+                      </label>
+                      {settings?.font_url && (
+                        <span className="text-[11px] text-gray-500 truncate">Custom font uploaded</span>
+                      )}
+                      <span className="text-[11px] text-gray-400 ml-auto">.woff, .woff2, .ttf, .otf</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
+    </div>
+  );
+}
 
-      <div className="mt-8 flex justify-end">
-        <Button 
-          onClick={handleSave}
-          disabled={saving}
-          size="lg"
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {saving ? "Saving..." : "Save All Changes"}
-        </Button>
+function LogoRow({ label, hint, src, bgClass, onFile, uploading, size = "lg" }) {
+  const dim = size === "sm" ? "w-10 h-10" : "w-16 h-16";
+  return (
+    <div className="flex items-center gap-3 py-3">
+      <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">{label}</label>
+      <div className={`${dim} rounded border border-gray-200 ${bgClass} flex items-center justify-center shrink-0 overflow-hidden`}>
+        {src ? (
+          <img
+            src={src}
+            alt={label}
+            className="max-w-full max-h-full object-contain p-1"
+          />
+        ) : (
+          <span className="text-[10px] text-gray-400">No image</span>
+        )}
+      </div>
+      <div className="flex-1 flex items-center gap-2">
+        <label className="inline-flex items-center gap-1.5 px-2 h-7 rounded border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer text-[13px] text-gray-700">
+          <Upload className="w-3.5 h-3.5" />
+          <span>{uploading ? "Uploading…" : "Upload"}</span>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onFile(file);
+            }}
+            disabled={uploading}
+            className="hidden"
+          />
+        </label>
+        <span className="text-[11px] text-gray-500 ml-auto">{hint}</span>
+      </div>
+    </div>
+  );
+}
+
+function ColorRow({ label, value, onChange }) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">{label}</label>
+      <div className="flex items-center gap-2 flex-1">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-8 h-8 rounded border border-gray-200 p-0.5 cursor-pointer bg-transparent"
+        />
+        <Input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="#000000"
+          className="w-32 h-8 text-[13px] font-mono"
+        />
+        <div
+          className="h-8 flex-1 rounded border border-gray-200"
+          style={{ backgroundColor: value }}
+        />
       </div>
     </div>
   );

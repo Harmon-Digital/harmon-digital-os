@@ -2,9 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -14,16 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Clock, TrendingUp, TrendingDown, DollarSign, ChevronLeft, ChevronRight, Trophy, Target, CheckCircle2, XCircle, List, CalendarDays } from "lucide-react";
-import { KPI_DEFINITIONS, toWeekStart, formatWeekLabel, formatKpiValue, getKpiDef } from "@/config/kpiConfig";
+import { Clock, ChevronLeft, ChevronRight, Trophy, CheckCircle2, XCircle, List, CalendarDays } from "lucide-react";
+import { toWeekStart, formatWeekLabel, formatKpiValue, getKpiDef } from "@/config/kpiConfig";
 import WeeklyCalendarView from "@/components/time/WeeklyCalendarView";
 
 export default function Reports() {
@@ -215,22 +204,6 @@ export default function Reports() {
 
   // Calculate metrics from filtered entries
   const totalHours = filteredEntries.reduce((sum, e) => sum + (e.hours || 0), 0);
-  const billableHours = filteredEntries.filter(e => e.billable).reduce((sum, e) => sum + (e.hours || 0), 0);
-
-  const revenue = filteredEntries
-    .filter(e => e.billable)
-    .reduce((sum, e) => {
-      const project = projects.find(p => p.id === e.project_id);
-      return sum + ((e.hours || 0) * (project?.hourly_rate || 0));
-    }, 0);
-
-  const laborCost = filteredEntries.reduce((sum, e) => {
-    const member = teamMembers.find(m => m.id === e.team_member_id);
-    return sum + ((e.hours || 0) * (member?.hourly_rate || 0));
-  }, 0);
-
-  const profit = revenue - laborCost;
-  const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
   // Unbilled & Unpaid
   const unbilledRevenue = filteredEntries
@@ -263,510 +236,542 @@ export default function Reports() {
 
   if (!isAdmin) {
     return (
-      <div className="p-8">
-        <div className="text-center py-12">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Admin Access Required</h2>
-          <p className="text-gray-500">You need administrator privileges to view reports.</p>
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Admin access required</h2>
+          <p className="text-[13px] text-gray-500">You need administrator privileges to view reports.</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-          <p className="text-gray-500 text-sm">Financial overview & bonus payouts</p>
-        </div>
-      </div>
+  const unbilledCount = timeEntries.filter(e => e.billable && !e.client_billed).length;
+  const unpaidCount = timeEntries.filter(e => !e.contractor_paid).length;
 
-      {/* Top-level Tabs */}
-      <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
-        <button
-          onClick={() => setTab("time")}
-          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            tab === "time" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <Clock className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-          Time & Billing
-        </button>
-        <button
-          onClick={() => setTab("bonuses")}
-          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            tab === "bonuses" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <Trophy className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-          Bonuses
-          {bonusStats.unpaidAmount > 0 && (
-            <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full">
-              ${bonusStats.unpaidAmount.toLocaleString()}
-            </span>
-          )}
-        </button>
+  return (
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Top header */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-2 px-4 h-12">
+          <h1 className="text-[15px] font-semibold text-gray-900">Reports</h1>
+
+          <div className="ml-3 flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px]">
+            <button
+              type="button"
+              onClick={() => setTab("time")}
+              className={`px-2.5 py-1 rounded flex items-center gap-1.5 ${
+                tab === "time" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <Clock className="w-3 h-3" />
+              Time & Billing
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("bonuses")}
+              className={`px-2.5 py-1 rounded flex items-center gap-1.5 ${
+                tab === "bonuses" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <Trophy className="w-3 h-3" />
+              Bonuses
+              {bonusStats.unpaidAmount > 0 && tab !== "bonuses" && (
+                <span className="ml-0.5 text-amber-600 font-medium">
+                  ${bonusStats.unpaidAmount.toLocaleString()}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ====== TIME & BILLING TAB ====== */}
       {tab === "time" && (
         <>
-          {/* View Tabs */}
-          <div className="flex items-center gap-2 border-b">
-            <button
-              onClick={() => setView("unbilled")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-                view === "unbilled" ? "border-orange-500 text-orange-600" : "border-transparent text-gray-500"
-              }`}
-            >
-              Unbilled ({timeEntries.filter(e => e.billable && !e.client_billed).length})
-            </button>
-            <button
-              onClick={() => setView("unpaid")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-                view === "unpaid" ? "border-red-500 text-red-600" : "border-transparent text-gray-500"
-              }`}
-            >
-              Unpaid ({timeEntries.filter(e => !e.contractor_paid).length})
-            </button>
-            <button
-              onClick={() => setView("all")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-                view === "all" ? "border-gray-900 text-gray-900" : "border-transparent text-gray-500"
-              }`}
-            >
-              All
-            </button>
+          {/* Sub-toolbar */}
+          <div className="border-b border-gray-200 bg-white">
+            <div className="flex items-center gap-2 px-4 h-12">
+              <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px]">
+                <button
+                  type="button"
+                  onClick={() => setView("unbilled")}
+                  className={`px-2.5 py-1 rounded ${
+                    view === "unbilled" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  Unbilled <span className="opacity-60">({unbilledCount})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("unpaid")}
+                  className={`px-2.5 py-1 rounded ${
+                    view === "unpaid" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  Unpaid <span className="opacity-60">({unpaidCount})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("all")}
+                  className={`px-2.5 py-1 rounded ${
+                    view === "all" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  All
+                </button>
+              </div>
 
-            <div className="flex-1" />
+              <Select value={projectFilter} onValueChange={setProjectFilter}>
+                <SelectTrigger className="w-36 h-8 text-[13px] border-gray-200">
+                  <SelectValue placeholder="All Projects" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Projects</SelectItem>
+                  {projects.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={teamMemberFilter} onValueChange={setTeamMemberFilter}>
+                <SelectTrigger className="w-36 h-8 text-[13px] border-gray-200">
+                  <SelectValue placeholder="All Team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Team</SelectItem>
+                  {teamMembers.map(m => (
+                    <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <Select value={projectFilter} onValueChange={setProjectFilter}>
-              <SelectTrigger className="w-40 h-8 text-sm">
-                <SelectValue placeholder="All Projects" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Projects</SelectItem>
-                {projects.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={teamMemberFilter} onValueChange={setTeamMemberFilter}>
-              <SelectTrigger className="w-40 h-8 text-sm">
-                <SelectValue placeholder="All Team" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Team</SelectItem>
-                {teamMembers.map(m => (
-                  <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* List / Calendar toggle */}
-            <div className="flex items-center border rounded-lg overflow-hidden">
-              <button
-                onClick={() => setTimeViewMode("list")}
-                className={`p-1.5 transition-colors ${timeViewMode === "list" ? "bg-gray-900 text-white" : "text-gray-400 hover:text-gray-600"}`}
-              >
-                <List className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setTimeViewMode("calendar")}
-                className={`p-1.5 transition-colors ${timeViewMode === "calendar" ? "bg-gray-900 text-white" : "text-gray-400 hover:text-gray-600"}`}
-              >
-                <CalendarDays className="w-4 h-4" />
-              </button>
+              <div className="ml-auto flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setTimeViewMode("list")}
+                  className={`p-1 rounded ${timeViewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                  title="List"
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTimeViewMode("calendar")}
+                  className={`p-1 rounded ${timeViewMode === "calendar" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                  title="Calendar"
+                >
+                  <CalendarDays className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
-            </div>
-          ) : (
-            <>
-              {/* Summary for current view */}
-              <div className="flex items-center gap-6 text-sm">
-                {view === "unbilled" && (
-                  <span className="font-semibold text-orange-600">
-                    ${unbilledRevenue.toLocaleString()} unbilled
-                  </span>
-                )}
-                {view === "unpaid" && (
-                  <span className="font-semibold text-red-600">
-                    ${unpaidPayroll.toLocaleString()} unpaid
-                  </span>
-                )}
-                <span className="text-gray-500">
-                  {filteredEntries.length} entries • {totalHours.toFixed(1)}h
-                </span>
+          {/* Content */}
+          <div className="overflow-y-auto flex-1 min-h-0">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
               </div>
-
-              {/* Bulk Actions */}
-              {selectedIds.length > 0 && (
-                <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg">
-                  <span className="text-sm font-medium">{selectedIds.length} selected</span>
-                  <div className="h-4 w-px bg-gray-300" />
-                  {view === "unpaid" ? (
-                    <>
-                      <Button size="sm" onClick={() => bulkMarkPaid(true)}>Mark Paid</Button>
-                      <Button size="sm" variant="outline" onClick={() => bulkMarkPaid(false)}>Mark Unpaid</Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button size="sm" onClick={() => bulkMarkBilled(true)}>Mark Billed</Button>
-                      <Button size="sm" variant="outline" onClick={() => bulkMarkBilled(false)}>Mark Unbilled</Button>
-                    </>
+            ) : (
+              <div className="p-4 space-y-3">
+                {/* Metric pill strip */}
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
+                  {view === "unbilled" && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                      Unbilled <span className="text-gray-900 font-medium tabular-nums">${unbilledRevenue.toLocaleString()}</span>
+                    </span>
                   )}
-                  <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Clear</Button>
+                  {view === "unpaid" && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      Unpaid <span className="text-gray-900 font-medium tabular-nums">${unpaidPayroll.toLocaleString()}</span>
+                    </span>
+                  )}
+                  <span>
+                    Entries <span className="text-gray-900 font-medium tabular-nums">{filteredEntries.length}</span>
+                  </span>
+                  <span>
+                    Hours <span className="text-gray-900 font-medium tabular-nums">{totalHours.toFixed(1)}</span>
+                  </span>
                 </div>
-              )}
 
-              {/* Time Entries — List or Calendar */}
-              {timeViewMode === "list" ? (
-                <Card>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-10">
-                          <Checkbox
-                            checked={selectedIds.length === filteredEntries.length && filteredEntries.length > 0}
-                            onCheckedChange={toggleSelectAll}
-                          />
-                        </TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Project</TableHead>
-                        <TableHead>Team Member</TableHead>
-                        <TableHead>Hours</TableHead>
-                        <TableHead>{view === "unpaid" ? "Cost" : "Amount"}</TableHead>
-                        <TableHead>{view === "unpaid" ? "Paid" : "Billed"}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredEntries.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                            {view === "unbilled" ? "All caught up! No unbilled entries." :
-                             view === "unpaid" ? "All caught up! No unpaid entries." :
-                             "No time entries found."}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredEntries.map(entry => {
-                          const project = projects.find(p => p.id === entry.project_id);
-                          const member = teamMembers.find(m => m.id === entry.team_member_id);
-                          const amount = (entry.hours || 0) * (project?.hourly_rate || 0);
-                          const cost = (entry.hours || 0) * (member?.hourly_rate || 0);
+                {/* Bulk Actions */}
+                {selectedIds.length > 0 && (
+                  <div className="flex items-center gap-2 px-3 h-9 bg-gray-50 border border-gray-200 rounded-md">
+                    <span className="text-[13px] font-medium text-gray-900">{selectedIds.length} selected</span>
+                    <div className="h-4 w-px bg-gray-300" />
+                    {view === "unpaid" ? (
+                      <>
+                        <Button size="sm" className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]" onClick={() => bulkMarkPaid(true)}>Mark Paid</Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-[13px]" onClick={() => bulkMarkPaid(false)}>Mark Unpaid</Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button size="sm" className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]" onClick={() => bulkMarkBilled(true)}>Mark Billed</Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-[13px]" onClick={() => bulkMarkBilled(false)}>Mark Unbilled</Button>
+                      </>
+                    )}
+                    <Button size="sm" variant="ghost" className="h-7 px-2 text-[13px]" onClick={() => setSelectedIds([])}>Clear</Button>
+                  </div>
+                )}
 
-                          return (
-                            <TableRow key={entry.id} className={selectedIds.includes(entry.id) ? "bg-gray-50" : ""}>
-                              <TableCell>
+                {/* Time Entries — List or Calendar */}
+                {timeViewMode === "list" ? (
+                  <div>
+                    {/* Header row */}
+                    <div className="flex items-center gap-3 px-2 h-7 border-b border-gray-200 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                      <div className="w-5 flex-shrink-0">
+                        <Checkbox
+                          checked={selectedIds.length === filteredEntries.length && filteredEntries.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </div>
+                      <div className="w-24">Date</div>
+                      <div className="flex-1">Project</div>
+                      <div className="flex-1">Team Member</div>
+                      <div className="w-16 text-right">Hours</div>
+                      <div className="w-24 text-right">{view === "unpaid" ? "Cost" : "Amount"}</div>
+                      <div className="w-16 text-center">{view === "unpaid" ? "Paid" : "Billed"}</div>
+                    </div>
+
+                    {filteredEntries.length === 0 ? (
+                      <div className="py-16 text-center text-[13px] text-gray-500">
+                        {view === "unbilled" ? "All caught up. No unbilled entries." :
+                         view === "unpaid" ? "All caught up. No unpaid entries." :
+                         "No time entries found."}
+                      </div>
+                    ) : (
+                      filteredEntries.map(entry => {
+                        const project = projects.find(p => p.id === entry.project_id);
+                        const member = teamMembers.find(m => m.id === entry.team_member_id);
+                        const amount = (entry.hours || 0) * (project?.hourly_rate || 0);
+                        const cost = (entry.hours || 0) * (member?.hourly_rate || 0);
+
+                        return (
+                          <div
+                            key={entry.id}
+                            className={`flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50 ${
+                              selectedIds.includes(entry.id) ? "bg-gray-50" : ""
+                            }`}
+                          >
+                            <div className="w-5 flex-shrink-0">
+                              <Checkbox
+                                checked={selectedIds.includes(entry.id)}
+                                onCheckedChange={() => toggleSelect(entry.id)}
+                              />
+                            </div>
+                            <div className="w-24 text-[12px] text-gray-500 tabular-nums">
+                              {parseLocalDate(entry.date).toLocaleDateString()}
+                            </div>
+                            <div className="flex-1 min-w-0 truncate text-[13px] text-gray-900">
+                              {project?.name || "—"}
+                            </div>
+                            <div className="flex-1 min-w-0 truncate text-[13px] text-gray-600">
+                              {member?.full_name || "—"}
+                            </div>
+                            <div className="w-16 text-right text-[13px] text-gray-900 tabular-nums">
+                              {entry.hours}h
+                            </div>
+                            <div className="w-24 text-right text-[13px] text-gray-900 font-medium tabular-nums">
+                              {view === "unpaid" ? `$${cost.toLocaleString()}` : `$${amount.toLocaleString()}`}
+                            </div>
+                            <div className="w-16 flex justify-center">
+                              {view === "unpaid" ? (
                                 <Checkbox
-                                  checked={selectedIds.includes(entry.id)}
-                                  onCheckedChange={() => toggleSelect(entry.id)}
+                                  checked={entry.contractor_paid}
+                                  onCheckedChange={() => togglePaid(entry)}
                                 />
-                              </TableCell>
-                              <TableCell>{parseLocalDate(entry.date).toLocaleDateString()}</TableCell>
-                              <TableCell>{project?.name || "—"}</TableCell>
-                              <TableCell>{member?.full_name || "—"}</TableCell>
-                              <TableCell>{entry.hours}h</TableCell>
-                              <TableCell>
-                                {view === "unpaid" ? `$${cost.toLocaleString()}` : `$${amount.toLocaleString()}`}
-                              </TableCell>
-                              <TableCell>
-                                {view === "unpaid" ? (
-                                  <Checkbox
-                                    checked={entry.contractor_paid}
-                                    onCheckedChange={() => togglePaid(entry)}
-                                  />
-                                ) : (
-                                  <Checkbox
-                                    checked={entry.client_billed}
-                                    onCheckedChange={() => toggleBilled(entry)}
-                                  />
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </Card>
-              ) : (
-                <WeeklyCalendarView
-                  timeEntries={filteredEntries}
-                  projects={projects}
-                  users={teamMembers}
-                />
-              )}
-            </>
-          )}
+                              ) : (
+                                <Checkbox
+                                  checked={entry.client_billed}
+                                  onCheckedChange={() => toggleBilled(entry)}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                ) : (
+                  <WeeklyCalendarView
+                    timeEntries={filteredEntries}
+                    projects={projects}
+                    users={teamMembers}
+                  />
+                )}
+              </div>
+            )}
+          </div>
         </>
       )}
 
       {/* ====== BONUSES TAB ====== */}
       {tab === "bonuses" && (
         <>
-          {/* Week Navigation */}
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => shiftBonusWeek(-1)}>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm font-medium min-w-[160px] text-center">
-              {formatWeekLabel(bonusWeek)}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => shiftBonusWeek(1)}
-              disabled={bonusWeek >= toWeekStart(new Date())}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            {bonusWeek !== toWeekStart(new Date()) && (
-              <Button variant="ghost" size="sm" className="text-xs" onClick={() => setBonusWeek(toWeekStart(new Date()))}>
-                This Week
-              </Button>
-            )}
+          {/* Week Navigation Toolbar */}
+          <div className="border-b border-gray-200 bg-white">
+            <div className="flex items-center gap-2 px-4 h-12">
+              <div className="flex items-center gap-0.5 border border-gray-200 rounded-md h-8 text-[12px]">
+                <button
+                  type="button"
+                  onClick={() => shiftBonusWeek(-1)}
+                  className="h-full px-1.5 text-gray-500 hover:text-gray-800"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-gray-700 min-w-[140px] text-center tabular-nums">
+                  {formatWeekLabel(bonusWeek)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => shiftBonusWeek(1)}
+                  disabled={bonusWeek >= toWeekStart(new Date())}
+                  className="h-full px-1.5 text-gray-500 hover:text-gray-800 disabled:opacity-40"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {bonusWeek !== toWeekStart(new Date()) && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-[13px]"
+                  onClick={() => setBonusWeek(toWeekStart(new Date()))}
+                >
+                  This Week
+                </Button>
+              )}
+            </div>
           </div>
 
-          {bonusLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
-            </div>
-          ) : (
-            <>
-              {/* Summary Cards */}
-              <div className="grid grid-cols-4 gap-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <p className="text-xs text-gray-500 mb-1">Total Earned</p>
-                    <p className="text-2xl font-bold text-green-600">${bonusStats.totalEarned.toLocaleString()}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <p className="text-xs text-gray-500 mb-1">Total Potential</p>
-                    <p className="text-2xl font-bold text-gray-900">${bonusStats.totalPotential.toLocaleString()}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <p className="text-xs text-gray-500 mb-1">Goals Hit</p>
-                    <p className="text-2xl font-bold text-gray-900">{bonusStats.goalsHit} / {bonusStats.totalGoals}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <p className="text-xs text-gray-500 mb-1">Unpaid Bonuses</p>
-                    <p className={`text-2xl font-bold ${bonusStats.unpaidAmount > 0 ? "text-amber-600" : "text-gray-400"}`}>
-                      ${bonusStats.unpaidAmount.toLocaleString()}
-                    </p>
-                  </CardContent>
-                </Card>
+          {/* Content */}
+          <div className="overflow-y-auto flex-1 min-h-0">
+            {bonusLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
               </div>
+            ) : (
+              <div className="p-4 space-y-4">
+                {/* Metric pill strip */}
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Earned <span className="text-emerald-600 font-medium tabular-nums">${bonusStats.totalEarned.toLocaleString()}</span>
+                  </span>
+                  <span>
+                    Potential <span className="text-gray-900 font-medium tabular-nums">${bonusStats.totalPotential.toLocaleString()}</span>
+                  </span>
+                  <span>
+                    Goals hit <span className="text-gray-900 font-medium tabular-nums">{bonusStats.goalsHit} / {bonusStats.totalGoals}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className={`w-1.5 h-1.5 rounded-full ${bonusStats.unpaidAmount > 0 ? "bg-amber-500" : "bg-gray-300"}`} />
+                    Unpaid <span className={`font-medium tabular-nums ${bonusStats.unpaidAmount > 0 ? "text-amber-600" : "text-gray-400"}`}>
+                      ${bonusStats.unpaidAmount.toLocaleString()}
+                    </span>
+                  </span>
+                </div>
 
-              {bonusEntries.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
+                {bonusEntries.length === 0 ? (
+                  <div className="py-16 text-center">
                     <Trophy className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 text-sm">No bonus goals set for this week.</p>
-                    <p className="text-gray-400 text-xs mt-1">Set bonus amounts on the KPIs page when configuring targets.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <>
-                  {/* Bulk Actions */}
-                  {selectedBonusIds.length > 0 && (
-                    <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg">
-                      <span className="text-sm font-medium">{selectedBonusIds.length} selected</span>
-                      <div className="h-4 w-px bg-gray-300" />
-                      <Button size="sm" onClick={() => bulkMarkBonusPaid(true)}>Mark Paid</Button>
-                      <Button size="sm" variant="outline" onClick={() => bulkMarkBonusPaid(false)}>Mark Unpaid</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setSelectedBonusIds([])}>Clear</Button>
+                    <p className="text-[13px] text-gray-500">No bonus goals set for this week.</p>
+                    <p className="text-[12px] text-gray-400 mt-1">Set bonus amounts on the KPIs page when configuring targets.</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Bulk Actions */}
+                    {selectedBonusIds.length > 0 && (
+                      <div className="flex items-center gap-2 px-3 h-9 bg-gray-50 border border-gray-200 rounded-md">
+                        <span className="text-[13px] font-medium text-gray-900">{selectedBonusIds.length} selected</span>
+                        <div className="h-4 w-px bg-gray-300" />
+                        <Button size="sm" className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]" onClick={() => bulkMarkBonusPaid(true)}>Mark Paid</Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-[13px]" onClick={() => bulkMarkBonusPaid(false)}>Mark Unpaid</Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-[13px]" onClick={() => setSelectedBonusIds([])}>Clear</Button>
+                      </div>
+                    )}
+
+                    {/* Bonus List */}
+                    <div>
+                      <div className="flex items-center gap-3 px-2 h-7 border-b border-gray-200 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                        <div className="w-5 flex-shrink-0">
+                          <Checkbox
+                            checked={selectedBonusIds.length === earnedBonusList.length && earnedBonusList.length > 0}
+                            onCheckedChange={() => {
+                              if (selectedBonusIds.length === earnedBonusList.length) {
+                                setSelectedBonusIds([]);
+                              } else {
+                                setSelectedBonusIds(earnedBonusList.map((e) => e.id));
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1">Team Member</div>
+                        <div className="flex-1">KPI</div>
+                        <div className="w-20 text-right">Actual</div>
+                        <div className="w-20 text-right">Target</div>
+                        <div className="w-32 text-center">Progress</div>
+                        <div className="w-20 text-right">Bonus</div>
+                        <div className="w-16 text-center">Earned</div>
+                        <div className="w-14 text-center">Paid</div>
+                      </div>
+
+                      {bonusEntries.length === 0 ? (
+                        <div className="py-10 text-center text-[13px] text-gray-500">No bonus goals for this week.</div>
+                      ) : (
+                        bonusEntries
+                          .sort((a, b) => {
+                            const nameA = teamMembers.find((m) => m.id === a.team_member_id)?.full_name || "";
+                            const nameB = teamMembers.find((m) => m.id === b.team_member_id)?.full_name || "";
+                            return nameA.localeCompare(nameB) || a.slug.localeCompare(b.slug);
+                          })
+                          .map((entry) => {
+                            const member = teamMembers.find((m) => m.id === entry.team_member_id);
+                            const kpiDef = getKpiDef(entry.slug);
+                            const actual = entry.actual_value || 0;
+                            const target = entry.target_value || 0;
+                            const pct = target ? Math.round((actual / target) * 100) : 0;
+                            const earned = pct >= 100;
+
+                            return (
+                              <div
+                                key={entry.id}
+                                className={`flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50 ${
+                                  selectedBonusIds.includes(entry.id) ? "bg-gray-50" : ""
+                                }`}
+                              >
+                                <div className="w-5 flex-shrink-0">
+                                  {earned && (
+                                    <Checkbox
+                                      checked={selectedBonusIds.includes(entry.id)}
+                                      onCheckedChange={() => {
+                                        setSelectedBonusIds((prev) =>
+                                          prev.includes(entry.id) ? prev.filter((x) => x !== entry.id) : [...prev, entry.id]
+                                        );
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+                                  {member?.full_name || "—"}
+                                </div>
+                                <div className="flex-1 min-w-0 truncate text-[13px] text-gray-600">
+                                  {kpiDef?.name || entry.slug}
+                                </div>
+                                <div className="w-20 text-right text-[13px] text-gray-900 font-medium tabular-nums">
+                                  {kpiDef ? formatKpiValue(actual, kpiDef.unit) : actual}
+                                </div>
+                                <div className="w-20 text-right text-[13px] text-gray-500 tabular-nums">
+                                  {kpiDef ? formatKpiValue(target, kpiDef.unit) : target}
+                                </div>
+                                <div className="w-32 flex items-center gap-2 justify-center">
+                                  <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full transition-all ${
+                                        pct >= 100 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-red-400"
+                                      }`}
+                                      style={{ width: `${Math.min(pct, 100)}%` }}
+                                    />
+                                  </div>
+                                  <span className={`text-[12px] tabular-nums ${pct >= 100 ? "text-emerald-600 font-medium" : "text-gray-500"}`}>
+                                    {pct}%
+                                  </span>
+                                </div>
+                                <div className="w-20 text-right text-[13px] text-gray-900 font-semibold tabular-nums">
+                                  ${(entry.bonus_amount || 0).toLocaleString()}
+                                </div>
+                                <div className="w-16 flex justify-center">
+                                  {earned ? (
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                  ) : (
+                                    <XCircle className="w-4 h-4 text-gray-300" />
+                                  )}
+                                </div>
+                                <div className="w-14 flex justify-center">
+                                  {earned ? (
+                                    <Checkbox
+                                      checked={entry.bonus_paid}
+                                      onCheckedChange={() => toggleBonusPaid(entry)}
+                                    />
+                                  ) : (
+                                    <span className="text-gray-300 text-[13px]">—</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                      )}
                     </div>
-                  )}
 
-                  {/* Bonus Table */}
-                  <Card>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-10">
-                            <Checkbox
-                              checked={selectedBonusIds.length === earnedBonusList.length && earnedBonusList.length > 0}
-                              onCheckedChange={() => {
-                                if (selectedBonusIds.length === earnedBonusList.length) {
-                                  setSelectedBonusIds([]);
-                                } else {
-                                  setSelectedBonusIds(earnedBonusList.map((e) => e.id));
-                                }
-                              }}
-                            />
-                          </TableHead>
-                          <TableHead>Team Member</TableHead>
-                          <TableHead>KPI</TableHead>
-                          <TableHead className="text-right">Actual</TableHead>
-                          <TableHead className="text-right">Target</TableHead>
-                          <TableHead className="text-center">Progress</TableHead>
-                          <TableHead className="text-right">Bonus</TableHead>
-                          <TableHead className="text-center">Earned</TableHead>
-                          <TableHead className="text-center">Paid</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {bonusEntries.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                              No bonus goals for this week.
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          bonusEntries
-                            .sort((a, b) => {
-                              const nameA = teamMembers.find((m) => m.id === a.team_member_id)?.full_name || "";
-                              const nameB = teamMembers.find((m) => m.id === b.team_member_id)?.full_name || "";
-                              return nameA.localeCompare(nameB) || a.slug.localeCompare(b.slug);
-                            })
-                            .map((entry) => {
-                              const member = teamMembers.find((m) => m.id === entry.team_member_id);
-                              const kpiDef = getKpiDef(entry.slug);
-                              const actual = entry.actual_value || 0;
-                              const target = entry.target_value || 0;
-                              const pct = target ? Math.round((actual / target) * 100) : 0;
-                              const earned = pct >= 100;
+                    {/* Per-member summary */}
+                    <div className="pt-2">
+                      <div className="h-7 flex items-center text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                        By team member
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {Object.entries(bonusByMember).map(([memberId, entries]) => {
+                          const member = teamMembers.find((m) => m.id === memberId);
+                          let earned = 0;
+                          let potential = 0;
+                          let hits = 0;
 
-                              return (
-                                <TableRow key={entry.id} className={selectedBonusIds.includes(entry.id) ? "bg-gray-50" : ""}>
-                                  <TableCell>
-                                    {earned && (
-                                      <Checkbox
-                                        checked={selectedBonusIds.includes(entry.id)}
-                                        onCheckedChange={() => {
-                                          setSelectedBonusIds((prev) =>
-                                            prev.includes(entry.id) ? prev.filter((x) => x !== entry.id) : [...prev, entry.id]
-                                          );
-                                        }}
-                                      />
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="font-medium">{member?.full_name || "—"}</TableCell>
-                                  <TableCell className="text-gray-600">{kpiDef?.name || entry.slug}</TableCell>
-                                  <TableCell className="text-right font-medium tabular-nums">
-                                    {kpiDef ? formatKpiValue(actual, kpiDef.unit) : actual}
-                                  </TableCell>
-                                  <TableCell className="text-right text-gray-500 tabular-nums">
-                                    {kpiDef ? formatKpiValue(target, kpiDef.unit) : target}
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2 justify-center">
-                                      <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                        <div
-                                          className={`h-full rounded-full transition-all ${
-                                            pct >= 100 ? "bg-green-500" : pct >= 50 ? "bg-amber-500" : "bg-red-400"
-                                          }`}
-                                          style={{ width: `${Math.min(pct, 100)}%` }}
-                                        />
-                                      </div>
-                                      <span className={`text-xs tabular-nums ${pct >= 100 ? "text-green-600 font-medium" : "text-gray-500"}`}>
-                                        {pct}%
-                                      </span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-right font-semibold tabular-nums">
-                                    ${(entry.bonus_amount || 0).toLocaleString()}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    {earned ? (
-                                      <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />
-                                    ) : (
-                                      <XCircle className="w-4 h-4 text-gray-300 mx-auto" />
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    {earned ? (
-                                      <Checkbox
-                                        checked={entry.bonus_paid}
-                                        onCheckedChange={() => toggleBonusPaid(entry)}
-                                      />
-                                    ) : (
-                                      <span className="text-gray-300">—</span>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })
-                        )}
-                      </TableBody>
-                    </Table>
-                  </Card>
+                          entries.forEach((e) => {
+                            const pct = e.target_value ? (e.actual_value / e.target_value) * 100 : 0;
+                            potential += e.bonus_amount || 0;
+                            if (pct >= 100) {
+                              earned += e.bonus_amount || 0;
+                              hits++;
+                            }
+                          });
 
-                  {/* Per-member summary cards */}
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-gray-700">By Team Member</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(bonusByMember).map(([memberId, entries]) => {
-                        const member = teamMembers.find((m) => m.id === memberId);
-                        let earned = 0;
-                        let potential = 0;
-                        let hits = 0;
-
-                        entries.forEach((e) => {
-                          const pct = e.target_value ? (e.actual_value / e.target_value) * 100 : 0;
-                          potential += e.bonus_amount || 0;
-                          if (pct >= 100) {
-                            earned += e.bonus_amount || 0;
-                            hits++;
-                          }
-                        });
-
-                        return (
-                          <Card key={memberId}>
-                            <CardContent className="p-4">
-                              <div className="flex items-center justify-between mb-3">
-                                <span className="font-medium text-sm">{member?.full_name || "Unknown"}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                  hits === entries.length ? "bg-green-100 text-green-700" :
-                                  hits > 0 ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-500"
+                          return (
+                            <div key={memberId} className="border border-gray-200 rounded-md p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-[13px] font-medium text-gray-900">
+                                  {member?.full_name || "Unknown"}
+                                </span>
+                                <span className={`text-[11px] tabular-nums ${
+                                  hits === entries.length ? "text-emerald-600" :
+                                  hits > 0 ? "text-amber-600" : "text-gray-500"
                                 }`}>
                                   {hits}/{entries.length} goals
                                 </span>
                               </div>
-                              {entries.map((e) => {
-                                const kpiDef = getKpiDef(e.slug);
-                                const pct = e.target_value ? Math.round((e.actual_value / e.target_value) * 100) : 0;
-                                const hit = pct >= 100;
-                                return (
-                                  <div key={e.id} className="flex items-center justify-between text-xs py-1">
-                                    <span className="text-gray-600">{kpiDef?.name || e.slug}</span>
-                                    <div className="flex items-center gap-2">
-                                      <span className={`tabular-nums ${hit ? "text-green-600 font-medium" : "text-gray-400"}`}>
-                                        {pct}%
-                                      </span>
-                                      <span className={`font-medium tabular-nums ${hit ? "text-green-700" : "text-gray-400 line-through"}`}>
-                                        ${(e.bonus_amount || 0).toLocaleString()}
-                                      </span>
+                              <div className="space-y-1">
+                                {entries.map((e) => {
+                                  const kpiDef = getKpiDef(e.slug);
+                                  const pct = e.target_value ? Math.round((e.actual_value / e.target_value) * 100) : 0;
+                                  const hit = pct >= 100;
+                                  return (
+                                    <div key={e.id} className="flex items-center justify-between text-[12px]">
+                                      <span className="text-gray-600 truncate">{kpiDef?.name || e.slug}</span>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <span className={`tabular-nums ${hit ? "text-emerald-600 font-medium" : "text-gray-400"}`}>
+                                          {pct}%
+                                        </span>
+                                        <span className={`font-medium tabular-nums ${hit ? "text-gray-900" : "text-gray-400 line-through"}`}>
+                                          ${(e.bonus_amount || 0).toLocaleString()}
+                                        </span>
+                                      </div>
                                     </div>
-                                  </div>
-                                );
-                              })}
-                              <div className="mt-2 pt-2 border-t flex items-center justify-between">
-                                <span className="text-xs text-gray-500">Total Earned</span>
-                                <span className="text-sm font-bold text-green-600">${earned.toLocaleString()}</span>
+                                  );
+                                })}
                               </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
+                              <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+                                <span className="text-[11px] uppercase tracking-wide text-gray-500">Earned</span>
+                                <span className="text-[13px] font-semibold text-emerald-600 tabular-nums">${earned.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-            </>
-          )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>
