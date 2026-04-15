@@ -179,13 +179,14 @@ export default function Accounting() {
   }
 
   // Calculate metrics from Stripe transactions
-  const totalRevenue = transactions
-    .filter(t => t.status === 'succeeded' && t.type !== 'refund')
-    .reduce((sum, t) => sum + (t.amount || 0), 0);
+  const succeededTransactions = transactions.filter(
+    t => t.status === 'succeeded' && t.type !== 'refund'
+  );
+  const totalRevenue = succeededTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
 
   const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const totalStripeFees = transactions.reduce((sum, t) => sum + (t.stripe_fee || 0), 0);
-  const netRevenue = transactions.reduce((sum, t) => sum + (t.net_amount || 0), 0);
+  const totalStripeFees = succeededTransactions.reduce((sum, t) => sum + (t.stripe_fee || 0), 0);
+  const netRevenue = succeededTransactions.reduce((sum, t) => sum + (t.net_amount || 0), 0);
   const profit = netRevenue - totalExpenses;
   const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 

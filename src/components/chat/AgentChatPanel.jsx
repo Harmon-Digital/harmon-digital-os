@@ -230,23 +230,32 @@ export function AgentChatPanel({ isOpen, onClose, accounts = [], fullWidth = fal
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      const { data: channels } = await supabase
-        .from("bot_channels")
-        .select("id")
-        .eq("is_active", true)
-        .limit(1);
-
-      let cid = channels?.[0]?.id;
-      if (!cid) {
-        const { data: inserted } = await supabase
+      try {
+        const { data: channels, error: channelsError } = await supabase
           .from("bot_channels")
-          .insert({ name: "harmon-bot", kind: "internal", is_active: true })
           .select("id")
-          .single();
-        cid = inserted?.id;
+          .eq("is_active", true)
+          .limit(1);
+
+        if (channelsError) throw channelsError;
+
+        let cid = channels?.[0]?.id;
+        if (!cid) {
+          const { data: inserted, error: insertError } = await supabase
+            .from("bot_channels")
+            .insert({ name: "harmon-bot", kind: "internal", is_active: true })
+            .select("id")
+            .single();
+          if (insertError) throw insertError;
+          cid = inserted?.id;
+        }
+        setChannelId(cid || null);
+      } catch (err) {
+        console.error("Failed to initialize chat channel:", err);
+        setChannelId(null);
+      } finally {
+        setLoading(false);
       }
-      setChannelId(cid || null);
-      setLoading(false);
     };
     init();
   }, []);

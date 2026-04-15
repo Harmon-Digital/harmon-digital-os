@@ -12,19 +12,18 @@ export function AuthProvider({ children }) {
   const mountedRef = useRef(true);
 
   useEffect(() => {
-    let mounted = true;
     mountedRef.current = true;
 
     // Listen for auth changes - this also fires immediately with current session
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted) return;
+        if (!mountedRef.current) return;
 
         setUser(session?.user ?? null);
 
         if (session?.user) {
           // Fetch profile in background, don't await
-          fetchUserProfile(session.user.id, mounted);
+          fetchUserProfile(session.user.id);
         } else {
           setUserProfile(null);
           setLoading(false);
@@ -34,20 +33,19 @@ export function AuthProvider({ children }) {
 
     // Fallback timeout to ensure loading eventually stops
     const timeout = setTimeout(() => {
-      if (mounted && loading) {
-        setLoading(false);
+      if (mountedRef.current) {
+        setLoading((prev) => (prev ? false : prev));
       }
     }, 3000);
 
     return () => {
-      mounted = false;
       mountedRef.current = false;
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
   }, []);
 
-  const fetchUserProfile = async (userId, mounted = true) => {
+  const fetchUserProfile = async (userId) => {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
@@ -55,7 +53,7 @@ export function AuthProvider({ children }) {
         .eq('id', userId)
         .single();
 
-      if (!mounted) return;
+      if (!mountedRef.current) return;
 
       if (error && error.code !== 'PGRST116') {
         // Ignore abort errors
@@ -65,13 +63,13 @@ export function AuthProvider({ children }) {
       }
       setUserProfile(data || null);
     } catch (error) {
-      if (!mounted) return;
+      if (!mountedRef.current) return;
       // Ignore abort errors
       if (!error.message?.includes('aborted')) {
         console.error('Error fetching user profile:', error);
       }
     } finally {
-      if (mounted) setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   };
 
@@ -188,7 +186,7 @@ export function AuthProvider({ children }) {
     resetPassword,
     updatePassword,
     invitePartner,
-    refreshProfile: () => user && fetchUserProfile(user.id, mountedRef.current),
+    refreshProfile: () => user && fetchUserProfile(user.id),
   };
 
   return (
