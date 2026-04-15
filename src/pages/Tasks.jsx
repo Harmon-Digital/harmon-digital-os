@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Task, Project, Account, TeamMember } from "@/api/entities";
+import { Task, Project, Account, TeamMember, TaskAttachment } from "@/api/entities";
+import { supabase } from "@/api/supabaseClient";
 import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -134,13 +135,46 @@ export default function Tasks() {
     loadData();
   }, []);
 
-  const handleSubmit = async (taskData) => {
+  const handleSubmit = async (taskData, pendingFiles = []) => {
     const isNewTask = !editingTask;
-    
+    let savedTask;
+
     if (editingTask) {
-      await Task.update(editingTask.id, taskData);
+      savedTask = await Task.update(editingTask.id, taskData);
     } else {
-      await Task.create(taskData);
+      savedTask = await Task.create(taskData);
+    }
+
+    // Upload any files queued during new-task creation
+    if (isNewTask && savedTask?.id && pendingFiles.length > 0) {
+      try {
+        for (const file of pendingFiles) {
+          const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
+          const safeBase = file.name
+            .replace(/\.[^/.]+$/, "")
+            .replace(/[^a-zA-Z0-9._-]/g, "_")
+            .slice(0, 80);
+          const path = `tasks/${savedTask.id}/${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 8)}-${safeBase}.${ext}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("uploads")
+            .upload(path, file, { cacheControl: "3600", upsert: false });
+          if (uploadError) throw uploadError;
+
+          await TaskAttachment.create({
+            task_id: savedTask.id,
+            file_path: path,
+            file_name: file.name,
+            file_size: file.size,
+            file_type: file.type || null,
+            uploaded_by: authUser?.id || null,
+          });
+        }
+      } catch (err) {
+        console.error("Error uploading task attachments:", err);
+      }
     }
     
     // Send notification on new task assignment or reassignment

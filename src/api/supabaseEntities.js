@@ -116,6 +116,7 @@ export const Contact = createEntity('contacts');
 export const Project = createEntity('projects');
 export const TeamMember = createEntity('team_members');
 export const Task = createEntity('tasks');
+export const TaskAttachment = createEntity('task_attachments');
 export const TimeEntry = createEntity('time_entries');
 export const Lead = createEntity('leads');
 export const Activity = createEntity('activities');

@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import RichTextEditor from "@/components/ui/RichTextEditor";
+import TaskAttachments from "./TaskAttachments";
 
 export default function TaskForm({ task, projects = [], teamMembers = [], onSubmit, onCancel }) {
+  const [pendingFiles, setPendingFiles] = useState([]);
   const [formData, setFormData] = useState(task || {
     title: "",
     description: "",
@@ -38,7 +40,7 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
       recurrence_end_date: formData.recurrence_enabled && formData.recurrence_end_date ? formData.recurrence_end_date : null,
       recurrence_count: formData.recurrence_enabled && formData.recurrence_count ? Math.max(1, parseInt(formData.recurrence_count, 10)) : null,
     };
-    onSubmit(cleanedData);
+    onSubmit(cleanedData, pendingFiles);
   };
 
   return (
@@ -233,6 +235,12 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
             </>
           )}
         </div>
+
+        <TaskAttachments
+          taskId={task?.id || null}
+          pendingFiles={pendingFiles}
+          onPendingChange={setPendingFiles}
+        />
       </div>
       <div className="flex justify-end gap-3 pt-4 border-t">
         <Button type="button" variant="outline" onClick={onCancel}>
