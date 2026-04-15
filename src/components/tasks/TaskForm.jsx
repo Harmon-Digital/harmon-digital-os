@@ -201,6 +201,9 @@ export default function TaskForm({
   );
   const [newChecklistItem, setNewChecklistItem] = useState("");
   const [recurrenceOpen, setRecurrenceOpen] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(
+    () => !!(task?.estimated_hours || task?.recurrence_enabled),
+  );
 
   const checklist = Array.isArray(formData.checklist) ? formData.checklist : [];
   const setChecklist = (items) => setFormData({ ...formData, checklist: items });
@@ -375,39 +378,53 @@ export default function TaskForm({
           </div>
         </PropertyRow>
 
-        <PropertyRow icon={Clock} label="Estimate">
-          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-gray-100">
-            <input
-              type="number"
-              step="0.5"
-              min={0}
-              value={formData.estimated_hours ?? 0}
-              onChange={(e) =>
-                setFormData({ ...formData, estimated_hours: parseFloat(e.target.value) || 0 })
-              }
-              className="bg-transparent text-[13px] text-gray-700 outline-none w-16"
-            />
-            <span className="text-[12px] text-gray-500">hrs</span>
-          </div>
-        </PropertyRow>
-
-        <PropertyRow icon={Repeat} label="Repeat">
+        {!showAdvanced && (
           <button
             type="button"
-            onClick={() => {
-              const next = !formData.recurrence_enabled;
-              setFormData({ ...formData, recurrence_enabled: next });
-              setRecurrenceOpen(next);
-            }}
-            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[13px] text-gray-700 hover:bg-gray-100"
+            onClick={() => setShowAdvanced(true)}
+            className="ml-28 pl-3 text-[12px] text-gray-500 hover:text-gray-700"
           >
-            {formData.recurrence_enabled
-              ? `Every ${formData.recurrence_interval || 1} ${formData.recurrence_frequency || "week"}${(formData.recurrence_interval || 1) > 1 ? "s" : ""}`
-              : "Doesn't repeat"}
+            + More options
           </button>
-        </PropertyRow>
+        )}
 
-        {formData.recurrence_enabled && (
+        {showAdvanced && (
+          <>
+            <PropertyRow icon={Clock} label="Estimate">
+              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-gray-100">
+                <input
+                  type="number"
+                  step="0.5"
+                  min={0}
+                  value={formData.estimated_hours ?? 0}
+                  onChange={(e) =>
+                    setFormData({ ...formData, estimated_hours: parseFloat(e.target.value) || 0 })
+                  }
+                  className="bg-transparent text-[13px] text-gray-700 outline-none w-16"
+                />
+                <span className="text-[12px] text-gray-500">hrs</span>
+              </div>
+            </PropertyRow>
+
+            <PropertyRow icon={Repeat} label="Repeat">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !formData.recurrence_enabled;
+                  setFormData({ ...formData, recurrence_enabled: next });
+                  setRecurrenceOpen(next);
+                }}
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[13px] text-gray-700 hover:bg-gray-100"
+              >
+                {formData.recurrence_enabled
+                  ? `Every ${formData.recurrence_interval || 1} ${formData.recurrence_frequency || "week"}${(formData.recurrence_interval || 1) > 1 ? "s" : ""}`
+                  : "Doesn't repeat"}
+              </button>
+            </PropertyRow>
+          </>
+        )}
+
+        {showAdvanced && formData.recurrence_enabled && (
           <div className="ml-28 pl-3 space-y-2 py-2 border-l border-gray-100">
             <div className="grid grid-cols-2 gap-2">
               <div>

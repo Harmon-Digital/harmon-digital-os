@@ -655,13 +655,6 @@ export default function Tasks() {
                 <Grid3X3 className="w-3.5 h-3.5" />
               </button>
             </div>
-            <div className="hidden md:block w-60">
-              <QuickAddTask
-                authUser={authUser}
-                currentTeamMember={currentTeamMember}
-                onCreated={(task) => setTasks((prev) => [task, ...prev])}
-              />
-            </div>
             <Button
               onClick={() => {
                 setEditingTask(null);
