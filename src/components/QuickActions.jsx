@@ -398,7 +398,7 @@ export default function QuickActions() {
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="end">
+          <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-0" align="end">
             {timerRunning ? (
               <div className="p-4 space-y-4">
                 {/* Timer Header */}

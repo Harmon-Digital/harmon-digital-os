@@ -95,7 +95,7 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
             </Select>
           </div>
         )}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
@@ -125,7 +125,7 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
             </Select>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="estimated_hours">Est. Hours</Label>
             <Input
@@ -177,7 +177,7 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Frequency</Label>
                   <Select
@@ -207,7 +207,7 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>End Date (optional)</Label>
                   <Input
