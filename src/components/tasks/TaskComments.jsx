@@ -6,6 +6,7 @@ import { sendNotification } from "@/api/functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { MessageSquare, Send, Trash2, Loader2 } from "lucide-react";
 
 function formatTime(iso) {
@@ -60,6 +61,7 @@ export default function TaskComments({ taskId, task, teamMembers = [], projectsM
   const [submitting, setSubmitting] = useState(false);
   const [draft, setDraft] = useState("");
   const [authorMap, setAuthorMap] = useState({});
+  const [avatarMap, setAvatarMap] = useState({});
   const [mentionQuery, setMentionQuery] = useState(null); // { start, query } or null
   const [mentionIndex, setMentionIndex] = useState(0);
   const textareaRef = useRef(null);
@@ -76,6 +78,17 @@ export default function TaskComments({ taskId, task, teamMembers = [], projectsM
     return m;
   }, [teamMembers, authorMap]);
 
+  const userIdToImage = useMemo(() => {
+    const m = {};
+    for (const tm of teamMembers) {
+      if (tm.user_id && tm.profile_image_url) m[tm.user_id] = tm.profile_image_url;
+    }
+    for (const [id, url] of Object.entries(avatarMap)) {
+      if (!m[id] && url) m[id] = url;
+    }
+    return m;
+  }, [teamMembers, avatarMap]);
+
   const mentionableUsers = useMemo(
     () =>
       teamMembers
@@ -91,19 +104,37 @@ export default function TaskComments({ taskId, task, teamMembers = [], projectsM
       const data = await TaskComment.filter({ task_id: taskId }, "created_at");
       setComments(data || []);
 
-      // Pull author names in bulk
+      // Pull author names + avatars in bulk
       const missingIds = Array.from(
         new Set((data || []).map((c) => c.user_id).filter((id) => id && !userIdToName[id])),
       );
       if (missingIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("user_profiles")
-          .select("id, full_name, email")
-          .in("id", missingIds);
+        const [{ data: profiles }, { data: tms }] = await Promise.all([
+          supabase
+            .from("user_profiles")
+            .select("id, full_name, email")
+            .in("id", missingIds),
+          supabase
+            .from("team_members")
+            .select("user_id, full_name, profile_image_url")
+            .in("user_id", missingIds),
+        ]);
         if (profiles) {
           setAuthorMap((prev) => {
             const next = { ...prev };
             for (const p of profiles) next[p.id] = p.full_name || p.email || "User";
+            return next;
+          });
+        }
+        if (tms) {
+          setAuthorMap((prev) => {
+            const next = { ...prev };
+            for (const t of tms) if (t.full_name) next[t.user_id] = t.full_name;
+            return next;
+          });
+          setAvatarMap((prev) => {
+            const next = { ...prev };
+            for (const t of tms) if (t.profile_image_url) next[t.user_id] = t.profile_image_url;
             return next;
           });
         }
@@ -291,14 +322,7 @@ export default function TaskComments({ taskId, task, teamMembers = [], projectsM
             const isMine = c.user_id === user?.id;
             return (
               <li key={c.id} className="flex gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center justify-center shrink-0">
-                  {author
-                    .split(" ")
-                    .map((p) => p[0])
-                    .slice(0, 2)
-                    .join("")
-                    .toUpperCase()}
-                </div>
+                <UserAvatar name={author} imageUrl={userIdToImage[c.user_id]} size="md" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
                     <span className="text-sm font-medium text-gray-900">{author}</span>
@@ -350,14 +374,7 @@ export default function TaskComments({ taskId, task, teamMembers = [], projectsM
                   i === mentionIndex ? "bg-indigo-50 text-indigo-700" : "hover:bg-gray-50"
                 }`}
               >
-                <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center shrink-0">
-                  {u.name
-                    .split(" ")
-                    .map((p) => p[0])
-                    .slice(0, 2)
-                    .join("")
-                    .toUpperCase()}
-                </div>
+                <UserAvatar name={u.name} imageUrl={userIdToImage[u.id]} size="sm" />
                 <span className="truncate">{u.name}</span>
               </button>
             ))}
