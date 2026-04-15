@@ -63,14 +63,7 @@ function buildGroups(user) {
         { icon: CheckSquare, label: "Tasks", path: "Tasks" },
         { icon: Hash, label: "Chat", path: "Channels" },
         { icon: Clock, label: "Time Tracking", path: "TimeTracking" },
-      ],
-    },
-    {
-      id: "knowledge",
-      label: "Knowledge",
-      items: [
-        { icon: FileText, label: "SOPs", path: "SOPs" },
-        { icon: Building2, label: "Branding", path: "Branding" },
+        { icon: Calendar, label: "Social Media", path: "SocialMedia" },
       ],
     },
     {
@@ -81,7 +74,6 @@ function buildGroups(user) {
         { icon: Briefcase, label: "Brokers", path: "BrokerOutreach" },
         { icon: Building2, label: "Accounts", path: "Accounts" },
         { icon: UserCircle, label: "Contacts", path: "Contacts" },
-        { icon: Calendar, label: "Social Media", path: "SocialMedia" },
       ],
     },
   ];
@@ -98,6 +90,8 @@ function buildGroups(user) {
         { icon: TrendingUp, label: "KPIs", path: "KPIs" },
         { icon: Handshake, label: "Partners", path: "Partners" },
         { icon: Receipt, label: "Referral Payouts", path: "ReferralPayouts" },
+        { icon: FileText, label: "SOPs", path: "SOPs" },
+        { icon: Building2, label: "Branding", path: "Branding" },
         { icon: KeyRound, label: "API Keys", path: "McpApiKeys" },
       ],
     });
