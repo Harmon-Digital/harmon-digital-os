@@ -241,8 +241,8 @@ function NavItem({ item, isActive, onNavigate, collapsed }) {
   );
 }
 
-function NavGroup({ group, currentPath, onNavigate, collapsed, initiallyCollapsed = false }) {
-  const [open, setOpen] = useState(!initiallyCollapsed);
+function NavGroup({ group, currentPath, onNavigate, collapsed, isOpen, onToggle }) {
+  const open = !!isOpen;
 
   if (collapsed) {
     return (
@@ -268,7 +268,7 @@ function NavGroup({ group, currentPath, onNavigate, collapsed, initiallyCollapse
     <div className="px-2">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={onToggle}
         className="w-full flex items-center gap-1 h-6 px-1.5 text-[11px] font-semibold uppercase tracking-wider text-neutral-500 hover:text-neutral-300"
       >
         <ChevronRight
@@ -378,6 +378,36 @@ function SidebarBody({
   onNavigate,
 }) {
   const groups = useMemo(() => buildGroups(user), [user]);
+
+  // Accordion: at most one group open at a time. Defaults to whichever
+  // group contains the current route (so the active page stays visible),
+  // or all-closed if no match.
+  const groupForPath = useMemo(() => {
+    for (const g of groups) {
+      for (const item of g.items) {
+        if (createPageUrl(item.path) === currentPath) return g.id;
+      }
+    }
+    return null;
+  }, [groups, currentPath]);
+
+  const [openGroupId, setOpenGroupId] = useState(groupForPath);
+  const [userInteracted, setUserInteracted] = useState(false);
+
+  // When route changes, auto-switch to the group of the new route —
+  // unless the user has manually opened/closed groups this session.
+  useEffect(() => {
+    if (!userInteracted && groupForPath !== openGroupId) {
+      setOpenGroupId(groupForPath);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupForPath]);
+
+  const handleToggleGroup = (id) => {
+    setUserInteracted(true);
+    setOpenGroupId((current) => (current === id ? null : id));
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#0e0e10] border-r border-white/[0.06]">
       <WorkspaceSwitcher
@@ -396,6 +426,8 @@ function SidebarBody({
             currentPath={currentPath}
             onNavigate={onNavigate}
             collapsed={collapsed}
+            isOpen={openGroupId === g.id}
+            onToggle={() => handleToggleGroup(g.id)}
           />
         ))}
       </nav>
