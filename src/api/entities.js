@@ -7,6 +7,7 @@ export {
   TeamMember,
   Task,
   TaskAttachment,
+  TaskComment,
   TimeEntry,
   Invoice,
   Lead,

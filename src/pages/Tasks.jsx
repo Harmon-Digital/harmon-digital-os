@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3 } from "lucide-react";
+import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3, PanelRight, Maximize2 } from "lucide-react";
 import { stripHtml } from "@/components/ui/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -50,6 +50,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import TaskForm from "../components/tasks/TaskForm";
+import TaskComments from "../components/tasks/TaskComments";
 import { api } from "@/api/legacyClient";
 import { sendNotification } from "@/api/functions";
 
@@ -62,6 +63,16 @@ export default function Tasks() {
   const [currentTeamMember, setCurrentTeamMember] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [taskViewMode, setTaskViewMode] = useState(() => {
+    if (typeof window === "undefined") return "sidebar";
+    return window.localStorage.getItem("hdo.taskViewMode") || "sidebar";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("hdo.taskViewMode", taskViewMode);
+    }
+  }, [taskViewMode]);
   const [loading, setLoading] = useState(true);
   
   const [searchQuery, setSearchQuery] = useState("");
@@ -1032,28 +1043,99 @@ export default function Tasks() {
         </div>
       )}
 
-      <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingTask ? "Edit Task" : "New Task"}</SheetTitle>
-            <SheetDescription>
-              {editingTask ? "Update task details" : "Create a new task"}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            <TaskForm
-              task={editingTask}
-              projects={projects}
-              teamMembers={teamMembers}
-              onSubmit={handleSubmit}
-              onCancel={() => {
-                setShowDrawer(false);
-                setEditingTask(null);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      {taskViewMode === "sidebar" ? (
+        <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
+          <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+            <SheetHeader>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <SheetTitle>{editingTask ? "Edit Task" : "New Task"}</SheetTitle>
+                  <SheetDescription>
+                    {editingTask ? "Update task details" : "Create a new task"}
+                  </SheetDescription>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTaskViewMode("center")}
+                  className="p-1.5 rounded hover:bg-gray-100 text-gray-500"
+                  title="Switch to center view"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </button>
+              </div>
+            </SheetHeader>
+            <div className="mt-6">
+              <TaskForm
+                task={editingTask}
+                projects={projects}
+                teamMembers={teamMembers}
+                onSubmit={handleSubmit}
+                onCancel={() => {
+                  setShowDrawer(false);
+                  setEditingTask(null);
+                }}
+              />
+              {editingTask && (
+                <div className="mt-8 pt-6 border-t">
+                  <TaskComments
+                    taskId={editingTask.id}
+                    task={editingTask}
+                    teamMembers={teamMembers}
+                    projectsMap={projectsMap}
+                  />
+                </div>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={showDrawer} onOpenChange={setShowDrawer}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <DialogTitle>{editingTask ? "Edit Task" : "New Task"}</DialogTitle>
+                  <DialogDescription>
+                    {editingTask ? "Update task details" : "Create a new task"}
+                  </DialogDescription>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTaskViewMode("sidebar")}
+                  className="p-1.5 rounded hover:bg-gray-100 text-gray-500"
+                  title="Switch to sidebar view"
+                >
+                  <PanelRight className="w-4 h-4" />
+                </button>
+              </div>
+            </DialogHeader>
+            <div className={`mt-4 grid gap-8 ${editingTask ? "lg:grid-cols-[minmax(0,1fr)_360px]" : ""}`}>
+              <div className="min-w-0">
+                <TaskForm
+                  task={editingTask}
+                  projects={projects}
+                  teamMembers={teamMembers}
+                  onSubmit={handleSubmit}
+                  onCancel={() => {
+                    setShowDrawer(false);
+                    setEditingTask(null);
+                  }}
+                />
+              </div>
+              {editingTask && (
+                <div className="min-w-0 lg:border-l lg:pl-8">
+                  <TaskComments
+                    taskId={editingTask.id}
+                    task={editingTask}
+                    teamMembers={teamMembers}
+                    projectsMap={projectsMap}
+                  />
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={deleteConfirmDialog.open} onOpenChange={(open) => setDeleteConfirmDialog({ ...deleteConfirmDialog, open })}>
         <DialogContent>
