@@ -506,6 +506,7 @@ export default function ProjectDetail() {
   const tasksByStatus = {
     todo: tasks.filter(t => t.status === 'todo').length,
     in_progress: tasks.filter(t => t.status === 'in_progress').length,
+    blocked: tasks.filter(t => t.status === 'blocked').length,
     review: tasks.filter(t => t.status === 'review').length,
     completed: tasks.filter(t => t.status === 'completed').length,
   };
@@ -1077,7 +1078,7 @@ export default function ProjectDetail() {
 
         <TabsContent value="tasks" className="space-y-6">
           {/* Task Status Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="text-sm text-gray-600">To Do</div>
@@ -1088,6 +1089,12 @@ export default function ProjectDetail() {
               <CardContent className="pt-6">
                 <div className="text-sm text-gray-600">In Progress</div>
                 <div className="text-2xl font-bold text-blue-600">{tasksByStatus.in_progress}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-sm text-gray-600">Blocked</div>
+                <div className="text-2xl font-bold text-red-600">{tasksByStatus.blocked}</div>
               </CardContent>
             </Card>
             <Card>
@@ -1144,6 +1151,7 @@ export default function ProjectDetail() {
                           <Badge className={
                             task.status === 'completed' ? 'bg-green-100 text-green-800' :
                             task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                            task.status === 'blocked' ? 'bg-red-100 text-red-800' :
                             task.status === 'review' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-gray-100 text-gray-800'
                           }>

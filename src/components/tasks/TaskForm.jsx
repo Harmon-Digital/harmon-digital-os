@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -170,7 +170,15 @@ function AssigneePicker({ value, teamMembers, onChange }) {
 
 /* ---------------- Main form ---------------- */
 
-export default function TaskForm({ task, projects = [], teamMembers = [], onSubmit, onCancel }) {
+export default function TaskForm({
+  task,
+  projects = [],
+  teamMembers = [],
+  onSubmit,
+  onAutoSave,
+  onCancel,
+}) {
+  const isEdit = !!task?.id;
   const [pendingFiles, setPendingFiles] = useState([]);
   const [formData, setFormData] = useState(
     task || {
@@ -220,32 +228,76 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
   const statusLabel = STATUS_LIST.find((s) => s.id === formData.status)?.label || "Status";
   const priorityLabel = PRIORITY_LIST.find((p) => p.id === formData.priority)?.label || "Priority";
 
+  const buildCleanedData = (d = formData) => ({
+    ...d,
+    project_id: d.project_id || null,
+    assigned_to: d.assigned_to || null,
+    due_date: d.due_date || null,
+    recurrence_enabled: !!d.recurrence_enabled,
+    recurrence_mode: d.recurrence_enabled
+      ? d.recurrence_mode || "on_complete"
+      : "on_complete",
+    recurrence_frequency: d.recurrence_enabled ? d.recurrence_frequency : null,
+    recurrence_interval: d.recurrence_enabled
+      ? Math.max(1, parseInt(d.recurrence_interval || 1, 10))
+      : 1,
+    recurrence_end_date:
+      d.recurrence_enabled && d.recurrence_end_date ? d.recurrence_end_date : null,
+    recurrence_count:
+      d.recurrence_enabled && d.recurrence_count
+        ? Math.max(1, parseInt(d.recurrence_count, 10))
+        : null,
+  });
+
   const handleSubmit = (e) => {
-    e.preventDefault();
-    const cleanedData = {
-      ...formData,
-      project_id: formData.project_id || null,
-      assigned_to: formData.assigned_to || null,
-      due_date: formData.due_date || null,
-      recurrence_enabled: !!formData.recurrence_enabled,
-      recurrence_mode: formData.recurrence_enabled
-        ? formData.recurrence_mode || "on_complete"
-        : "on_complete",
-      recurrence_frequency: formData.recurrence_enabled ? formData.recurrence_frequency : null,
-      recurrence_interval: formData.recurrence_enabled
-        ? Math.max(1, parseInt(formData.recurrence_interval || 1, 10))
-        : 1,
-      recurrence_end_date:
-        formData.recurrence_enabled && formData.recurrence_end_date
-          ? formData.recurrence_end_date
-          : null,
-      recurrence_count:
-        formData.recurrence_enabled && formData.recurrence_count
-          ? Math.max(1, parseInt(formData.recurrence_count, 10))
-          : null,
-    };
-    onSubmit(cleanedData, pendingFiles);
+    if (e) e.preventDefault();
+    onSubmit(buildCleanedData(), pendingFiles);
   };
+
+  /* -------- Auto-save for existing tasks --------
+   * We watch formData and call onAutoSave after a short debounce.
+   * The first render (hydration from `task` prop) is skipped so we don't
+   * fire a pointless save the instant the drawer opens.
+   */
+  const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
+  const autoSaveTimer = useRef(null);
+  const lastSerialized = useRef(null);
+  const firstRun = useRef(true);
+
+  useEffect(() => {
+    if (!isEdit || !onAutoSave) return;
+    const serialized = JSON.stringify(buildCleanedData());
+    if (firstRun.current) {
+      firstRun.current = false;
+      lastSerialized.current = serialized;
+      return;
+    }
+    if (serialized === lastSerialized.current) return;
+    lastSerialized.current = serialized;
+
+    setSaveState("saving");
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(async () => {
+      try {
+        await onAutoSave(JSON.parse(serialized));
+        setSaveState("saved");
+      } catch (err) {
+        console.error("Auto-save failed:", err);
+        setSaveState("error");
+      }
+    }, 500);
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, isEdit, onAutoSave]);
+
+  // After "saved" briefly flash, go back to idle
+  useEffect(() => {
+    if (saveState !== "saved") return;
+    const t = setTimeout(() => setSaveState("idle"), 1500);
+    return () => clearTimeout(t);
+  }, [saveState]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -488,13 +540,30 @@ export default function TaskForm({ task, projects = [], teamMembers = [], onSubm
       />
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
-          {task ? "Update" : "Create"} Task
-        </Button>
+      <div className="flex justify-end items-center gap-3 pt-4 border-t border-gray-100">
+        {isEdit ? (
+          <>
+            <span className="mr-auto text-[11px] text-gray-400 tabular-nums">
+              {saveState === "saving" && "Saving…"}
+              {saveState === "saved" && "✓ All changes saved"}
+              {saveState === "error" && (
+                <span className="text-red-600">Save failed — changes may be lost</span>
+              )}
+            </span>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Close
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
+              Create Task
+            </Button>
+          </>
+        )}
       </div>
     </form>
   );

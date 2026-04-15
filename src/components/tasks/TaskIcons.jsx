@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 export const STATUS_LIST = [
   { id: "todo", label: "To Do" },
   { id: "in_progress", label: "In Progress" },
+  { id: "blocked", label: "Blocked" },
   { id: "review", label: "Review" },
   { id: "completed", label: "Completed" },
 ];
@@ -13,6 +14,7 @@ export const STATUS_LIST = [
 const STATUS_COLOR = {
   todo: "#9ca3af", // gray-400
   in_progress: "#eab308", // yellow-500
+  blocked: "#dc2626", // red-600
   review: "#3b82f6", // blue-500
   completed: "#22c55e", // green-500
 };
@@ -23,6 +25,22 @@ export function StatusIcon({ status = "todo", size = 14, className = "" }) {
   const r = s / 2 - 1;
   const cx = s / 2;
   const cy = s / 2;
+  if (status === "blocked") {
+    // solid red circle with a white horizontal bar (stop/block)
+    return (
+      <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} className={className}>
+        <circle cx={cx} cy={cy} r={r} fill={color} />
+        <rect
+          x={s * 0.25}
+          y={cy - 0.8}
+          width={s * 0.5}
+          height={1.6}
+          rx={0.8}
+          fill="white"
+        />
+      </svg>
+    );
+  }
   if (status === "completed") {
     return (
       <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} className={className}>

@@ -230,6 +230,20 @@ export default function Tasks() {
     setShowDrawer(true);
   };
 
+  // Auto-save from the task drawer: update row in-place, keep drawer open
+  const handleAutoSave = async (taskData) => {
+    if (!editingTask?.id) return;
+    try {
+      const saved = await Task.update(editingTask.id, taskData);
+      // Keep editingTask in sync so the form's props don't get stale
+      setEditingTask((prev) => (prev ? { ...prev, ...saved } : prev));
+      setTasks((prev) => prev.map((t) => (t.id === saved.id ? { ...t, ...saved } : t)));
+    } catch (err) {
+      console.error("Auto-save failed:", err);
+      throw err;
+    }
+  };
+
   const handleQuickUpdate = async (taskId, field, value) => {
     try {
       const task = tasks.find(t => t.id === taskId);
@@ -408,6 +422,7 @@ export default function Tasks() {
   const statusColors = {
     todo: "bg-gray-100 text-gray-800 border-gray-200",
     in_progress: "bg-blue-100 text-blue-800 border-blue-200",
+    blocked: "bg-red-100 text-red-800 border-red-200",
     review: "bg-yellow-100 text-yellow-800 border-yellow-200",
     completed: "bg-green-100 text-green-800 border-green-200"
   };
@@ -430,6 +445,7 @@ export default function Tasks() {
   const kanbanColumns = [
     { id: "todo", label: "To Do", color: "bg-gray-500", textColor: "text-gray-500", bgLight: "bg-gray-50" },
     { id: "in_progress", label: "In Progress", color: "bg-blue-500", textColor: "text-blue-500", bgLight: "bg-blue-50" },
+    { id: "blocked", label: "Blocked", color: "bg-red-500", textColor: "text-red-500", bgLight: "bg-red-50" },
     { id: "review", label: "Review", color: "bg-yellow-500", textColor: "text-yellow-500", bgLight: "bg-yellow-50" },
     { id: "completed", label: "Completed", color: "bg-green-500", textColor: "text-green-500", bgLight: "bg-green-50" }
   ];
@@ -438,245 +454,225 @@ export default function Tasks() {
     return filteredTasks.filter(task => task.status === status);
   };
 
-  const boardStatuses = completedFilter === "active" 
-    ? ["todo", "in_progress", "review"]
+  const boardStatuses = completedFilter === "active"
+    ? ["todo", "in_progress", "blocked", "review"]
     : ["completed"];
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="border-b bg-white shadow-sm">
-        <div className="p-6 lg:p-8">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Tasks</h1>
-              <p className="text-gray-500 mt-1">Manage all project tasks</p>
+    <div className="h-full flex flex-col bg-white">
+      <div className="border-b border-gray-200 bg-white">
+        {/* Single consolidated toolbar */}
+        <div className="flex items-center gap-2 px-4 h-12">
+          <div className="flex items-center gap-1 rounded-md border border-gray-200 p-0.5 text-[12px]">
+            <button
+              type="button"
+              onClick={() => setCompletedFilter("active")}
+              className={`px-2.5 py-1 rounded ${completedFilter === "active" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+            >
+              Active
+            </button>
+            <button
+              type="button"
+              onClick={() => setCompletedFilter("completed")}
+              className={`px-2.5 py-1 rounded ${completedFilter === "completed" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+            >
+              Completed
+            </button>
+          </div>
+          <div className="flex items-center gap-1 rounded-md border border-gray-200 p-0.5 text-[12px]">
+            <button
+              type="button"
+              onClick={() => setViewFilter("all")}
+              className={`px-2.5 py-1 rounded ${viewFilter === "all" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewFilter("my")}
+              className={`px-2.5 py-1 rounded ${viewFilter === "my" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+            >
+              Mine
+            </button>
+          </div>
+
+          <div className="relative flex-1 max-w-md min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Input
+              placeholder="Search tasks"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+            />
+          </div>
+
+          {(() => {
+            const activeCount =
+              (completedFilter === "active" && statusFilter !== "all" ? 1 : 0) +
+              (priorityFilter !== "all" ? 1 : 0) +
+              (projectFilter !== "all" ? 1 : 0) +
+              (assigneeFilter !== "all" ? 1 : 0) +
+              (dueDateFilter !== "all" ? 1 : 0);
+            return (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="shrink-0 gap-1.5 h-8 text-[13px]">
+                    <Filter className="w-3.5 h-3.5" />
+                    Filter
+                    {activeCount > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold">
+                        {activeCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">Filters</span>
+                    {activeCount > 0 && (
+                      <button
+                        type="button"
+                        className="text-xs text-indigo-600 hover:text-indigo-700"
+                        onClick={() => {
+                          setStatusFilter("all");
+                          setPriorityFilter("all");
+                          setProjectFilter("all");
+                          setAssigneeFilter("all");
+                          setDueDateFilter("all");
+                        }}
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+                  {completedFilter === "active" && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-gray-600">Status</label>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Status</SelectItem>
+                          <SelectItem value="todo">To Do</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="blocked">Blocked</SelectItem>
+                          <SelectItem value="review">Review</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-600">Priority</label>
+                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                      <SelectTrigger><SelectValue placeholder="Priority" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Priority</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-600">Project</label>
+                    <Select value={projectFilter} onValueChange={setProjectFilter}>
+                      <SelectTrigger><SelectValue placeholder="Project" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Projects</SelectItem>
+                        {projects.map(project => (
+                          <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-600">Assignee</label>
+                    <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                      <SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Team</SelectItem>
+                        {teamMembers.filter(tm => tm.status === 'active').map(tm => (
+                          <SelectItem key={tm.id} value={tm.id}>{tm.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-600">Due Date</label>
+                    <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
+                      <SelectTrigger><SelectValue placeholder="Due Date" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Dates</SelectItem>
+                        <SelectItem value="overdue">Overdue</SelectItem>
+                        <SelectItem value="today">Due Today</SelectItem>
+                        <SelectItem value="this_week">This Week</SelectItem>
+                        <SelectItem value="this_month">This Month</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            );
+          })()}
+
+          <div className="ml-auto flex items-center gap-1.5">
+            {viewMode === "grouped" && (
+              <Select value={groupBy} onValueChange={setGroupBy}>
+                <SelectTrigger className="w-32 h-8 text-[13px]">
+                  <SelectValue placeholder="Group" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="status">Status</SelectItem>
+                  <SelectItem value="project">Project</SelectItem>
+                  <SelectItem value="priority">Priority</SelectItem>
+                  <SelectItem value="assignee">Assignee</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`p-1 rounded ${viewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                title="List"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("board")}
+                className={`p-1 rounded ${viewMode === "board" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                title="Board"
+              >
+                <Kanban className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("grouped")}
+                className={`p-1 rounded ${viewMode === "grouped" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                title="Grouped"
+              >
+                <Grid3X3 className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <div className="flex items-center gap-2 w-full lg:w-auto">
+            <div className="hidden md:block w-60">
               <QuickAddTask
                 authUser={authUser}
                 currentTeamMember={currentTeamMember}
-                onCreated={(task) => {
-                  setTasks((prev) => [task, ...prev]);
-                }}
+                onCreated={(task) => setTasks((prev) => [task, ...prev])}
               />
-              <Button
-                onClick={() => {
-                  setEditingTask(null);
-                  setShowDrawer(true);
-                }}
-                className="bg-indigo-600 hover:bg-indigo-700 shrink-0"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                New Task
-              </Button>
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <Tabs value={completedFilter} onValueChange={setCompletedFilter}>
-                <TabsList>
-                  <TabsTrigger value="active">Active Tasks</TabsTrigger>
-                  <TabsTrigger value="completed">Completed</TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              <Tabs value={viewFilter} onValueChange={setViewFilter}>
-                <TabsList>
-                  <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="my">My Tasks</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {viewMode === "grouped" && (
-                <Select value={groupBy} onValueChange={setGroupBy}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Group by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="status">Status</SelectItem>
-                    <SelectItem value="project">Project</SelectItem>
-                    <SelectItem value="priority">Priority</SelectItem>
-                    <SelectItem value="assignee">Assignee</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              
-              <Tabs value={viewMode} onValueChange={setViewMode}>
-                <TabsList>
-                  <TabsTrigger value="list">
-                    <List className="w-4 h-4" />
-                  </TabsTrigger>
-                  <TabsTrigger value="board">
-                    <Kanban className="w-4 h-4" />
-                  </TabsTrigger>
-                  <TabsTrigger value="grouped">
-                    <Grid3X3 className="w-4 h-4" />
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border shadow-sm p-4">
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search tasks..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              {(() => {
-                const activeCount =
-                  (completedFilter === "active" && statusFilter !== "all" ? 1 : 0) +
-                  (priorityFilter !== "all" ? 1 : 0) +
-                  (projectFilter !== "all" ? 1 : 0) +
-                  (assigneeFilter !== "all" ? 1 : 0) +
-                  (dueDateFilter !== "all" ? 1 : 0);
-                return (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="shrink-0 gap-2">
-                        <Filter className="w-4 h-4" />
-                        Filters
-                        {activeCount > 0 && (
-                          <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold">
-                            {activeCount}
-                          </span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-80 p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold">Filters</span>
-                        {activeCount > 0 && (
-                          <button
-                            type="button"
-                            className="text-xs text-indigo-600 hover:text-indigo-700"
-                            onClick={() => {
-                              setStatusFilter("all");
-                              setPriorityFilter("all");
-                              setProjectFilter("all");
-                              setAssigneeFilter("all");
-                              setDueDateFilter("all");
-                            }}
-                          >
-                            Clear all
-                          </button>
-                        )}
-                      </div>
-                      {completedFilter === "active" && (
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-gray-600">Status</label>
-                          <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Status</SelectItem>
-                              <SelectItem value="todo">To Do</SelectItem>
-                              <SelectItem value="in_progress">In Progress</SelectItem>
-                              <SelectItem value="review">Review</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-gray-600">Priority</label>
-                        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                          <SelectTrigger><SelectValue placeholder="Priority" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Priority</SelectItem>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="urgent">Urgent</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-gray-600">Project</label>
-                        <Select value={projectFilter} onValueChange={setProjectFilter}>
-                          <SelectTrigger><SelectValue placeholder="Project" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Projects</SelectItem>
-                            {projects.map(project => (
-                              <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-gray-600">Assignee</label>
-                        <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                          <SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Team</SelectItem>
-                            {teamMembers.filter(tm => tm.status === 'active').map(tm => (
-                              <SelectItem key={tm.id} value={tm.id}>{tm.full_name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-gray-600">Due Date</label>
-                        <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
-                          <SelectTrigger><SelectValue placeholder="Due Date" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Dates</SelectItem>
-                            <SelectItem value="overdue">Overdue</SelectItem>
-                            <SelectItem value="today">Due Today</SelectItem>
-                            <SelectItem value="this_week">This Week</SelectItem>
-                            <SelectItem value="this_month">This Month</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                );
-              })()}
-            </div>
-
-            {(searchQuery || statusFilter !== "all" || priorityFilter !== "all" || projectFilter !== "all" || assigneeFilter !== "all" || dueDateFilter !== "all") && (
-              <div className="mt-4 flex items-center gap-2">
-                <span className="text-sm text-gray-600">Active filters:</span>
-                <div className="flex gap-2 flex-wrap">
-                  {searchQuery && (
-                    <Badge variant="secondary" className="cursor-pointer" onClick={() => setSearchQuery("")}>
-                      Search: {searchQuery} ×
-                    </Badge>
-                  )}
-                  {statusFilter !== "all" && (
-                    <Badge variant="secondary" className="cursor-pointer" onClick={() => setStatusFilter("all")}>
-                      Status: {statusFilter.replace('_', ' ')} ×
-                    </Badge>
-                  )}
-                  {priorityFilter !== "all" && (
-                    <Badge variant="secondary" className="cursor-pointer" onClick={() => setPriorityFilter("all")}>
-                      Priority: {priorityFilter} ×
-                    </Badge>
-                  )}
-                  {projectFilter !== "all" && (
-                    <Badge variant="secondary" className="cursor-pointer" onClick={() => setProjectFilter("all")}>
-                      Project: {getProjectName(projectFilter)} ×
-                    </Badge>
-                  )}
-                  {assigneeFilter !== "all" && (
-                    <Badge variant="secondary" className="cursor-pointer" onClick={() => setAssigneeFilter("all")}>
-                      Assignee: {getTeamMemberName(assigneeFilter)} ×
-                    </Badge>
-                  )}
-                  {dueDateFilter !== "all" && (
-                    <Badge variant="secondary" className="cursor-pointer" onClick={() => setDueDateFilter("all")}>
-                      Due: {dueDateFilter.replace('_', ' ')} ×
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            )}
+            <Button
+              onClick={() => {
+                setEditingTask(null);
+                setShowDrawer(true);
+              }}
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 h-8 shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              New Task
+            </Button>
           </div>
         </div>
       </div>
@@ -919,6 +915,9 @@ export default function Tasks() {
                   <DropdownMenuItem onClick={() => handleBulkStatusChange('in_progress')}>
                     In Progress
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkStatusChange('blocked')}>
+                    Blocked
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleBulkStatusChange('review')}>
                     Review
                   </DropdownMenuItem>
@@ -972,6 +971,7 @@ export default function Tasks() {
                 projects={projects}
                 teamMembers={teamMembers}
                 onSubmit={handleSubmit}
+                onAutoSave={handleAutoSave}
                 onCancel={() => {
                   setShowDrawer(false);
                   setEditingTask(null);
@@ -1014,6 +1014,7 @@ export default function Tasks() {
                   projects={projects}
                   teamMembers={teamMembers}
                   onSubmit={handleSubmit}
+                  onAutoSave={handleAutoSave}
                   onCancel={() => {
                     setShowDrawer(false);
                     setEditingTask(null);
