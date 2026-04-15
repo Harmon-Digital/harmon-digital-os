@@ -86,6 +86,15 @@ export default function Channels() {
   const textareaRef = useRef(null);
   const scrollerRef = useRef(null);
   const realtimeRef = useRef(null);
+  const selectedChannelIdRef = useRef(null);
+
+  const [onlineUserIds, setOnlineUserIds] = useState(() => new Set());
+  const [reads, setReads] = useState(() => new Map()); // channel_id -> last_read_at ISO
+  const [unread, setUnread] = useState(() => new Map()); // channel_id -> count
+
+  useEffect(() => {
+    selectedChannelIdRef.current = selectedChannelId;
+  }, [selectedChannelId]);
 
   const userIdToName = useMemo(() => {
     const m = {};
@@ -139,17 +148,45 @@ export default function Channels() {
     [channels, user?.id, userIdToName],
   );
 
-  // Bootstrap: load channels + team members
+  // Bootstrap: load channels + team members + reads + initial unread counts
   useEffect(() => {
     const init = async () => {
       setLoading(true);
       try {
-        const [ch, tm] = await Promise.all([
+        const [ch, tm, readsResp] = await Promise.all([
           ChatChannel.filter({ is_archived: false }, "created_at"),
           TeamMember.list(),
+          user?.id
+            ? supabase
+                .from("chat_channel_reads")
+                .select("channel_id, last_read_at")
+                .eq("user_id", user.id)
+            : Promise.resolve({ data: [] }),
         ]);
         setChannels(ch || []);
         setTeamMembers(tm || []);
+
+        const readsMap = new Map();
+        for (const r of readsResp?.data || []) readsMap.set(r.channel_id, r.last_read_at);
+        setReads(readsMap);
+
+        // Initial unread counts per channel (fires per-channel COUNT in parallel)
+        if (user?.id && (ch || []).length > 0) {
+          const entries = await Promise.all(
+            ch.map(async (c) => {
+              const since = readsMap.get(c.id) || "1970-01-01T00:00:00Z";
+              const { count } = await supabase
+                .from("chat_messages")
+                .select("id", { count: "exact", head: true })
+                .eq("channel_id", c.id)
+                .gt("created_at", since)
+                .neq("user_id", user.id);
+              return [c.id, count || 0];
+            }),
+          );
+          setUnread(new Map(entries));
+        }
+
         if (ch && ch.length > 0) setSelectedChannelId(ch[0].id);
       } catch (err) {
         console.error("Error loading channels:", err);
@@ -158,7 +195,100 @@ export default function Channels() {
       }
     };
     init();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  // Mark channel as read (optimistic + upsert)
+  const markRead = useCallback(
+    async (channelId) => {
+      if (!channelId || !user?.id) return;
+      const now = new Date().toISOString();
+      setReads((prev) => {
+        const next = new Map(prev);
+        next.set(channelId, now);
+        return next;
+      });
+      setUnread((prev) => {
+        if (!prev.has(channelId)) return prev;
+        const next = new Map(prev);
+        next.set(channelId, 0);
+        return next;
+      });
+      try {
+        await supabase
+          .from("chat_channel_reads")
+          .upsert(
+            { user_id: user.id, channel_id: channelId, last_read_at: now },
+            { onConflict: "user_id,channel_id" },
+          );
+      } catch (err) {
+        console.error("markRead failed:", err);
+      }
+    },
+    [user?.id],
+  );
+
+  // Mark the selected channel as read on select or when it already has messages loaded
+  useEffect(() => {
+    if (selectedChannelId) markRead(selectedChannelId);
+  }, [selectedChannelId, markRead]);
+
+  // Global subscription: bump unread for messages in non-active channels.
+  // RLS ensures we only receive messages from channels we can see.
+  useEffect(() => {
+    if (!user?.id) return;
+    const ch = supabase
+      .channel("chat-global-unread")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_messages" },
+        (payload) => {
+          const msg = payload.new;
+          if (!msg || msg.user_id === user.id) return;
+          if (msg.channel_id === selectedChannelIdRef.current) {
+            // Currently viewing -> mark as read
+            markRead(msg.channel_id);
+            return;
+          }
+          setUnread((prev) => {
+            const next = new Map(prev);
+            next.set(msg.channel_id, (next.get(msg.channel_id) || 0) + 1);
+            return next;
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_channels" },
+        (payload) => {
+          const newCh = payload.new;
+          if (!newCh) return;
+          setChannels((prev) =>
+            prev.find((c) => c.id === newCh.id) ? prev : [...prev, newCh],
+          );
+        },
+      )
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [user?.id, markRead]);
+
+  // Presence: track who is currently online
+  useEffect(() => {
+    if (!user?.id) return;
+    const ch = supabase.channel("chat-presence", {
+      config: { presence: { key: user.id } },
+    });
+    ch.on("presence", { event: "sync" }, () => {
+      const state = ch.presenceState();
+      setOnlineUserIds(new Set(Object.keys(state)));
+    });
+    ch.subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await ch.track({ user_id: user.id, online_at: new Date().toISOString() });
+      }
+    });
+    return () => supabase.removeChannel(ch);
+  }, [user?.id]);
 
   const loadMessages = useCallback(
     async (channelId) => {
@@ -460,6 +590,8 @@ export default function Channels() {
             ) : (
               filteredPublic.map((c) => {
                 const active = c.id === selectedChannelId;
+                const count = unread.get(c.id) || 0;
+                const hasUnread = count > 0 && !active;
                 return (
                   <button
                     key={c.id}
@@ -468,11 +600,18 @@ export default function Channels() {
                     className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm flex items-center gap-1.5 ${
                       active
                         ? "bg-indigo-100 text-indigo-900 font-medium"
-                        : "text-gray-700 hover:bg-gray-100"
+                        : hasUnread
+                          ? "text-gray-900 font-semibold hover:bg-gray-100"
+                          : "text-gray-700 hover:bg-gray-100"
                     }`}
                   >
                     <Hash className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                    <span className="truncate">{c.name}</span>
+                    <span className="truncate flex-1">{c.name}</span>
+                    {hasUnread && (
+                      <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold">
+                        {count > 99 ? "99+" : count}
+                      </span>
+                    )}
                   </button>
                 );
               })
@@ -502,6 +641,10 @@ export default function Channels() {
               filteredDms.map((c) => {
                 const active = c.id === selectedChannelId;
                 const name = displayNameForChannel(c);
+                const count = unread.get(c.id) || 0;
+                const hasUnread = count > 0 && !active;
+                const partnerId = dmPartnerId(c);
+                const isOnline = partnerId && onlineUserIds.has(partnerId);
                 return (
                   <button
                     key={c.id}
@@ -510,13 +653,25 @@ export default function Channels() {
                     className={`w-full text-left px-2.5 py-1.5 rounded-md text-sm flex items-center gap-2 ${
                       active
                         ? "bg-indigo-100 text-indigo-900 font-medium"
-                        : "text-gray-700 hover:bg-gray-100"
+                        : hasUnread
+                          ? "text-gray-900 font-semibold hover:bg-gray-100"
+                          : "text-gray-700 hover:bg-gray-100"
                     }`}
                   >
-                    <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center shrink-0">
-                      {initials(name)}
+                    <div className="relative shrink-0">
+                      <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center">
+                        {initials(name)}
+                      </div>
+                      {isOnline && (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 ring-2 ring-gray-50" />
+                      )}
                     </div>
-                    <span className="truncate">{name}</span>
+                    <span className="truncate flex-1">{name}</span>
+                    {hasUnread && (
+                      <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold">
+                        {count > 99 ? "99+" : count}
+                      </span>
+                    )}
                   </button>
                 );
               })
@@ -537,12 +692,29 @@ export default function Channels() {
               <div className="flex items-center gap-2">
                 {selectedChannel.is_dm ? (
                   <>
-                    <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center">
-                      {initials(displayNameForChannel(selectedChannel))}
+                    <div className="relative">
+                      <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center">
+                        {initials(displayNameForChannel(selectedChannel))}
+                      </div>
+                      {(() => {
+                        const pid = dmPartnerId(selectedChannel);
+                        return pid && onlineUserIds.has(pid) ? (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 ring-2 ring-white" />
+                        ) : null;
+                      })()}
                     </div>
                     <h1 className="font-semibold text-gray-900">
                       {displayNameForChannel(selectedChannel)}
                     </h1>
+                    {(() => {
+                      const pid = dmPartnerId(selectedChannel);
+                      if (!pid) return null;
+                      return onlineUserIds.has(pid) ? (
+                        <span className="text-xs text-green-600">• Active</span>
+                      ) : (
+                        <span className="text-xs text-gray-400">• Offline</span>
+                      );
+                    })()}
                   </>
                 ) : (
                   <>
@@ -675,6 +847,7 @@ export default function Channels() {
         onOpenChange={setShowNewDm}
         teamMembers={teamMembers}
         existingDms={dmChannels}
+        onlineUserIds={onlineUserIds}
         onOpened={(channel) => {
           setChannels((prev) =>
             prev.find((c) => c.id === channel.id) ? prev : [...prev, channel],
@@ -687,7 +860,7 @@ export default function Channels() {
   );
 }
 
-function NewDmDialog({ open, onOpenChange, teamMembers, existingDms, onOpened }) {
+function NewDmDialog({ open, onOpenChange, teamMembers, existingDms, onlineUserIds, onOpened }) {
   const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -785,31 +958,39 @@ function NewDmDialog({ open, onOpenChange, teamMembers, existingDms, onOpened })
                 {query ? "No matches" : "No teammates available"}
               </div>
             ) : (
-              candidates.map((tm) => (
-                <button
-                  key={tm.id}
-                  type="button"
-                  onClick={() => openWithUser(tm.user_id)}
-                  disabled={submitting}
-                  className="w-full text-left px-3 py-2 flex items-center gap-2.5 hover:bg-gray-50 disabled:opacity-60"
-                >
-                  <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center justify-center shrink-0">
-                    {tm.full_name
-                      .split(" ")
-                      .map((p) => p[0])
-                      .slice(0, 2)
-                      .join("")
-                      .toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm text-gray-900 truncate">{tm.full_name}</div>
-                    {tm.role && (
-                      <div className="text-xs text-gray-400 truncate">{tm.role}</div>
-                    )}
-                  </div>
-                  <MessageCircle className="w-4 h-4 text-gray-300 shrink-0" />
-                </button>
-              ))
+              candidates.map((tm) => {
+                const isOnline = onlineUserIds?.has(tm.user_id);
+                return (
+                  <button
+                    key={tm.id}
+                    type="button"
+                    onClick={() => openWithUser(tm.user_id)}
+                    disabled={submitting}
+                    className="w-full text-left px-3 py-2 flex items-center gap-2.5 hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    <div className="relative shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center justify-center">
+                        {tm.full_name
+                          .split(" ")
+                          .map((p) => p[0])
+                          .slice(0, 2)
+                          .join("")
+                          .toUpperCase()}
+                      </div>
+                      {isOnline && (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-white" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-gray-900 truncate">{tm.full_name}</div>
+                      {tm.role && (
+                        <div className="text-xs text-gray-400 truncate">{tm.role}</div>
+                      )}
+                    </div>
+                    <MessageCircle className="w-4 h-4 text-gray-300 shrink-0" />
+                  </button>
+                );
+              })
             )}
           </div>
           {error && <div className="text-xs text-red-600">{error}</div>}
