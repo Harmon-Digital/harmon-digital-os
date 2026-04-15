@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3, PanelRight, Maximize2 } from "lucide-react";
+import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3, PanelRight, Maximize2, SlidersHorizontal } from "lucide-react";
 import { stripHtml } from "@/components/ui/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -87,6 +87,7 @@ export default function Tasks() {
   const isMobile = useIsMobile();
   const [viewMode, setViewMode] = useState("list");
   const [groupBy, setGroupBy] = useState("status");
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
 
   // Default to board view on mobile
   useEffect(() => {
@@ -430,33 +431,41 @@ export default function Tasks() {
     return filteredTasks.filter(task => task.status === status);
   };
 
-  const boardStatuses = completedFilter === "active" 
+  const activeFilterCount = [
+    statusFilter !== "all",
+    priorityFilter !== "all",
+    projectFilter !== "all",
+    assigneeFilter !== "all",
+    dueDateFilter !== "all",
+  ].filter(Boolean).length;
+
+  const boardStatuses = completedFilter === "active"
     ? ["todo", "in_progress", "review"]
     : ["completed"];
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="border-b bg-white shadow-sm">
-        <div className="p-6 lg:p-8">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+        <div className="p-4 lg:p-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 lg:mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Tasks</h1>
-              <p className="text-gray-500 mt-1">Manage all project tasks</p>
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Tasks</h1>
+              <p className="text-gray-500 mt-1 text-sm">Manage all project tasks</p>
             </div>
-            <Button 
+            <Button
               onClick={() => {
                 setEditingTask(null);
                 setShowDrawer(true);
               }}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto"
             >
               <Plus className="w-4 h-4 mr-2" />
               New Task
             </Button>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 lg:mb-6">
+            <div className="flex flex-wrap items-center gap-2">
               <Tabs value={completedFilter} onValueChange={setCompletedFilter}>
                 <TabsList>
                   <TabsTrigger value="active">Active Tasks</TabsTrigger>
@@ -504,88 +513,111 @@ export default function Tasks() {
           </div>
 
           <div className="bg-white rounded-lg border shadow-sm p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-              <div className="lg:col-span-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search tasks..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
+            {/* Search bar + mobile filter toggle */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search tasks..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
               </div>
+              {isMobile && (
+                <div className="relative shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setFiltersExpanded(!filtersExpanded)}
+                    className={activeFilterCount > 0 || filtersExpanded ? "border-indigo-400 text-indigo-600" : ""}
+                    title="Toggle filters"
+                  >
+                    <SlidersHorizontal className="w-4 h-4" />
+                  </Button>
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-600 text-white text-[10px] font-medium rounded-full flex items-center justify-center z-10">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
 
-              {completedFilter === "active" && (
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+            {/* Filter dropdowns: always visible on desktop, collapsible on mobile */}
+            {(!isMobile || filtersExpanded) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-4">
+                {completedFilter === "active" && (
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="todo">To Do</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="review">Review</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+
+                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Status" />
+                    <SelectValue placeholder="Priority" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="todo">To Do</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="review">Review</SelectItem>
+                    <SelectItem value="all">All Priority</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
                   </SelectContent>
                 </Select>
-              )}
 
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
+                <Select value={projectFilter} onValueChange={setProjectFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Projects</SelectItem>
+                    {projects.map(project => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              <Select value={projectFilter} onValueChange={setProjectFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Project" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
-                  {projects.map(project => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Team</SelectItem>
+                    {teamMembers.filter(tm => tm.status === 'active').map(tm => (
+                      <SelectItem key={tm.id} value={tm.id}>
+                        {tm.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Assignee" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Team</SelectItem>
-                  {teamMembers.filter(tm => tm.status === 'active').map(tm => (
-                    <SelectItem key={tm.id} value={tm.id}>
-                      {tm.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Due Date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Dates</SelectItem>
+                    <SelectItem value="overdue">Overdue</SelectItem>
+                    <SelectItem value="today">Due Today</SelectItem>
+                    <SelectItem value="this_week">This Week</SelectItem>
+                    <SelectItem value="this_month">This Month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-              <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Due Date" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Dates</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
-                  <SelectItem value="today">Due Today</SelectItem>
-                  <SelectItem value="this_week">This Week</SelectItem>
-                  <SelectItem value="this_month">This Month</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
             {(searchQuery || statusFilter !== "all" || priorityFilter !== "all" || projectFilter !== "all" || assigneeFilter !== "all" || dueDateFilter !== "all") && (
               <div className="mt-4 flex items-center gap-2">
                 <span className="text-sm text-gray-600">Active filters:</span>
@@ -635,7 +667,7 @@ export default function Tasks() {
                 {(completedFilter === "active" ? kanbanColumns.filter(c => c.id !== "completed") : kanbanColumns.filter(c => c.id === "completed")).map((column) => {
                   const columnTasks = getTasksByStatus(column.id);
                   return (
-                    <div key={column.id} className="flex-shrink-0 w-80 flex flex-col">
+                    <div key={column.id} className="flex-shrink-0 w-72 sm:w-80 flex flex-col">
                       <div className="mb-4">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -762,6 +794,7 @@ export default function Tasks() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
+                  <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -816,6 +849,7 @@ export default function Tasks() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -823,8 +857,68 @@ export default function Tasks() {
         )}
 
         {viewMode === "list" && (
-          <div className="p-6 lg:p-8 overflow-y-auto h-full">
-            <div className="bg-white rounded-lg border shadow-sm overflow-x-auto">
+          <div className="p-4 lg:p-8 overflow-y-auto h-full">
+            {isMobile ? (
+              /* Mobile: card-based list */
+              <div className="space-y-2">
+                {loading ? (
+                  <p className="text-center py-8 text-gray-500">Loading...</p>
+                ) : filteredTasks.length === 0 ? (
+                  <p className="text-center py-8 text-gray-500">
+                    {tasks.length === 0 ? 'No tasks yet. Tap "New Task" to get started.' : "No tasks match your filters."}
+                  </p>
+                ) : (
+                  filteredTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="bg-white rounded-lg border shadow-sm p-4 cursor-pointer active:bg-gray-50"
+                      onClick={() => handleOpenDrawer(task)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="mt-0.5 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Checkbox
+                            checked={selectedTasks.includes(task.id)}
+                            onCheckedChange={() => toggleTaskSelection(task.id)}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              {task.ticket_number && (
+                                <p className="text-xs text-gray-500 mb-0.5">#{task.ticket_number}</p>
+                              )}
+                              <p className="font-medium text-gray-900 line-clamp-2">{task.title}</p>
+                            </div>
+                            <Badge className={`${priorityColors[task.priority]} shrink-0 capitalize`}>
+                              {task.priority}
+                            </Badge>
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                            <span>{getProjectName(task.project_id)}</span>
+                            {task.assigned_to && <span>{getTeamMemberName(task.assigned_to)}</span>}
+                            {task.due_date && (
+                              <span>Due {parseLocalDate(task.due_date).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                          {completedFilter === "active" && (
+                            <div className="mt-2">
+                              <Badge className={statusColors[task.status]}>
+                                {task.status.replace('_', ' ')}
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : (
+              /* Desktop: full table */
+              <div className="bg-white rounded-lg border shadow-sm overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -989,17 +1083,18 @@ export default function Tasks() {
                 </TableBody>
               </Table>
             </div>
+            )}
           </div>
         )}
       </div>
 
       {selectedTasks.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white rounded-lg shadow-2xl p-4 z-50">
-          <div className="flex items-center gap-4">
-            <span className="font-medium">
+        <div className="fixed bottom-4 sm:bottom-6 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 bg-indigo-600 text-white rounded-lg shadow-2xl p-3 sm:p-4 z-50">
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+            <span className="font-medium text-sm sm:text-base">
               {selectedTasks.length} task{selectedTasks.length !== 1 ? 's' : ''} selected
             </span>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-1 sm:flex-none justify-end sm:justify-start">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="secondary" size="sm">
@@ -1043,17 +1138,19 @@ export default function Tasks() {
         </div>
       )}
 
-      {taskViewMode === "sidebar" ? (
+      {(taskViewMode === "sidebar" || isMobile) ? (
         <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
           <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-            <button
-              type="button"
-              onClick={() => setTaskViewMode("center")}
-              className="absolute right-12 top-4 p-1 rounded-sm opacity-70 hover:opacity-100 text-gray-500 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              title="Switch to center view"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
+            {!isMobile && (
+              <button
+                type="button"
+                onClick={() => setTaskViewMode("center")}
+                className="absolute right-12 top-4 p-1 rounded-sm opacity-70 hover:opacity-100 text-gray-500 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                title="Switch to center view"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+            )}
             <SheetHeader>
               <SheetTitle>{editingTask ? "Edit Task" : "New Task"}</SheetTitle>
               <SheetDescription>
