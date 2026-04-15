@@ -1046,23 +1046,19 @@ export default function Tasks() {
       {taskViewMode === "sidebar" ? (
         <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
           <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setTaskViewMode("center")}
+              className="absolute right-12 top-4 p-1 rounded-sm opacity-70 hover:opacity-100 text-gray-500 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              title="Switch to center view"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
             <SheetHeader>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <SheetTitle>{editingTask ? "Edit Task" : "New Task"}</SheetTitle>
-                  <SheetDescription>
-                    {editingTask ? "Update task details" : "Create a new task"}
-                  </SheetDescription>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setTaskViewMode("center")}
-                  className="p-1.5 rounded hover:bg-gray-100 text-gray-500"
-                  title="Switch to center view"
-                >
-                  <Maximize2 className="w-4 h-4" />
-                </button>
-              </div>
+              <SheetTitle>{editingTask ? "Edit Task" : "New Task"}</SheetTitle>
+              <SheetDescription>
+                {editingTask ? "Update task details" : "Create a new task"}
+              </SheetDescription>
             </SheetHeader>
             <div className="mt-6">
               <TaskForm
@@ -1091,23 +1087,19 @@ export default function Tasks() {
       ) : (
         <Dialog open={showDrawer} onOpenChange={setShowDrawer}>
           <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setTaskViewMode("sidebar")}
+              className="absolute right-12 top-4 p-1 rounded-sm opacity-70 hover:opacity-100 text-gray-500 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              title="Switch to sidebar view"
+            >
+              <PanelRight className="w-4 h-4" />
+            </button>
             <DialogHeader>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <DialogTitle>{editingTask ? "Edit Task" : "New Task"}</DialogTitle>
-                  <DialogDescription>
-                    {editingTask ? "Update task details" : "Create a new task"}
-                  </DialogDescription>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setTaskViewMode("sidebar")}
-                  className="p-1.5 rounded hover:bg-gray-100 text-gray-500"
-                  title="Switch to sidebar view"
-                >
-                  <PanelRight className="w-4 h-4" />
-                </button>
-              </div>
+              <DialogTitle>{editingTask ? "Edit Task" : "New Task"}</DialogTitle>
+              <DialogDescription>
+                {editingTask ? "Update task details" : "Create a new task"}
+              </DialogDescription>
             </DialogHeader>
             <div className={`mt-4 grid gap-8 ${editingTask ? "lg:grid-cols-[minmax(0,1fr)_360px]" : ""}`}>
               <div className="min-w-0">
