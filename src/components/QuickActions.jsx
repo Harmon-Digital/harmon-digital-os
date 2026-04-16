@@ -382,21 +382,23 @@ export default function QuickActions() {
       <div className="fixed bottom-6 z-50 transition-all duration-300" style={{ right: "var(--qa-right, 24px)" }}>
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
-            <Button
-              className={`rounded-full w-14 h-14 shadow-lg transition-all ${
+            <button
+              type="button"
+              aria-label={timerRunning ? "Open timer" : "Quick actions"}
+              className={`rounded-full w-11 h-11 shadow-md ring-1 transition-all flex items-center justify-center ${
                 timerRunning
                   ? timerPaused
-                    ? 'bg-yellow-500 hover:bg-yellow-600'
-                    : 'bg-green-500 hover:bg-green-600'
-                  : 'bg-indigo-600 hover:bg-indigo-700'
+                    ? 'bg-yellow-500 hover:bg-yellow-600 ring-yellow-400/40'
+                    : 'bg-green-500 hover:bg-green-600 ring-green-400/40'
+                  : 'bg-gray-900 hover:bg-gray-800 ring-black/10'
               }`}
             >
               {timerRunning ? (
-                <Clock className="w-6 h-6 text-white" />
+                <Clock className="w-4 h-4 text-white" />
               ) : (
-                <Plus className="w-6 h-6 text-white" />
+                <Plus className="w-4 h-4 text-white" />
               )}
-            </Button>
+            </button>
           </PopoverTrigger>
           <PopoverContent className="w-80 p-0" align="end">
             {timerRunning ? (
@@ -467,7 +469,7 @@ export default function QuickActions() {
                   </Button>
                   <Button
                     onClick={handleStopTimer}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                    className="flex-1 bg-gray-900 hover:bg-gray-800 text-white"
                     disabled={saving}
                   >
                     <Square className="w-4 h-4 mr-2" />
@@ -532,7 +534,7 @@ export default function QuickActions() {
                       className="flex-col h-auto py-3 px-2"
                       onClick={() => setActiveDialog('task')}
                     >
-                      <CheckCircle className="w-5 h-5 mb-1 text-indigo-600" />
+                      <CheckCircle className="w-5 h-5 mb-1 text-gray-700" />
                       <span className="text-xs">Task</span>
                     </Button>
                     <Button
@@ -540,7 +542,7 @@ export default function QuickActions() {
                       className="flex-col h-auto py-3 px-2"
                       onClick={() => setActiveDialog('project')}
                     >
-                      <Briefcase className="w-5 h-5 mb-1 text-indigo-600" />
+                      <Briefcase className="w-5 h-5 mb-1 text-gray-700" />
                       <span className="text-xs">Project</span>
                     </Button>
                     <Button
@@ -548,7 +550,7 @@ export default function QuickActions() {
                       className="flex-col h-auto py-3 px-2"
                       onClick={() => setActiveDialog('account')}
                     >
-                      <Building2 className="w-5 h-5 mb-1 text-indigo-600" />
+                      <Building2 className="w-5 h-5 mb-1 text-gray-700" />
                       <span className="text-xs">Account</span>
                     </Button>
                   </div>
@@ -603,7 +605,7 @@ export default function QuickActions() {
               <Button
                 onClick={handleQuickTask}
                 disabled={!quickTaskData.title || !quickTaskData.project_id}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-gray-900 hover:bg-gray-800 text-white"
               >
                 Create Task
               </Button>
@@ -657,7 +659,7 @@ export default function QuickActions() {
               <Button
                 onClick={handleQuickProject}
                 disabled={!quickProjectData.name}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-gray-900 hover:bg-gray-800 text-white"
               >
                 Create Project
               </Button>
@@ -692,7 +694,7 @@ export default function QuickActions() {
               <Button
                 onClick={handleQuickAccount}
                 disabled={!quickAccountData.company_name}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-gray-900 hover:bg-gray-800 text-white"
               >
                 Create Account
               </Button>

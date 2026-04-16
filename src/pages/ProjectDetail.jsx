@@ -35,7 +35,9 @@ import {
   Upload,
   File,
   Download,
-  Loader2
+  Loader2,
+  Filter,
+  Search,
 } from "lucide-react";
 import {
   Table,
@@ -74,6 +76,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -118,6 +121,12 @@ export default function ProjectDetail() {
   const [editingContact, setEditingContact] = useState(null);
   const [deleteConfirmDialog, setDeleteConfirmDialog] = useState({ open: false, type: null, id: null });
   const [copySuccess, setCopySuccess] = useState({ key: false, url: false });
+
+  // Task filters
+  const [taskStatusFilter, setTaskStatusFilter] = useState("active");
+  const [taskPriorityFilter, setTaskPriorityFilter] = useState("all");
+  const [taskAssigneeFilter, setTaskAssigneeFilter] = useState("all");
+  const [taskSearch, setTaskSearch] = useState("");
 
   useEffect(() => {
     if (projectId) {
@@ -1088,14 +1097,84 @@ export default function ProjectDetail() {
         </TabsContent>
 
         <TabsContent value="tasks" className="space-y-3">
-          {/* Inline status strip */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
-            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> Todo <span className="text-gray-900 font-medium">{tasksByStatus.todo}</span></span>
-            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> In progress <span className="text-gray-900 font-medium">{tasksByStatus.in_progress}</span></span>
-            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Blocked <span className="text-gray-900 font-medium">{tasksByStatus.blocked}</span></span>
-            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-yellow-500" /> Review <span className="text-gray-900 font-medium">{tasksByStatus.review}</span></span>
-            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Completed <span className="text-gray-900 font-medium">{tasksByStatus.completed}</span></span>
-            <div className="flex-1" />
+          {/* Toolbar: status segments + search + filter + new task */}
+          <div className="flex flex-wrap items-center gap-2 text-[13px]">
+            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px]">
+              {[
+                { id: "active", label: "Active" },
+                { id: "all", label: "All" },
+                { id: "completed", label: "Done" },
+              ].map(s => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setTaskStatusFilter(s.id)}
+                  className={`px-2 py-0.5 rounded ${taskStatusFilter === s.id ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <div className="relative flex-1 max-w-xs min-w-0">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+              <Input
+                placeholder="Search tasks"
+                value={taskSearch}
+                onChange={(e) => setTaskSearch(e.target.value)}
+                className="pl-7 h-7 text-[13px] border-gray-200 focus-visible:ring-1"
+              />
+            </div>
+            {(() => {
+              const fc = (taskPriorityFilter !== "all" ? 1 : 0) + (taskAssigneeFilter !== "all" ? 1 : 0);
+              return (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="shrink-0 gap-1.5 h-7 text-[12px]">
+                      <Filter className="w-3 h-3" />
+                      Filter
+                      {fc > 0 && (
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-900 text-white text-[10px] font-semibold">{fc}</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-64 p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px] font-semibold">Filters</span>
+                      {fc > 0 && (
+                        <button type="button" className="text-[12px] text-gray-500 hover:text-gray-900" onClick={() => { setTaskPriorityFilter("all"); setTaskAssigneeFilter("all"); }}>
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-gray-500">Priority</label>
+                      <Select value={taskPriorityFilter} onValueChange={setTaskPriorityFilter}>
+                        <SelectTrigger className="h-7 text-[13px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="low">Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-gray-500">Assignee</label>
+                      <Select value={taskAssigneeFilter} onValueChange={setTaskAssigneeFilter}>
+                        <SelectTrigger className="h-7 text-[13px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          {teamMembers.filter(tm => tm.status === 'active').map(tm => (
+                            <SelectItem key={tm.id} value={tm.id}>{tm.full_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              );
+            })()}
             <Button
               size="sm"
               variant="ghost"
@@ -1106,12 +1185,24 @@ export default function ProjectDetail() {
             </Button>
           </div>
 
-          {/* Dense list */}
+          {/* Dense filtered list */}
           <div className="border-t border-gray-200">
-            {tasks.length === 0 ? (
-              <div className="py-10 text-center text-[13px] text-gray-500">No tasks yet</div>
-            ) : (
-              tasks.map(task => {
+            {(() => {
+              const filtered = tasks.filter(task => {
+                if (taskStatusFilter === "active" && task.status === "completed") return false;
+                if (taskStatusFilter === "completed" && task.status !== "completed") return false;
+                if (taskPriorityFilter !== "all" && task.priority !== taskPriorityFilter) return false;
+                if (taskAssigneeFilter !== "all" && task.assigned_to !== taskAssigneeFilter) return false;
+                if (taskSearch) {
+                  const q = taskSearch.toLowerCase();
+                  if (!task.title?.toLowerCase().includes(q) && !(task.description || "").toLowerCase().includes(q)) return false;
+                }
+                return true;
+              });
+              if (filtered.length === 0) {
+                return <div className="py-10 text-center text-[13px] text-gray-500">{tasks.length === 0 ? "No tasks yet" : "No matching tasks"}</div>;
+              }
+              return filtered.map(task => {
                 const statusDot =
                   task.status === 'completed' ? 'bg-green-500' :
                   task.status === 'in_progress' ? 'bg-blue-500' :
@@ -1142,8 +1233,8 @@ export default function ProjectDetail() {
                     </button>
                   </div>
                 );
-              })
-            )}
+              });
+            })()}
           </div>
         </TabsContent>
 
