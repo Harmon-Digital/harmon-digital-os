@@ -295,7 +295,19 @@ export default function Contacts() {
             </PopoverContent>
           </Popover>
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1.5">
+            {isAdmin && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open("/ClientPortalAdmin", "_self")}
+                className="h-7 px-2.5 text-[13px] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                title="Manage client portal access"
+              >
+                <UserPlus className="w-3.5 h-3.5 mr-1" />
+                Portal access
+              </Button>
+            )}
             <Button
               onClick={() => {
                 setEditingContact(null);
@@ -473,6 +485,7 @@ export default function Contacts() {
                 contact={editingContact}
                 accounts={accounts}
                 onSubmit={handleSubmit}
+                onContactUpdated={loadData}
                 onCancel={() => {
                   setShowDrawer(false);
                   setEditingContact(null);

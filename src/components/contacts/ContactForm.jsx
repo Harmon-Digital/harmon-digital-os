@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { api } from "@/api/legacyClient";
 import { linkStripeCustomer } from "@/api/functions";
+import { supabase } from "@/api/supabaseClient";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +35,10 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  UserPlus,
+  RefreshCw,
+  Ban,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 
@@ -59,8 +65,11 @@ const ROLES = [
   { id: "stakeholder", label: "Stakeholder" },
 ];
 
-export default function ContactForm({ contact, accounts = [], onSubmit, onCancel }) {
+export default function ContactForm({ contact, accounts = [], onSubmit, onCancel, onContactUpdated }) {
   const isEdit = !!contact?.id;
+  const { userProfile } = useAuth();
+  const isAdmin = userProfile?.role === "admin";
+
   const [formData, setFormData] = useState(
     contact || {
       first_name: "",
@@ -74,6 +83,69 @@ export default function ContactForm({ contact, accounts = [], onSubmit, onCancel
       notes: "",
     }
   );
+
+  // Portal access state (tracks the contact's current portal linkage)
+  const [portalState, setPortalState] = useState({
+    portal_user_id: contact?.portal_user_id || null,
+    portal_invited_at: contact?.portal_invited_at || null,
+    portal_last_login_at: contact?.portal_last_login_at || null,
+  });
+  const [portalBusy, setPortalBusy] = useState(false);
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
+
+  // Keep portalState in sync if a newer contact is passed in (e.g. after refresh)
+  useEffect(() => {
+    setPortalState({
+      portal_user_id: contact?.portal_user_id || null,
+      portal_invited_at: contact?.portal_invited_at || null,
+      portal_last_login_at: contact?.portal_last_login_at || null,
+    });
+  }, [contact?.id, contact?.portal_user_id, contact?.portal_invited_at, contact?.portal_last_login_at]);
+
+  const portalStatus = portalState.portal_user_id
+    ? (portalState.portal_last_login_at ? "active" : "invited")
+    : "none";
+
+  const invokePortal = async (action) => {
+    if (!contact?.id) {
+      toast.error("Save the contact first before inviting");
+      return;
+    }
+    setPortalBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("invite-client-portal", {
+        body: { contactId: contact.id, action },
+      });
+      if (error) throw error;
+      if (data?.error && !data?.alreadyInvited) throw new Error(data.error);
+
+      if (action === "invite") {
+        setPortalState({
+          portal_user_id: data.userId,
+          portal_invited_at: new Date().toISOString(),
+          portal_last_login_at: null,
+        });
+        toast.success(`Invite sent to ${contact.email}`);
+      } else if (action === "resend") {
+        setPortalState((prev) => ({ ...prev, portal_invited_at: new Date().toISOString() }));
+        toast.success("Invite re-sent");
+      } else if (action === "revoke") {
+        setPortalState({
+          portal_user_id: null,
+          portal_invited_at: null,
+          portal_last_login_at: null,
+        });
+        toast.success("Portal access revoked");
+      }
+      onContactUpdated?.();
+    } catch (err) {
+      console.error(`${action} failed:`, err);
+      toast.error(`${action} failed`, { description: err.message });
+    } finally {
+      setPortalBusy(false);
+      setConfirmRevoke(false);
+    }
+  };
 
   const [showStripe, setShowStripe] = useState(false);
   const [stripeAction, setStripeAction] = useState(null); // 'create' | 'search'
@@ -234,6 +306,20 @@ export default function ContactForm({ contact, accounts = [], onSubmit, onCancel
       `}</style>
 
       <form onSubmit={handleSubmit} className="contact-form space-y-4">
+        {/* Portal access banner — prominent for admins on existing contacts */}
+        {isEdit && isAdmin && (
+          <PortalBanner
+            status={portalStatus}
+            email={formData.email}
+            portalInvitedAt={portalState.portal_invited_at}
+            portalLastLoginAt={portalState.portal_last_login_at}
+            busy={portalBusy}
+            onInvite={() => invokePortal("invite")}
+            onResend={() => invokePortal("resend")}
+            onRevoke={() => setConfirmRevoke(true)}
+          />
+        )}
+
         {/* Name input as big title */}
         <div className="space-y-2">
           <div className="flex gap-2">
@@ -474,6 +560,151 @@ export default function ContactForm({ contact, accounts = [], onSubmit, onCancel
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Revoke portal access confirmation */}
+      <Dialog open={confirmRevoke} onOpenChange={setConfirmRevoke}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[15px]">Revoke portal access?</DialogTitle>
+            <DialogDescription className="text-[12px]">
+              This will delete the auth user for <strong>{formData.email}</strong> and remove their portal access immediately.
+              They can be re-invited later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setConfirmRevoke(false)} className="h-8 text-[13px]">
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => invokePortal("revoke")}
+              disabled={portalBusy}
+              className="h-8 text-[13px]"
+            >
+              {portalBusy ? "Revoking…" : "Revoke access"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* PortalBanner — prominent invite / status panel at the top of the form      */
+/* -------------------------------------------------------------------------- */
+function PortalBanner({ status, email, portalInvitedAt, portalLastLoginAt, busy, onInvite, onResend, onRevoke }) {
+  // Not invited yet → big call-to-action to invite
+  if (status === "none") {
+    return (
+      <div className="flex items-start gap-3 p-3 rounded-md border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50/60 dark:bg-indigo-900/20">
+        <div className="w-9 h-9 rounded-md bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
+          <UserPlus className="w-4 h-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[13px] font-medium text-gray-900 dark:text-gray-100">
+            Give this contact client portal access
+          </div>
+          <div className="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">
+            They'll get a magic link to sign in and see their projects, invoices, and approvals.
+          </div>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          onClick={onInvite}
+          disabled={busy || !email}
+          className="h-8 text-[13px] bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:hover:bg-white dark:text-gray-900 flex-shrink-0"
+        >
+          {busy ? (
+            <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Inviting…</>
+          ) : (
+            <><UserPlus className="w-3.5 h-3.5 mr-1.5" /> Invite to portal</>
+          )}
+        </Button>
+      </div>
+    );
+  }
+
+  // Invited but hasn't logged in
+  if (status === "invited") {
+    return (
+      <div className="flex items-start gap-3 p-3 rounded-md border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-900/20">
+        <div className="w-9 h-9 rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
+          <Mail className="w-4 h-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[13px] font-medium text-gray-900 dark:text-gray-100">
+            Invite pending
+          </div>
+          <div className="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">
+            {portalInvitedAt ? `Sent ${new Date(portalInvitedAt).toLocaleDateString()}` : "Invite sent"} · waiting for them to sign in
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onResend}
+            disabled={busy}
+            className="h-8 text-[12px]"
+          >
+            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><RefreshCw className="w-3 h-3 mr-1" /> Resend</>}
+          </Button>
+          <button
+            type="button"
+            onClick={onRevoke}
+            disabled={busy}
+            className="p-1.5 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
+            title="Revoke access"
+          >
+            <Ban className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Active client
+  return (
+    <div className="flex items-start gap-3 p-3 rounded-md border border-green-200 dark:border-green-800/50 bg-green-50/60 dark:bg-green-900/20">
+      <div className="w-9 h-9 rounded-md bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 flex items-center justify-center flex-shrink-0">
+        <ShieldCheck className="w-4 h-4" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] font-medium text-gray-900 dark:text-gray-100">
+          Active portal user
+        </div>
+        <div className="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">
+          {portalLastLoginAt
+            ? `Last signed in ${new Date(portalLastLoginAt).toLocaleDateString()}`
+            : "Has portal access"}
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={onResend}
+          disabled={busy}
+          className="h-8 text-[12px]"
+          title="Send a fresh magic link"
+        >
+          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><RefreshCw className="w-3 h-3 mr-1" /> Magic link</>}
+        </Button>
+        <button
+          type="button"
+          onClick={onRevoke}
+          disabled={busy}
+          className="p-1.5 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
+          title="Revoke access"
+        >
+          <Ban className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
   );
 }

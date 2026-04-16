@@ -1731,6 +1731,7 @@ export default function ProjectDetail() {
           contact={editingContact}
           accounts={[account].filter(Boolean)}
           onSubmit={handleContactSubmit}
+          onContactUpdated={loadProjectData}
           onCancel={() => {
             setShowContactDrawer(false);
             setEditingContact(null);
