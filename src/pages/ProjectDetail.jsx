@@ -1317,45 +1317,74 @@ export default function ProjectDetail() {
 
           <div className="border-t border-gray-200 dark:border-gray-800">
             {contacts.length === 0 ? (
-              <div className="py-10 text-center text-[13px] text-gray-500">No contacts</div>
+              <div className="py-10 text-center text-[13px] text-gray-500">
+                No contacts yet. Click "New contact" to add one.
+              </div>
             ) : (
               contacts.map(contact => {
                 const initials = `${contact.first_name?.[0] || ''}${contact.last_name?.[0] || ''}`.toUpperCase();
+                const roleColor =
+                  contact.role === 'primary' ? 'text-indigo-600 dark:text-indigo-400' :
+                  contact.role === 'billing' ? 'text-green-600 dark:text-green-400' :
+                  contact.role === 'technical' ? 'text-blue-600 dark:text-blue-400' :
+                  'text-gray-500 dark:text-gray-400';
                 return (
                   <div
                     key={contact.id}
-                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 cursor-pointer"
+                    onClick={() => { setEditingContact(contact); setShowContactDrawer(true); }}
                   >
-                    <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 dark:text-gray-300 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center text-[11px] font-medium flex-shrink-0">
                       {initials || '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13px] text-gray-900 dark:text-gray-100 truncate">
-                        {contact.first_name} {contact.last_name}
-                        {contact.title && <span className="text-gray-400 dark:text-gray-500 font-normal ml-1.5">· {contact.title}</span>}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium truncate">
+                          {contact.first_name} {contact.last_name}
+                        </span>
+                        {contact.portal_user_id && (
+                          <span
+                            title="Has client portal access"
+                            className="inline-flex items-center gap-0.5 text-[10px] text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded shrink-0"
+                          >
+                            <Check className="w-2.5 h-2.5" />
+                            Portal
+                          </span>
+                        )}
                       </div>
+                      {contact.title && (
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{contact.title}</div>
+                      )}
                     </div>
-                    <a href={`mailto:${contact.email}`} className="text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-52 truncate text-right" onClick={(e) => e.stopPropagation()}>
+                    <a
+                      href={`mailto:${contact.email}`}
+                      className="hidden md:inline text-[12px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 w-52 truncate text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {contact.email}
                     </a>
                     {contact.phone ? (
-                      <a href={`tel:${contact.phone}`} className="text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-28 text-right" onClick={(e) => e.stopPropagation()}>
+                      <a
+                        href={`tel:${contact.phone}`}
+                        className="hidden lg:inline text-[12px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 w-28 text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {contact.phone}
                       </a>
                     ) : (
-                      <span className="text-[12px] text-gray-300 dark:text-gray-600 w-28 text-right">—</span>
+                      <span className="hidden lg:inline text-[12px] text-gray-300 dark:text-gray-600 w-28 text-right">—</span>
                     )}
-                    <span className="text-[11px] capitalize text-gray-500 w-20 text-right">{contact.role || '—'}</span>
+                    <span className={`text-[11px] capitalize w-20 text-right ${roleColor}`}>
+                      {contact.role || '—'}
+                    </span>
                     <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
                       <button
-                        onClick={() => { setEditingContact(contact); setShowContactDrawer(true); }}
-                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirmDialog({ open: true, type: 'contact', id: contact.id })}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirmDialog({ open: true, type: 'contact', id: contact.id });
+                        }}
                         className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600"
+                        title="Delete contact"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

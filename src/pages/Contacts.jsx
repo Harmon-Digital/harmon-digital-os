@@ -452,14 +452,23 @@ export default function Contacts() {
         sheetClassName="w-full sm:max-w-2xl overflow-y-auto"
       >
         <Tabs defaultValue="details">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="details">Contact Details</TabsTrigger>
-              <TabsTrigger value="activities" disabled={!editingContact}>
-                Activities ({editingContact ? getContactActivities(editingContact.id).length : 0})
+            <TabsList className="h-9 bg-transparent p-0 border-b border-gray-200 dark:border-gray-800 rounded-none w-full justify-start gap-5 px-1">
+              <TabsTrigger
+                value="details"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900 dark:data-[state=active]:after:bg-gray-100"
+              >
+                Details
+              </TabsTrigger>
+              <TabsTrigger
+                value="activities"
+                disabled={!editingContact}
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900 dark:data-[state=active]:after:bg-gray-100 disabled:opacity-40"
+              >
+                Activities{editingContact ? ` · ${getContactActivities(editingContact.id).length}` : ""}
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="details" className="mt-6">
+            <TabsContent value="details" className="mt-5">
               <ContactForm
                 contact={editingContact}
                 accounts={accounts}
