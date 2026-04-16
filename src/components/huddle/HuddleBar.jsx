@@ -32,18 +32,40 @@ function VideoGrid({ room, participants }) {
         tile.className =
           "relative bg-gray-900 rounded-md overflow-hidden flex items-center justify-center min-h-[160px]";
 
-        // Try to attach video track first
-        const videoPub = p.getTrackPublication?.(Track.Source.Camera) ||
-          p.getTrackPublication?.(Track.Source.ScreenShare);
-        const videoTrack = videoPub?.track;
+        // Find video + mic publications by iterating all trackPublications
+        // (getTrackPublication(source) can be unreliable for local tracks).
+        const allPubs = p.trackPublications
+          ? Array.from(p.trackPublications.values())
+          : [];
+        let videoPub = null;
+        let micPub = null;
+        let isScreenShare = false;
+        for (const pub of allPubs) {
+          if (pub.kind === "video" && pub.track && !pub.isMuted) {
+            // Prefer screen share over camera if both exist
+            if (pub.source === Track.Source.ScreenShare) {
+              videoPub = pub;
+              isScreenShare = true;
+              break;
+            } else if (!videoPub) {
+              videoPub = pub;
+            }
+          } else if (pub.kind === "audio" && pub.source === Track.Source.Microphone) {
+            micPub = pub;
+          }
+        }
 
-        if (videoTrack && !videoPub.isMuted) {
-          const el = videoTrack.attach();
-          el.className = "w-full h-full object-cover";
-          el.style.transform = p.isLocal && videoPub?.source === Track.Source.Camera ? "scaleX(-1)" : "";
+        if (videoPub?.track) {
+          const el = videoPub.track.attach();
+          el.className = "w-full h-full object-cover bg-gray-900";
+          el.autoplay = true;
+          el.playsInline = true;
+          el.muted = p.isLocal; // local video must be muted to avoid echo
+          // Mirror self-view camera (not screen share)
+          if (p.isLocal && !isScreenShare) el.style.transform = "scaleX(-1)";
           tile.appendChild(el);
         } else {
-          // Avatar fallback
+          // Avatar fallback when no video
           const av = document.createElement("div");
           av.className =
             "w-16 h-16 rounded-full bg-gray-700 text-white text-xl font-medium flex items-center justify-center";
@@ -58,8 +80,7 @@ function VideoGrid({ room, participants }) {
         label.textContent = (p.name || p.identity || "User") + (p.isLocal ? " (You)" : "");
         tile.appendChild(label);
 
-        // Mic indicator
-        const micPub = p.getTrackPublication?.(Track.Source.Microphone);
+        // Mic-off badge
         if (!micPub || micPub.isMuted) {
           const micIcon = document.createElement("div");
           micIcon.className =
@@ -69,7 +90,7 @@ function VideoGrid({ room, participants }) {
           tile.appendChild(micIcon);
         }
 
-        // Audio attach (always, for remote participants)
+        // Audio attach (remote participants only, to avoid echo from self)
         if (!p.isLocal && micPub?.track) {
           const audioEl = micPub.track.attach();
           audioEl.style.display = "none";
@@ -92,6 +113,8 @@ function VideoGrid({ room, participants }) {
     room.on("participantDisconnected", handler);
     room.on("localTrackPublished", handler);
     room.on("localTrackUnpublished", handler);
+    room.on("trackPublished", handler);
+    room.on("trackUnpublished", handler);
 
     return () => {
       room.off("trackSubscribed", handler);
@@ -102,6 +125,8 @@ function VideoGrid({ room, participants }) {
       room.off("participantDisconnected", handler);
       room.off("localTrackPublished", handler);
       room.off("localTrackUnpublished", handler);
+      room.off("trackPublished", handler);
+      room.off("trackUnpublished", handler);
       try {
         if (container) container.innerHTML = "";
       } catch {}
@@ -181,14 +206,52 @@ export default function HuddleBar() {
           <VideoGrid room={room} participants={participants} />
 
           {/* Controls */}
-          <div className="flex items-center justify-center gap-2 p-4 border-t border-gray-800">
-            <ControlButton onClick={toggleAudio} active={audioOn} icon={audioOn ? Mic : MicOff} label={audioOn ? "Mute" : "Unmute"} />
-            <ControlButton onClick={toggleVideo} active={videoOn} icon={videoOn ? Video : VideoOff} label={videoOn ? "Camera off" : "Camera on"} />
-            <ControlButton onClick={toggleScreenShare} active={screenShareOn} icon={screenShareOn ? MonitorOff : Monitor} label={screenShareOn ? "Stop sharing" : "Share screen"} />
+          <div className="flex items-center justify-center gap-2 p-3 border-t border-gray-800">
+            {/* Mic: red when muted, neutral when on */}
+            <button
+              type="button"
+              onClick={toggleAudio}
+              className={`inline-flex items-center justify-center w-11 h-11 rounded-full transition-colors ${
+                audioOn ? "bg-gray-800 text-white hover:bg-gray-700" : "bg-red-600 text-white hover:bg-red-700"
+              }`}
+              title={audioOn ? "Mute microphone" : "Unmute microphone"}
+            >
+              {audioOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+            </button>
+
+            {/* Camera: red when off, blue when on */}
+            <button
+              type="button"
+              onClick={toggleVideo}
+              className={`inline-flex items-center justify-center w-11 h-11 rounded-full transition-colors ${
+                videoOn ? "bg-gray-800 text-white hover:bg-gray-700" : "bg-red-600 text-white hover:bg-red-700"
+              }`}
+              title={videoOn ? "Turn camera off" : "Turn camera on"}
+            >
+              {videoOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+            </button>
+
+            {/* Screen share: blue when active, neutral when off */}
+            <button
+              type="button"
+              onClick={toggleScreenShare}
+              className={`inline-flex items-center justify-center w-11 h-11 rounded-full transition-colors ${
+                screenShareOn ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-800 text-white hover:bg-gray-700"
+              }`}
+              title={screenShareOn ? "Stop sharing screen" : "Share screen"}
+            >
+              {screenShareOn ? <MonitorOff className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
+            </button>
+
+            {/* Divider */}
+            <div className="w-px h-6 bg-gray-800 mx-1" />
+
+            {/* Leave: red pill with label */}
             <button
               type="button"
               onClick={leave}
-              className="ml-2 inline-flex items-center gap-1.5 px-4 h-9 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700"
+              className="inline-flex items-center gap-2 px-4 h-11 rounded-full bg-red-600 text-white text-[13px] font-medium hover:bg-red-700"
+              title="Leave huddle"
             >
               <PhoneOff className="w-4 h-4" />
               Leave
@@ -290,18 +353,3 @@ export default function HuddleBar() {
   );
 }
 
-function ControlButton({ onClick, active, icon: Icon, label }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex flex-col items-center gap-0.5 px-3 h-12 rounded-md text-[11px] transition-colors ${
-        active ? "bg-gray-800 text-white hover:bg-gray-700" : "bg-red-600 text-white hover:bg-red-700"
-      }`}
-      title={label}
-    >
-      <Icon className="w-4 h-4" />
-      <span>{label.split(" ")[0]}</span>
-    </button>
-  );
-}
