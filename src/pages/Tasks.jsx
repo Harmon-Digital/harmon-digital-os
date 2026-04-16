@@ -50,6 +50,16 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import TaskForm from "../components/tasks/TaskForm";
 import TaskComments from "../components/tasks/TaskComments";
@@ -337,21 +347,46 @@ export default function Tasks() {
     }
   };
 
-  const handleBulkStatusChange = async (newStatus) => {
+  const handleBulkStatusChange = async (newStatus, idsOverride) => {
+    const ids = idsOverride || selectedTasks;
+    if (!ids.length) return;
     try {
       await Promise.all(
-        selectedTasks.map(taskId => {
+        ids.map(taskId => {
           const task = tasks.find(t => t.id === taskId);
+          if (!task) return Promise.resolve();
           return Task.update(taskId, { ...task, status: newStatus });
         })
       );
-      setSelectedTasks([]);
-      
-      setTasks(prevTasks => 
-        prevTasks.map(t => selectedTasks.includes(t.id) ? { ...t, status: newStatus } : t)
+      if (!idsOverride) setSelectedTasks([]);
+
+      setTasks(prevTasks =>
+        prevTasks.map(t => ids.includes(t.id) ? { ...t, status: newStatus } : t)
       );
+      toast.success(`${ids.length} task${ids.length === 1 ? "" : "s"} updated`);
     } catch (error) {
       console.error("Error updating tasks:", error);
+    }
+  };
+
+  const handleBulkPriorityChange = async (newPriority, idsOverride) => {
+    const ids = idsOverride || selectedTasks;
+    if (!ids.length) return;
+    try {
+      await Promise.all(
+        ids.map(taskId => {
+          const task = tasks.find(t => t.id === taskId);
+          if (!task) return Promise.resolve();
+          return Task.update(taskId, { ...task, priority: newPriority });
+        })
+      );
+      if (!idsOverride) setSelectedTasks([]);
+      setTasks(prevTasks =>
+        prevTasks.map(t => ids.includes(t.id) ? { ...t, priority: newPriority } : t)
+      );
+      toast.success(`${ids.length} task${ids.length === 1 ? "" : "s"} updated`);
+    } catch (error) {
+      console.error("Error updating priority:", error);
     }
   };
 
@@ -843,6 +878,9 @@ export default function Tasks() {
             onOpenTask={handleOpenDrawer}
             onQuickUpdate={handleQuickUpdate}
             onDelete={(taskId) => setDeleteConfirmDialog({ open: true, taskIds: [taskId] })}
+            onBulkStatusChange={(status, ids) => handleBulkStatusChange(status, ids)}
+            onBulkPriority={(priority, ids) => handleBulkPriorityChange(priority, ids)}
+            onBulkDelete={(ids) => setDeleteConfirmDialog({ open: true, taskIds: ids })}
           />
         )}
       </div>
@@ -1072,10 +1110,15 @@ function TaskRow({
   teamMembersMap,
   projectsMap,
   selected,
+  selectedIds = [],
   onToggleSelect,
   onOpenTask,
   onQuickUpdate,
   onDelete,
+  onBulkStatusChange,
+  onBulkDelete,
+  onBulkAssign,
+  onBulkPriority,
 }) {
   const assignee = task.assigned_to ? teamMembersMap[task.assigned_to] : null;
   const project = task.project_id ? projectsMap[task.project_id] : null;
@@ -1083,7 +1126,13 @@ function TaskRow({
   const checklist = Array.isArray(task.checklist) ? task.checklist : [];
   const doneCount = checklist.filter((i) => i.done).length;
 
-  return (
+  // Decide the target: if the right-clicked task is part of a multi-select,
+  // actions operate on the whole selection. Otherwise just this task.
+  const multi = selected && selectedIds.length > 1;
+  const targetIds = multi ? selectedIds : [task.id];
+  const targetLabel = multi ? `${selectedIds.length} tasks` : "task";
+
+  const rowContent = (
     <div
       className={`group flex items-center gap-2 pl-3 pr-2 h-9 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
         selected ? "bg-indigo-50/40" : ""
@@ -1188,6 +1237,108 @@ function TaskRow({
       </button>
     </div>
   );
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{rowContent}</ContextMenuTrigger>
+      <ContextMenuContent className="w-56">
+        <ContextMenuItem onClick={() => onOpenTask(task)} className="text-[13px]">
+          Open
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuSub>
+          <ContextMenuSubTrigger className="text-[13px]">
+            Change status{multi ? ` · ${targetLabel}` : ""}
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            {[
+              { id: "todo", label: "Todo" },
+              { id: "in_progress", label: "In progress" },
+              { id: "blocked", label: "Blocked" },
+              { id: "review", label: "Review" },
+              { id: "completed", label: "Completed" },
+            ].map((s) => (
+              <ContextMenuItem
+                key={s.id}
+                onClick={() => {
+                  if (multi) onBulkStatusChange?.(s.id, targetIds);
+                  else onQuickUpdate(task.id, "status", s.id);
+                }}
+                className="text-[13px]"
+              >
+                {s.label}
+              </ContextMenuItem>
+            ))}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuSub>
+          <ContextMenuSubTrigger className="text-[13px]">
+            Change priority{multi ? ` · ${targetLabel}` : ""}
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            {[
+              { id: "urgent", label: "Urgent" },
+              { id: "high", label: "High" },
+              { id: "medium", label: "Medium" },
+              { id: "low", label: "Low" },
+            ].map((p) => (
+              <ContextMenuItem
+                key={p.id}
+                onClick={() => {
+                  if (multi) onBulkPriority?.(p.id, targetIds);
+                  else onQuickUpdate(task.id, "priority", p.id);
+                }}
+                className="text-[13px]"
+              >
+                {p.label}
+              </ContextMenuItem>
+            ))}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        {!multi && (
+          <ContextMenuSub>
+            <ContextMenuSubTrigger className="text-[13px]">Assign to</ContextMenuSubTrigger>
+            <ContextMenuSubContent>
+              <ContextMenuItem
+                onClick={() => onQuickUpdate(task.id, "assigned_to", null)}
+                className="text-[13px]"
+              >
+                Unassigned
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              {teamMembers.filter((tm) => tm.status === "active").map((tm) => (
+                <ContextMenuItem
+                  key={tm.id}
+                  onClick={() => onQuickUpdate(task.id, "assigned_to", tm.id)}
+                  className="text-[13px]"
+                >
+                  {tm.full_name}
+                </ContextMenuItem>
+              ))}
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+        )}
+        <ContextMenuSeparator />
+        {task.ticket_number && (
+          <ContextMenuItem
+            onClick={() => navigator.clipboard?.writeText(`#${task.ticket_number}`)}
+            className="text-[13px]"
+          >
+            Copy ticket #{task.ticket_number}
+          </ContextMenuItem>
+        )}
+        <ContextMenuItem
+          onClick={() => {
+            if (multi) onBulkDelete?.(targetIds);
+            else onDelete(task.id);
+          }}
+          className="text-[13px] text-red-600 focus:text-red-700 focus:bg-red-50 dark:focus:bg-red-950/40"
+        >
+          Delete {multi ? `${targetLabel}` : "task"}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  );
 }
 
 function LinearTaskList({
@@ -1205,6 +1356,9 @@ function LinearTaskList({
   onOpenTask,
   onQuickUpdate,
   onDelete,
+  onBulkStatusChange,
+  onBulkPriority,
+  onBulkDelete,
 }) {
   const [collapsed, setCollapsed] = React.useState(() => new Set());
   const toggleGroup = (id) =>
@@ -1286,10 +1440,14 @@ function LinearTaskList({
                     teamMembersMap={teamMembersMap}
                     projectsMap={projectsMap}
                     selected={selectedTasks.includes(task.id)}
+                    selectedIds={selectedTasks}
                     onToggleSelect={onToggleSelect}
                     onOpenTask={onOpenTask}
                     onQuickUpdate={onQuickUpdate}
                     onDelete={onDelete}
+                    onBulkStatusChange={onBulkStatusChange}
+                    onBulkPriority={onBulkPriority}
+                    onBulkDelete={onBulkDelete}
                   />
                 ))
               ))}
