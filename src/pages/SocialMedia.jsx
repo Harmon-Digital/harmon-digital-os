@@ -6,7 +6,8 @@ import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Trash2, ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon, Check, Filter, List, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Search, Trash2, ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon, Check, Filter, List, Calendar as CalendarIcon, Kanban } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PostStatusIcon, PostStatusPicker, PlatformChip, STATUS_LIST as POST_STATUS_LIST } from "../components/social/PostIcons";
@@ -390,6 +391,14 @@ export default function SocialMedia() {
               </button>
               <button
                 type="button"
+                onClick={() => setViewMode("board")}
+                className={`p-1 rounded ${viewMode === "board" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                title="Board"
+              >
+                <Kanban className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
                 onClick={() => setViewMode("calendar")}
                 className={`p-1 rounded ${viewMode === "calendar" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                 title="Calendar"
@@ -425,6 +434,14 @@ export default function SocialMedia() {
           onStatusChange={handleStatusChange}
           onEdit={handleEdit}
           onDelete={(id) => setDeleteDialog({ open: true, postId: id })}
+        />
+      ) : viewMode === "board" ? (
+        <BoardView
+          posts={filteredPosts}
+          accountsMap={accountsMap}
+          onStatusChange={handleStatusChange}
+          onEdit={handleEdit}
+          onApprovalToggle={handleApprovalToggle}
         />
       ) : (
         <div className="p-4 lg:p-6">
@@ -550,6 +567,141 @@ export default function SocialMedia() {
       </Dialog>
 
     </div>
+  );
+}
+
+/* ---------- Kanban board view ---------- */
+
+const BOARD_COLUMNS = [
+  { id: "draft", label: "Draft", dot: "bg-gray-400" },
+  { id: "scheduled", label: "Scheduled", dot: "bg-blue-500" },
+  { id: "published", label: "Published", dot: "bg-green-500" },
+];
+
+function BoardView({ posts, accountsMap, onStatusChange, onEdit, onApprovalToggle }) {
+  const grouped = React.useMemo(() => {
+    const m = { draft: [], scheduled: [], published: [] };
+    for (const p of posts) {
+      const k = p.status in m ? p.status : "draft";
+      m[k].push(p);
+    }
+    // Sort scheduled by date asc, others by created_at desc
+    for (const k of Object.keys(m)) {
+      m[k].sort((a, b) => {
+        if (k === "scheduled") {
+          return (a.scheduled_date || "").localeCompare(b.scheduled_date || "");
+        }
+        return (b.created_at || "").localeCompare(a.created_at || "");
+      });
+    }
+    return m;
+  }, [posts]);
+
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+    const newStatus = result.destination.droppableId;
+    const sourceStatus = result.source.droppableId;
+    if (newStatus === sourceStatus) return;
+    onStatusChange(result.draggableId, newStatus);
+  };
+
+  return (
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <div className="h-full overflow-x-auto">
+        <div className="inline-flex h-full gap-3 px-4 py-3 min-w-full">
+          {BOARD_COLUMNS.map((col) => {
+            const columnPosts = grouped[col.id] || [];
+            return (
+              <div key={col.id} className="flex-shrink-0 w-72 flex flex-col">
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <span className={`w-2 h-2 rounded-full ${col.dot}`} />
+                  <span className="text-[12px] font-medium text-gray-700 dark:text-gray-300">{col.label}</span>
+                  <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{columnPosts.length}</span>
+                </div>
+                <Droppable droppableId={col.id}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`flex-1 rounded-md transition-colors ${
+                        snapshot.isDraggingOver ? "bg-gray-100 dark:bg-gray-800" : "bg-gray-50/50 dark:bg-gray-900/50"
+                      } p-1.5 overflow-y-auto`}
+                    >
+                      <div className="space-y-1.5">
+                        {columnPosts.map((post, index) => {
+                          const scheduled = formatScheduledDate(post.scheduled_date);
+                          const account = post.client_id ? accountsMap[post.client_id] : null;
+                          return (
+                            <Draggable key={post.id} draggableId={post.id} index={index}>
+                              {(prov, snap) => (
+                                <div
+                                  ref={prov.innerRef}
+                                  {...prov.draggableProps}
+                                  {...prov.dragHandleProps}
+                                  className={`bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md p-2.5 cursor-pointer hover:border-gray-300 dark:hover:border-gray-700 transition-all ${
+                                    snap.isDragging ? "shadow-lg ring-1 ring-gray-300 dark:ring-gray-700" : ""
+                                  }`}
+                                  onClick={() => onEdit(post)}
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-[13px] text-gray-900 dark:text-gray-100 font-medium line-clamp-2">
+                                        {post.title || "Untitled post"}
+                                      </div>
+                                    </div>
+                                    {post.approved && (
+                                      <span title="Approved" className="shrink-0 inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400">
+                                        <Check className="w-2.5 h-2.5" />
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {post.platforms?.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1.5">
+                                      {post.platforms.map((p) => (
+                                        <PlatformChip key={p} platform={p} />
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {(scheduled || account) && (
+                                    <div className="flex items-center gap-2 mt-1.5 text-[11px] text-gray-500 dark:text-gray-500">
+                                      {scheduled && (
+                                        <span className={scheduled.late ? "text-red-600" : ""}>{scheduled.label}</span>
+                                      )}
+                                      {scheduled && account && <span className="text-gray-300 dark:text-gray-600">·</span>}
+                                      {account && (
+                                        <span className="truncate">{account.company_name}</span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {post.body && (
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-1.5 line-clamp-2">
+                                      {post.body}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </Draggable>
+                          );
+                        })}
+                        {provided.placeholder}
+                        {columnPosts.length === 0 && (
+                          <div className="text-center py-6 text-[12px] text-gray-400 dark:text-gray-500">
+                            No posts
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </DragDropContext>
   );
 }
 
