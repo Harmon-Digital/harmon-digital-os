@@ -35,7 +35,10 @@ import {
   FileText,
   Image as ImageIcon,
   Download,
+  Headphones,
+  PhoneCall,
 } from "lucide-react";
+import { useHuddle } from "@/contexts/HuddleContext";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 
@@ -122,6 +125,8 @@ export default function Channels() {
   const [showCreate, setShowCreate] = useState(false);
   const [showNewDm, setShowNewDm] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const huddle = useHuddle();
+  const [activeHuddles, setActiveHuddles] = useState(new Map()); // channelId -> { id, room_name, participant_count, started_by }
   const [authorMap, setAuthorMap] = useState({});
   const [avatarMap, setAvatarMap] = useState({}); // user_id -> image url
   const [teamMembers, setTeamMembers] = useState([]);
@@ -281,6 +286,42 @@ export default function Channels() {
       setSearchParams(next, { replace: true });
     }
   }, [searchParams, channels, setSearchParams]);
+
+  // Load active huddles + subscribe to changes
+  useEffect(() => {
+    if (!user?.id) return;
+    const load = async () => {
+      const { data } = await supabase
+        .from("huddles")
+        .select("id, channel_id, room_name, participant_count, started_by")
+        .is("ended_at", null);
+      const map = new Map();
+      for (const h of data || []) map.set(h.channel_id, h);
+      setActiveHuddles(map);
+    };
+    load();
+
+    const ch = supabase
+      .channel("huddles-global")
+      .on("postgres_changes", { event: "*", schema: "public", table: "huddles" }, (payload) => {
+        setActiveHuddles((prev) => {
+          const next = new Map(prev);
+          const row = payload.new || payload.old;
+          if (!row) return next;
+          if (payload.eventType === "DELETE" || (payload.new && payload.new.ended_at)) {
+            next.delete(row.channel_id);
+          } else {
+            next.set(row.channel_id, payload.new);
+          }
+          return next;
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [user?.id]);
 
   // Mark channel as read (optimistic + upsert)
   const markRead = useCallback(
@@ -993,6 +1034,12 @@ export default function Channels() {
                   >
                     <Hash className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" />
                     <span className="truncate flex-1">{c.name}</span>
+                    {activeHuddles.has(c.id) && (
+                      <span title="Active huddle" className="relative flex items-center justify-center w-2 h-2 mr-1">
+                        <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-50" />
+                        <span className="w-2 h-2 rounded-full bg-green-500" />
+                      </span>
+                    )}
                     {hasUnread && (
                       <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold">
                         {count > 99 ? "99+" : count}
@@ -1146,16 +1193,77 @@ export default function Channels() {
               {!selectedChannel.is_dm && selectedChannel.description && (
                 <p className="text-xs text-gray-500 mt-0.5 ml-6">{selectedChannel.description}</p>
               )}
-              {messages.some((m) => m.is_pinned) && (
-                <button
-                  type="button"
-                  onClick={() => setShowPinned((s) => !s)}
-                  className="absolute right-5 top-3 inline-flex items-center gap-1 text-xs text-amber-700 hover:text-amber-800 px-2 py-1 rounded hover:bg-amber-50"
-                >
-                  <Pin className="w-3.5 h-3.5" />
-                  <span>{messages.filter((m) => m.is_pinned).length} pinned</span>
-                </button>
-              )}
+              {/* Right-side actions: huddle + pinned */}
+              <div className="absolute right-5 top-3 flex items-center gap-2">
+                {(() => {
+                  const channelHuddle = activeHuddles.get(selectedChannel.id);
+                  const inThisHuddle = huddle.activeHuddle?.channelId === selectedChannel.id;
+                  if (channelHuddle && !inThisHuddle) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          huddle.join({
+                            channelId: selectedChannel.id,
+                            channelName: selectedChannel.is_dm
+                              ? displayNameForChannel(selectedChannel)
+                              : `#${selectedChannel.name}`,
+                            roomName: channelHuddle.room_name,
+                          })
+                        }
+                        disabled={huddle.connecting || !!huddle.activeHuddle}
+                        className="inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 h-7 rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                        title={huddle.activeHuddle ? "Leave current huddle first" : "Join huddle"}
+                      >
+                        <span className="relative flex items-center justify-center w-2 h-2">
+                          <span className="absolute inset-0 rounded-full bg-green-300 animate-ping" />
+                          <span className="w-2 h-2 rounded-full bg-white" />
+                        </span>
+                        Join huddle · {channelHuddle.participant_count || 0}
+                      </button>
+                    );
+                  }
+                  if (inThisHuddle) {
+                    return (
+                      <span className="inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 h-7 rounded-md bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                        <Headphones className="w-3.5 h-3.5" />
+                        In huddle
+                      </span>
+                    );
+                  }
+                  return (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        huddle.join({
+                          channelId: selectedChannel.id,
+                          channelName: selectedChannel.is_dm
+                            ? displayNameForChannel(selectedChannel)
+                            : `#${selectedChannel.name}`,
+                          roomName: `huddle-${selectedChannel.id}`,
+                          asStarter: true,
+                        })
+                      }
+                      disabled={huddle.connecting || !!huddle.activeHuddle}
+                      className="inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 h-7 rounded-md border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 disabled:opacity-50"
+                      title={huddle.activeHuddle ? "Leave current huddle first" : "Start a huddle"}
+                    >
+                      <Headphones className="w-3.5 h-3.5" />
+                      Huddle
+                    </button>
+                  );
+                })()}
+                {messages.some((m) => m.is_pinned) && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPinned((s) => !s)}
+                    className="inline-flex items-center gap-1 text-xs text-amber-700 hover:text-amber-800 px-2 py-1 rounded hover:bg-amber-50 dark:hover:bg-amber-900/30"
+                  >
+                    <Pin className="w-3.5 h-3.5" />
+                    <span>{messages.filter((m) => m.is_pinned).length} pinned</span>
+                  </button>
+                )}
+              </div>
             </header>
             {showPinned && messages.some((m) => m.is_pinned) && (
               <div className="border-b border-amber-200 bg-amber-50/60 px-5 py-2 space-y-1 max-h-40 overflow-y-auto">

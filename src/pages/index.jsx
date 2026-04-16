@@ -1,5 +1,8 @@
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { HuddleProvider } from '@/contexts/HuddleContext';
+import HuddleBar from '@/components/huddle/HuddleBar';
+import QuickChat from '@/components/chat/QuickChat';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import PartnerProtectedRoute from '@/components/PartnerProtectedRoute';
 import Layout from "./Layout.jsx";
@@ -374,7 +377,11 @@ export default function Pages() {
   return (
     <Router>
       <AuthProvider>
-        <PagesContent />
+        <HuddleProvider>
+          <PagesContent />
+          <HuddleBar />
+          <QuickChat />
+        </HuddleProvider>
       </AuthProvider>
     </Router>
   );
