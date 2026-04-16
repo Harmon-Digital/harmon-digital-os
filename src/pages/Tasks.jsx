@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Task, Project, Account, TeamMember, TaskAttachment } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
 import { parseLocalDate } from "@/utils";
@@ -72,6 +73,7 @@ export default function Tasks() {
   const [currentTeamMember, setCurrentTeamMember] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [taskViewMode, setTaskViewMode] = useState(() => {
     if (typeof window === "undefined") return "sidebar";
     return window.localStorage.getItem("hdo.taskViewMode") || "sidebar";
@@ -154,6 +156,28 @@ export default function Tasks() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Handle ?new=1 and ?taskId=X from command palette
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setEditingTask(null);
+      setShowDrawer(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("new");
+      setSearchParams(next, { replace: true });
+    }
+    const taskId = searchParams.get("taskId");
+    if (taskId && tasks.length > 0) {
+      const found = tasks.find((t) => t.id === taskId);
+      if (found) {
+        setEditingTask(found);
+        setShowDrawer(true);
+        const next = new URLSearchParams(searchParams);
+        next.delete("taskId");
+        setSearchParams(next, { replace: true });
+      }
+    }
+  }, [searchParams, tasks, setSearchParams]);
 
   const handleSubmit = async (taskData, pendingFiles = []) => {
     const isNewTask = !editingTask;

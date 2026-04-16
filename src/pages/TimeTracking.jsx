@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { TimeEntry, Project, Task, TeamMember } from "@/api/entities";
 import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,6 +50,7 @@ export default function TimeTracking() {
   const [tasks, setTasks] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [showDrawer, setShowDrawer] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [editingEntry, setEditingEntry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentTeamMember, setCurrentTeamMember] = useState(null);
@@ -72,6 +74,17 @@ export default function TimeTracking() {
   useEffect(() => {
     setDateRangePreset("week");
   }, []);
+
+  // Handle ?new=1 from command palette
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setEditingEntry(null);
+      setShowDrawer(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("new");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const setDateRangePreset = (preset) => {
     const today = new Date();

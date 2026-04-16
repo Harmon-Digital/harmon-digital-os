@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { ChatChannel, ChatMessage, ChatMessageReaction, TeamMember } from "@/api/entities";
 import { useAuth } from "@/contexts/AuthContext";
@@ -120,6 +121,7 @@ export default function Channels() {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [showNewDm, setShowNewDm] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [authorMap, setAuthorMap] = useState({});
   const [avatarMap, setAvatarMap] = useState({}); // user_id -> image url
   const [teamMembers, setTeamMembers] = useState([]);
@@ -256,6 +258,29 @@ export default function Channels() {
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  // Handle ?new=1 (new channel), ?dm=1 (new DM), ?channelId=X from command palette
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setShowCreate(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("new");
+      setSearchParams(next, { replace: true });
+    }
+    if (searchParams.get("dm") === "1") {
+      setShowNewDm(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("dm");
+      setSearchParams(next, { replace: true });
+    }
+    const cid = searchParams.get("channelId");
+    if (cid && channels.some((c) => c.id === cid)) {
+      setSelectedChannelId(cid);
+      const next = new URLSearchParams(searchParams);
+      next.delete("channelId");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, channels, setSearchParams]);
 
   // Mark channel as read (optimistic + upsert)
   const markRead = useCallback(

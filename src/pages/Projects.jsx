@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Project, Account } from "@/api/entities";
 import { sendNotification } from "@/api/functions";
 import { supabase } from "@/api/supabaseClient";
@@ -72,10 +72,22 @@ export default function Projects() {
   const [accountFilter, setAccountFilter] = useState("all");
 
   const [deleteDialog, setDeleteDialog] = useState({ open: false, projectId: null });
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Handle ?new=1 from command palette
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setEditingProject(null);
+      setShowDrawer(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("new");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const loadData = async () => {
     setLoading(true);
