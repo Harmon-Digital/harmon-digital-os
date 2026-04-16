@@ -733,7 +733,12 @@ function PostRow({ post, accountsMap, onApprovalToggle, onStatusChange, onEdit, 
       className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60"
       onClick={() => onEdit(post)}
     >
-      <div className="flex items-center justify-center w-5 shrink-0" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex items-center justify-center w-5 shrink-0 opacity-0 group-hover:opacity-100 data-[checked=true]:opacity-100 transition-opacity"
+        data-checked={post.approved || false}
+        onClick={(e) => e.stopPropagation()}
+        title={post.approved ? "Approved" : "Approve"}
+      >
         <Checkbox
           checked={post.approved || false}
           onCheckedChange={() => onApprovalToggle(post.id, post.approved)}
