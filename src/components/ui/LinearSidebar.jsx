@@ -35,7 +35,11 @@ import {
   X,
   Sparkles,
   PanelLeft,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -355,6 +359,7 @@ function NavGroup({ group, currentPath, onNavigate, collapsed, isOpen, onToggle,
 }
 
 function BottomBar({ user, onLogout, onSettings, onChatToggle, chatOpen, collapsed }) {
+  const { theme, setTheme } = useTheme();
   const initials = (user?.full_name || "U")
     .split(" ")
     .map((p) => p[0])
@@ -387,6 +392,30 @@ function BottomBar({ user, onLogout, onSettings, onChatToggle, chatOpen, collaps
             <Settings className="w-4 h-4 mr-2" />
             Settings
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <div className="px-2 py-1.5">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-1.5">Theme</div>
+            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-700 p-0.5">
+              {[
+                { id: "light", icon: Sun, label: "Light" },
+                { id: "dark", icon: Moon, label: "Dark" },
+                { id: "system", icon: Monitor, label: "Auto" },
+              ].map(({ id, icon: Icon, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTheme(id)}
+                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded text-[11px] ${
+                    theme === id ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900" : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  }`}
+                  title={label}
+                >
+                  <Icon className="w-3 h-3" />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onLogout} className="cursor-pointer text-red-600 focus:text-red-600">
             <LogOut className="w-4 h-4 mr-2" />
@@ -680,7 +709,7 @@ export function LinearSidebar({ children }) {
           />
         </aside>
 
-        <main className="flex-1 overflow-auto min-w-0 bg-white">{children}</main>
+        <main className="flex-1 overflow-auto min-w-0 bg-white dark:bg-gray-950">{children}</main>
 
         {chatOpen && (
           <div className="fixed inset-0 z-40 flex flex-col bg-white">
@@ -731,7 +760,7 @@ export function LinearSidebar({ children }) {
           projectItems={projectItems}
         />
       </aside>
-      <main className="flex-1 overflow-auto min-w-0 bg-white">{children}</main>
+      <main className="flex-1 overflow-auto min-w-0 bg-white dark:bg-gray-950">{children}</main>
       <AgentChatPanel
         isOpen={chatOpen}
         onClose={() => setChatOpen(false)}
