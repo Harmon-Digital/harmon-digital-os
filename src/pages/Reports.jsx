@@ -238,7 +238,7 @@ export default function Reports() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-[15px] font-semibold text-gray-900 mb-1">Admin access required</h2>
+          <h2 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100 mb-1">Admin access required</h2>
           <p className="text-[13px] text-gray-500">You need administrator privileges to view reports.</p>
         </div>
       </div>
@@ -249,18 +249,18 @@ export default function Reports() {
   const unpaidCount = timeEntries.filter(e => !e.contractor_paid).length;
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Top header */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
-          <h1 className="text-[15px] font-semibold text-gray-900">Reports</h1>
+          <h1 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Reports</h1>
 
-          <div className="ml-3 flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px]">
+          <div className="ml-3 flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5 text-[12px]">
             <button
               type="button"
               onClick={() => setTab("time")}
               className={`px-2.5 py-1 rounded flex items-center gap-1.5 ${
-                tab === "time" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+                tab === "time" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
               <Clock className="w-3 h-3" />
@@ -270,7 +270,7 @@ export default function Reports() {
               type="button"
               onClick={() => setTab("bonuses")}
               className={`px-2.5 py-1 rounded flex items-center gap-1.5 ${
-                tab === "bonuses" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+                tab === "bonuses" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
               <Trophy className="w-3 h-3" />
@@ -289,14 +289,14 @@ export default function Reports() {
       {tab === "time" && (
         <>
           {/* Sub-toolbar */}
-          <div className="border-b border-gray-200 bg-white">
+          <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
             <div className="flex items-center gap-2 px-4 h-12">
-              <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px]">
+              <div className="flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5 text-[12px]">
                 <button
                   type="button"
                   onClick={() => setView("unbilled")}
                   className={`px-2.5 py-1 rounded ${
-                    view === "unbilled" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+                    view === "unbilled" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                   }`}
                 >
                   Unbilled <span className="opacity-60">({unbilledCount})</span>
@@ -305,7 +305,7 @@ export default function Reports() {
                   type="button"
                   onClick={() => setView("unpaid")}
                   className={`px-2.5 py-1 rounded ${
-                    view === "unpaid" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+                    view === "unpaid" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                   }`}
                 >
                   Unpaid <span className="opacity-60">({unpaidCount})</span>
@@ -314,7 +314,7 @@ export default function Reports() {
                   type="button"
                   onClick={() => setView("all")}
                   className={`px-2.5 py-1 rounded ${
-                    view === "all" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+                    view === "all" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                   }`}
                 >
                   All
@@ -322,7 +322,7 @@ export default function Reports() {
               </div>
 
               <Select value={projectFilter} onValueChange={setProjectFilter}>
-                <SelectTrigger className="w-36 h-8 text-[13px] border-gray-200">
+                <SelectTrigger className="w-36 h-8 text-[13px] border-gray-200 dark:border-gray-800">
                   <SelectValue placeholder="All Projects" />
                 </SelectTrigger>
                 <SelectContent>
@@ -333,7 +333,7 @@ export default function Reports() {
                 </SelectContent>
               </Select>
               <Select value={teamMemberFilter} onValueChange={setTeamMemberFilter}>
-                <SelectTrigger className="w-36 h-8 text-[13px] border-gray-200">
+                <SelectTrigger className="w-36 h-8 text-[13px] border-gray-200 dark:border-gray-800">
                   <SelectValue placeholder="All Team" />
                 </SelectTrigger>
                 <SelectContent>
@@ -344,11 +344,11 @@ export default function Reports() {
                 </SelectContent>
               </Select>
 
-              <div className="ml-auto flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5">
+              <div className="ml-auto flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5">
                 <button
                   type="button"
                   onClick={() => setTimeViewMode("list")}
-                  className={`p-1 rounded ${timeViewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                  className={`p-1 rounded ${timeViewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                   title="List"
                 >
                   <List className="w-3.5 h-3.5" />
@@ -356,7 +356,7 @@ export default function Reports() {
                 <button
                   type="button"
                   onClick={() => setTimeViewMode("calendar")}
-                  className={`p-1 rounded ${timeViewMode === "calendar" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                  className={`p-1 rounded ${timeViewMode === "calendar" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                   title="Calendar"
                 >
                   <CalendarDays className="w-3.5 h-3.5" />
@@ -369,36 +369,36 @@ export default function Reports() {
           <div className="overflow-y-auto flex-1 min-h-0">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-gray-200 dark:border-gray-800 border-t-gray-400 rounded-full animate-spin" />
               </div>
             ) : (
               <div className="p-4 space-y-3">
                 {/* Metric pill strip */}
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600 dark:text-gray-400">
                   {view === "unbilled" && (
                     <span className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                      Unbilled <span className="text-gray-900 font-medium tabular-nums">${unbilledRevenue.toLocaleString()}</span>
+                      Unbilled <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">${unbilledRevenue.toLocaleString()}</span>
                     </span>
                   )}
                   {view === "unpaid" && (
                     <span className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                      Unpaid <span className="text-gray-900 font-medium tabular-nums">${unpaidPayroll.toLocaleString()}</span>
+                      Unpaid <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">${unpaidPayroll.toLocaleString()}</span>
                     </span>
                   )}
                   <span>
-                    Entries <span className="text-gray-900 font-medium tabular-nums">{filteredEntries.length}</span>
+                    Entries <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{filteredEntries.length}</span>
                   </span>
                   <span>
-                    Hours <span className="text-gray-900 font-medium tabular-nums">{totalHours.toFixed(1)}</span>
+                    Hours <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{totalHours.toFixed(1)}</span>
                   </span>
                 </div>
 
                 {/* Bulk Actions */}
                 {selectedIds.length > 0 && (
-                  <div className="flex items-center gap-2 px-3 h-9 bg-gray-50 border border-gray-200 rounded-md">
-                    <span className="text-[13px] font-medium text-gray-900">{selectedIds.length} selected</span>
+                  <div className="flex items-center gap-2 px-3 h-9 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-md">
+                    <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{selectedIds.length} selected</span>
                     <div className="h-4 w-px bg-gray-300" />
                     {view === "unpaid" ? (
                       <>
@@ -419,7 +419,7 @@ export default function Reports() {
                 {timeViewMode === "list" ? (
                   <div>
                     {/* Header row */}
-                    <div className="flex items-center gap-3 px-2 h-7 border-b border-gray-200 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                    <div className="flex items-center gap-3 px-2 h-7 border-b border-gray-200 dark:border-gray-800 text-[11px] font-medium uppercase tracking-wide text-gray-500">
                       <div className="w-5 flex-shrink-0">
                         <Checkbox
                           checked={selectedIds.length === filteredEntries.length && filteredEntries.length > 0}
@@ -450,8 +450,8 @@ export default function Reports() {
                         return (
                           <div
                             key={entry.id}
-                            className={`flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50 ${
-                              selectedIds.includes(entry.id) ? "bg-gray-50" : ""
+                            className={`flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
+                              selectedIds.includes(entry.id) ? "bg-gray-50 dark:bg-gray-900" : ""
                             }`}
                           >
                             <div className="w-5 flex-shrink-0">
@@ -463,16 +463,16 @@ export default function Reports() {
                             <div className="w-24 text-[12px] text-gray-500 tabular-nums">
                               {parseLocalDate(entry.date).toLocaleDateString()}
                             </div>
-                            <div className="flex-1 min-w-0 truncate text-[13px] text-gray-900">
+                            <div className="flex-1 min-w-0 truncate text-[13px] text-gray-900 dark:text-gray-100">
                               {project?.name || "—"}
                             </div>
-                            <div className="flex-1 min-w-0 truncate text-[13px] text-gray-600">
+                            <div className="flex-1 min-w-0 truncate text-[13px] text-gray-600 dark:text-gray-400">
                               {member?.full_name || "—"}
                             </div>
-                            <div className="w-16 text-right text-[13px] text-gray-900 tabular-nums">
+                            <div className="w-16 text-right text-[13px] text-gray-900 dark:text-gray-100 tabular-nums">
                               {entry.hours}h
                             </div>
-                            <div className="w-24 text-right text-[13px] text-gray-900 font-medium tabular-nums">
+                            <div className="w-24 text-right text-[13px] text-gray-900 dark:text-gray-100 font-medium tabular-nums">
                               {view === "unpaid" ? `$${cost.toLocaleString()}` : `$${amount.toLocaleString()}`}
                             </div>
                             <div className="w-16 flex justify-center">
@@ -510,24 +510,24 @@ export default function Reports() {
       {tab === "bonuses" && (
         <>
           {/* Week Navigation Toolbar */}
-          <div className="border-b border-gray-200 bg-white">
+          <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
             <div className="flex items-center gap-2 px-4 h-12">
-              <div className="flex items-center gap-0.5 border border-gray-200 rounded-md h-8 text-[12px]">
+              <div className="flex items-center gap-0.5 border border-gray-200 dark:border-gray-800 rounded-md h-8 text-[12px]">
                 <button
                   type="button"
                   onClick={() => shiftBonusWeek(-1)}
-                  className="h-full px-1.5 text-gray-500 hover:text-gray-800"
+                  className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-200"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-gray-700 min-w-[140px] text-center tabular-nums">
+                <span className="text-gray-700 dark:text-gray-300 min-w-[140px] text-center tabular-nums">
                   {formatWeekLabel(bonusWeek)}
                 </span>
                 <button
                   type="button"
                   onClick={() => shiftBonusWeek(1)}
                   disabled={bonusWeek >= toWeekStart(new Date())}
-                  className="h-full px-1.5 text-gray-500 hover:text-gray-800 disabled:opacity-40"
+                  className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-200 disabled:opacity-40"
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
@@ -549,25 +549,25 @@ export default function Reports() {
           <div className="overflow-y-auto flex-1 min-h-0">
             {bonusLoading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-gray-200 dark:border-gray-800 border-t-gray-400 rounded-full animate-spin" />
               </div>
             ) : (
               <div className="p-4 space-y-4">
                 {/* Metric pill strip */}
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600 dark:text-gray-400">
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     Earned <span className="text-emerald-600 font-medium tabular-nums">${bonusStats.totalEarned.toLocaleString()}</span>
                   </span>
                   <span>
-                    Potential <span className="text-gray-900 font-medium tabular-nums">${bonusStats.totalPotential.toLocaleString()}</span>
+                    Potential <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">${bonusStats.totalPotential.toLocaleString()}</span>
                   </span>
                   <span>
-                    Goals hit <span className="text-gray-900 font-medium tabular-nums">{bonusStats.goalsHit} / {bonusStats.totalGoals}</span>
+                    Goals hit <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{bonusStats.goalsHit} / {bonusStats.totalGoals}</span>
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className={`w-1.5 h-1.5 rounded-full ${bonusStats.unpaidAmount > 0 ? "bg-amber-500" : "bg-gray-300"}`} />
-                    Unpaid <span className={`font-medium tabular-nums ${bonusStats.unpaidAmount > 0 ? "text-amber-600" : "text-gray-400"}`}>
+                    Unpaid <span className={`font-medium tabular-nums ${bonusStats.unpaidAmount > 0 ? "text-amber-600" : "text-gray-400 dark:text-gray-500"}`}>
                       ${bonusStats.unpaidAmount.toLocaleString()}
                     </span>
                   </span>
@@ -575,16 +575,16 @@ export default function Reports() {
 
                 {bonusEntries.length === 0 ? (
                   <div className="py-16 text-center">
-                    <Trophy className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                    <Trophy className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                     <p className="text-[13px] text-gray-500">No bonus goals set for this week.</p>
-                    <p className="text-[12px] text-gray-400 mt-1">Set bonus amounts on the KPIs page when configuring targets.</p>
+                    <p className="text-[12px] text-gray-400 dark:text-gray-500 mt-1">Set bonus amounts on the KPIs page when configuring targets.</p>
                   </div>
                 ) : (
                   <>
                     {/* Bulk Actions */}
                     {selectedBonusIds.length > 0 && (
-                      <div className="flex items-center gap-2 px-3 h-9 bg-gray-50 border border-gray-200 rounded-md">
-                        <span className="text-[13px] font-medium text-gray-900">{selectedBonusIds.length} selected</span>
+                      <div className="flex items-center gap-2 px-3 h-9 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-md">
+                        <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{selectedBonusIds.length} selected</span>
                         <div className="h-4 w-px bg-gray-300" />
                         <Button size="sm" className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]" onClick={() => bulkMarkBonusPaid(true)}>Mark Paid</Button>
                         <Button size="sm" variant="ghost" className="h-7 px-2 text-[13px]" onClick={() => bulkMarkBonusPaid(false)}>Mark Unpaid</Button>
@@ -594,7 +594,7 @@ export default function Reports() {
 
                     {/* Bonus List */}
                     <div>
-                      <div className="flex items-center gap-3 px-2 h-7 border-b border-gray-200 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                      <div className="flex items-center gap-3 px-2 h-7 border-b border-gray-200 dark:border-gray-800 text-[11px] font-medium uppercase tracking-wide text-gray-500">
                         <div className="w-5 flex-shrink-0">
                           <Checkbox
                             checked={selectedBonusIds.length === earnedBonusList.length && earnedBonusList.length > 0}
@@ -637,8 +637,8 @@ export default function Reports() {
                             return (
                               <div
                                 key={entry.id}
-                                className={`flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50 ${
-                                  selectedBonusIds.includes(entry.id) ? "bg-gray-50" : ""
+                                className={`flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
+                                  selectedBonusIds.includes(entry.id) ? "bg-gray-50 dark:bg-gray-900" : ""
                                 }`}
                               >
                                 <div className="w-5 flex-shrink-0">
@@ -653,20 +653,20 @@ export default function Reports() {
                                     />
                                   )}
                                 </div>
-                                <div className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+                                <div className="flex-1 min-w-0 truncate text-[13px] text-gray-900 dark:text-gray-100 font-medium">
                                   {member?.full_name || "—"}
                                 </div>
-                                <div className="flex-1 min-w-0 truncate text-[13px] text-gray-600">
+                                <div className="flex-1 min-w-0 truncate text-[13px] text-gray-600 dark:text-gray-400">
                                   {kpiDef?.name || entry.slug}
                                 </div>
-                                <div className="w-20 text-right text-[13px] text-gray-900 font-medium tabular-nums">
+                                <div className="w-20 text-right text-[13px] text-gray-900 dark:text-gray-100 font-medium tabular-nums">
                                   {kpiDef ? formatKpiValue(actual, kpiDef.unit) : actual}
                                 </div>
                                 <div className="w-20 text-right text-[13px] text-gray-500 tabular-nums">
                                   {kpiDef ? formatKpiValue(target, kpiDef.unit) : target}
                                 </div>
                                 <div className="w-32 flex items-center gap-2 justify-center">
-                                  <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="w-16 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                                     <div
                                       className={`h-full rounded-full transition-all ${
                                         pct >= 100 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-red-400"
@@ -678,14 +678,14 @@ export default function Reports() {
                                     {pct}%
                                   </span>
                                 </div>
-                                <div className="w-20 text-right text-[13px] text-gray-900 font-semibold tabular-nums">
+                                <div className="w-20 text-right text-[13px] text-gray-900 dark:text-gray-100 font-semibold tabular-nums">
                                   ${(entry.bonus_amount || 0).toLocaleString()}
                                 </div>
                                 <div className="w-16 flex justify-center">
                                   {earned ? (
                                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                                   ) : (
-                                    <XCircle className="w-4 h-4 text-gray-300" />
+                                    <XCircle className="w-4 h-4 text-gray-300 dark:text-gray-600" />
                                   )}
                                 </div>
                                 <div className="w-14 flex justify-center">
@@ -695,7 +695,7 @@ export default function Reports() {
                                       onCheckedChange={() => toggleBonusPaid(entry)}
                                     />
                                   ) : (
-                                    <span className="text-gray-300 text-[13px]">—</span>
+                                    <span className="text-gray-300 dark:text-gray-600 text-[13px]">—</span>
                                   )}
                                 </div>
                               </div>
@@ -726,9 +726,9 @@ export default function Reports() {
                           });
 
                           return (
-                            <div key={memberId} className="border border-gray-200 rounded-md p-3">
+                            <div key={memberId} className="border border-gray-200 dark:border-gray-800 rounded-md p-3">
                               <div className="flex items-center justify-between mb-2">
-                                <span className="text-[13px] font-medium text-gray-900">
+                                <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100">
                                   {member?.full_name || "Unknown"}
                                 </span>
                                 <span className={`text-[11px] tabular-nums ${
@@ -745,12 +745,12 @@ export default function Reports() {
                                   const hit = pct >= 100;
                                   return (
                                     <div key={e.id} className="flex items-center justify-between text-[12px]">
-                                      <span className="text-gray-600 truncate">{kpiDef?.name || e.slug}</span>
+                                      <span className="text-gray-600 dark:text-gray-400 truncate">{kpiDef?.name || e.slug}</span>
                                       <div className="flex items-center gap-2 shrink-0">
-                                        <span className={`tabular-nums ${hit ? "text-emerald-600 font-medium" : "text-gray-400"}`}>
+                                        <span className={`tabular-nums ${hit ? "text-emerald-600 font-medium" : "text-gray-400 dark:text-gray-500"}`}>
                                           {pct}%
                                         </span>
-                                        <span className={`font-medium tabular-nums ${hit ? "text-gray-900" : "text-gray-400 line-through"}`}>
+                                        <span className={`font-medium tabular-nums ${hit ? "text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 line-through"}`}>
                                           ${(e.bonus_amount || 0).toLocaleString()}
                                         </span>
                                       </div>
@@ -758,7 +758,7 @@ export default function Reports() {
                                   );
                                 })}
                               </div>
-                              <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+                              <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
                                 <span className="text-[11px] uppercase tracking-wide text-gray-500">Earned</span>
                                 <span className="text-[13px] font-semibold text-emerald-600 tabular-nums">${earned.toLocaleString()}</span>
                               </div>

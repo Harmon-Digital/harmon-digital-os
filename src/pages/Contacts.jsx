@@ -174,39 +174,39 @@ export default function Contacts() {
     (roleFilter !== "all" ? 1 : 0);
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Page header */}
-      <div className="px-4 pt-4 pb-3 border-b border-gray-200">
+      <div className="px-4 pt-4 pb-3 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between">
-          <h1 className="text-[15px] font-semibold text-gray-900">Contacts</h1>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-gray-600">
+          <h1 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Contacts</h1>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-gray-600 dark:text-gray-400">
             <span className="inline-flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-              Primary <span className="text-gray-900 font-medium">{stats.primary}</span>
+              Primary <span className="text-gray-900 dark:text-gray-100 font-medium">{stats.primary}</span>
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              Billing <span className="text-gray-900 font-medium">{stats.billing}</span>
+              Billing <span className="text-gray-900 dark:text-gray-100 font-medium">{stats.billing}</span>
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-              Technical <span className="text-gray-900 font-medium">{stats.technical}</span>
+              Technical <span className="text-gray-900 dark:text-gray-100 font-medium">{stats.technical}</span>
             </span>
-            <span>Total <span className="text-gray-900 font-medium">{stats.total}</span></span>
+            <span>Total <span className="text-gray-900 dark:text-gray-100 font-medium">{stats.total}</span></span>
           </div>
         </div>
       </div>
 
       {/* Consolidated toolbar */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
           <div className="relative flex-1 max-w-md min-w-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5" />
             <Input
               placeholder="Search contacts"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+              className="pl-8 h-8 text-[13px] border-gray-200 dark:border-gray-800 focus-visible:ring-1"
             />
           </div>
 
@@ -239,7 +239,7 @@ export default function Contacts() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600">Account</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Account</label>
                 <Select value={accountFilter} onValueChange={setAccountFilter}>
                   <SelectTrigger><SelectValue placeholder="Account" /></SelectTrigger>
                   <SelectContent>
@@ -253,7 +253,7 @@ export default function Contacts() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600">Role</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Role</label>
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
                   <SelectTrigger><SelectValue placeholder="Role" /></SelectTrigger>
                   <SelectContent>
@@ -286,11 +286,11 @@ export default function Contacts() {
       </div>
 
       {/* List */}
-      <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+      <div className="overflow-y-auto flex-1 min-h-0 bg-white dark:bg-gray-950">
         {loading ? (
-          <div className="p-8 text-center text-sm text-gray-400">Loading…</div>
+          <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">Loading…</div>
         ) : filteredContacts.length === 0 ? (
-          <div className="p-8 text-center text-sm text-gray-400">
+          <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">
             {contacts.length === 0
               ? 'No contacts yet. Click "New Contact" to get started.'
               : "No contacts match your filters."}
@@ -302,29 +302,29 @@ export default function Contacts() {
             return (
               <div
                 key={contact.id}
-                className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 cursor-pointer"
                 onClick={() => handleViewContact(contact)}
               >
-                <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 dark:text-gray-300 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
                   {initials || "?"}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] text-gray-900 font-medium truncate">
+                  <div className="text-[13px] text-gray-900 dark:text-gray-100 font-medium truncate">
                     {contact.first_name} {contact.last_name}
-                    {contact.title && <span className="text-gray-400 font-normal ml-1.5">· {contact.title}</span>}
+                    {contact.title && <span className="text-gray-400 dark:text-gray-500 font-normal ml-1.5">· {contact.title}</span>}
                   </div>
                 </div>
 
                 <span className="hidden md:inline-flex items-center gap-1 text-[12px] text-gray-500 w-40 truncate">
-                  <Building2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                  <Building2 className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                   <span className="truncate">{getAccountName(contact.account_id)}</span>
                 </span>
 
                 <a
                   href={`mailto:${contact.email}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="hidden md:inline text-[12px] text-gray-500 hover:text-gray-900 w-52 truncate text-right"
+                  className="hidden md:inline text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-52 truncate text-right"
                 >
                   {contact.email}
                 </a>
@@ -333,12 +333,12 @@ export default function Contacts() {
                   <a
                     href={`tel:${contact.phone}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="hidden lg:inline text-[12px] text-gray-500 hover:text-gray-900 w-28 text-right"
+                    className="hidden lg:inline text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-28 text-right"
                   >
                     {contact.phone}
                   </a>
                 ) : (
-                  <span className="hidden lg:inline text-[12px] text-gray-300 w-28 text-right">—</span>
+                  <span className="hidden lg:inline text-[12px] text-gray-300 dark:text-gray-600 w-28 text-right">—</span>
                 )}
 
                 <span className={`text-[11px] capitalize w-20 text-right ${roleTextColors[contact.role] || "text-gray-500"}`}>
@@ -353,7 +353,7 @@ export default function Contacts() {
                     setEditingContact(contact);
                     setShowDrawer(true);
                   }}
-                  className="inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-900 w-10 justify-end"
+                  className="inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-10 justify-end"
                   title="Activities"
                 >
                   <MessageSquare className="w-3 h-3" />
@@ -367,7 +367,7 @@ export default function Contacts() {
                       e.stopPropagation();
                       handleViewContact(contact);
                     }}
-                    className="p-1 text-gray-400 hover:text-gray-900"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
                   >
                     <Edit className="w-3.5 h-3.5" />
                   </button>
@@ -377,7 +377,7 @@ export default function Contacts() {
                       e.stopPropagation();
                       setDeleteDialog({ open: true, contactId: contact.id });
                     }}
-                    className="p-1 text-gray-400 hover:text-red-600"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -432,7 +432,7 @@ export default function Contacts() {
                     setEditingActivity(null);
                     setShowActivityDialog(true);
                   }}
-                  className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+                  className="h-7 px-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   Log Activity
@@ -440,8 +440,8 @@ export default function Contacts() {
               </div>
 
               {getContactActivities(editingContact?.id).length === 0 ? (
-                <div className="py-10 text-center border-t border-gray-200">
-                  <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                <div className="py-10 text-center border-t border-gray-200 dark:border-gray-800">
+                  <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                   <p className="text-[13px] text-gray-500 mb-3">No activities logged yet</p>
                   <Button
                     variant="ghost"
@@ -457,27 +457,27 @@ export default function Contacts() {
                   </Button>
                 </div>
               ) : (
-                <div className="border-t border-gray-200">
+                <div className="border-t border-gray-200 dark:border-gray-800">
                   {getContactActivities(editingContact?.id).map((activity) => (
                     <div
                       key={activity.id}
-                      className="group flex items-start gap-3 px-2 py-3 border-b border-gray-100 hover:bg-gray-50"
+                      className="group flex items-start gap-3 px-2 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
                     >
                       <span className="text-lg flex-shrink-0 leading-none mt-0.5">
                         {activityIcons[activity.type]}
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-[13px] text-gray-900 font-medium truncate">
+                          <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium truncate">
                             {activity.subject}
                           </span>
-                          <span className="text-[11px] text-gray-400">
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500">
                             {parseLocalDate(activity.date).toLocaleString()}
                             {activity.duration_minutes > 0 && ` · ${activity.duration_minutes} min`}
                           </span>
                         </div>
                         {activity.description && (
-                          <p className="text-[12px] text-gray-600 mt-1">{activity.description}</p>
+                          <p className="text-[12px] text-gray-600 dark:text-gray-400 mt-1">{activity.description}</p>
                         )}
                         {activity.outcome && (
                           <span className="inline-block mt-1 text-[11px] text-gray-500 capitalize">
@@ -502,7 +502,7 @@ export default function Contacts() {
                             setEditingActivity(activity);
                             setShowActivityDialog(true);
                           }}
-                          className="p-1 text-gray-400 hover:text-gray-900"
+                          className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>
@@ -514,7 +514,7 @@ export default function Contacts() {
                               loadData();
                             }
                           }}
-                          className="p-1 text-gray-400 hover:text-red-600"
+                          className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

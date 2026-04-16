@@ -136,14 +136,14 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[15px] font-semibold text-gray-900">Welcome back, {firstName}</h1>
+          <h1 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Welcome back, {firstName}</h1>
           <p className="text-[12px] text-gray-500 mt-0.5">Here's what's on your plate today</p>
         </div>
         <div className="flex items-center gap-1">
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+            className="h-7 px-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             onClick={() => navigate(createPageUrl('TimeTracking'))}
           >
             <Clock className="w-3.5 h-3.5 mr-1.5" />
@@ -161,48 +161,48 @@ export default function Dashboard() {
       </div>
 
       {/* Metric pill strip */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-b border-gray-200 py-2.5">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-b border-gray-200 dark:border-gray-800 py-2.5">
         <button
           onClick={() => navigate(createPageUrl('Tasks'))}
-          className="flex items-center gap-2 text-[13px] text-gray-600 hover:text-gray-900"
+          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
           <span>My tasks</span>
-          <span className="text-gray-900 font-medium">{myTasks.length}</span>
+          <span className="text-gray-900 dark:text-gray-100 font-medium">{myTasks.length}</span>
         </button>
         <button
           onClick={() => navigate(createPageUrl('Tasks'))}
-          className="flex items-center gap-2 text-[13px] text-gray-600 hover:text-gray-900"
+          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
           <span>Overdue</span>
-          <span className={`font-medium ${myOverdueTasks.length > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+          <span className={`font-medium ${myOverdueTasks.length > 0 ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}`}>
             {myOverdueTasks.length}
           </span>
         </button>
         <button
           onClick={() => navigate(createPageUrl('Tasks'))}
-          className="flex items-center gap-2 text-[13px] text-gray-600 hover:text-gray-900"
+          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
           <span>Due this week</span>
-          <span className="text-gray-900 font-medium">{myTasksDueThisWeek.length}</span>
+          <span className="text-gray-900 dark:text-gray-100 font-medium">{myTasksDueThisWeek.length}</span>
         </button>
         <button
           onClick={() => navigate(createPageUrl('TimeTracking'))}
-          className="flex items-center gap-2 text-[13px] text-gray-600 hover:text-gray-900"
+          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
           <span>Hours this week</span>
-          <span className="text-gray-900 font-medium">{myTimeThisWeek.toFixed(1)}</span>
+          <span className="text-gray-900 dark:text-gray-100 font-medium">{myTimeThisWeek.toFixed(1)}</span>
         </button>
         <button
           onClick={() => navigate(createPageUrl('Projects'))}
-          className="flex items-center gap-2 text-[13px] text-gray-600 hover:text-gray-900"
+          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
           <span>My projects</span>
-          <span className="text-gray-900 font-medium">{myProjects.length}</span>
+          <span className="text-gray-900 dark:text-gray-100 font-medium">{myProjects.length}</span>
         </button>
       </div>
 
@@ -215,7 +215,7 @@ export default function Dashboard() {
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 px-2 text-[12px] text-gray-700 hover:bg-gray-100"
+              className="h-6 px-2 text-[12px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               onClick={() => navigate(createPageUrl('Tasks'))}
             >
               View all
@@ -223,12 +223,12 @@ export default function Dashboard() {
             </Button>
           </div>
           {recentTasks.length === 0 ? (
-            <div className="border border-gray-200 rounded-md px-3 py-8 text-center">
-              <div className="text-[13px] text-gray-600 mb-2">No active tasks</div>
+            <div className="border border-gray-200 dark:border-gray-800 rounded-md px-3 py-8 text-center">
+              <div className="text-[13px] text-gray-600 dark:text-gray-400 mb-2">No active tasks</div>
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+                className="h-7 px-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                 onClick={() => navigate(createPageUrl('Tasks'))}
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
@@ -236,18 +236,18 @@ export default function Dashboard() {
               </Button>
             </div>
           ) : (
-            <div className="border border-gray-200 rounded-md">
+            <div className="border border-gray-200 dark:border-gray-800 rounded-md">
               {recentTasks.map((task, idx) => (
                 <div
                   key={task.id}
                   onClick={() => navigate(createPageUrl('Tasks'))}
-                  className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer ${
-                    idx !== recentTasks.length - 1 ? 'border-b border-gray-100' : ''
+                  className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/60 cursor-pointer ${
+                    idx !== recentTasks.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''
                   }`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${priorityDot[task.priority] || 'bg-gray-400'}`} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-[13px] text-gray-900 truncate">{task.title}</div>
+                    <div className="text-[13px] text-gray-900 dark:text-gray-100 truncate">{task.title}</div>
                     <div className="text-[12px] text-gray-500 truncate">{getProjectName(task.project_id)}</div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
@@ -258,7 +258,7 @@ export default function Dashboard() {
                     )}
                     <div className="flex items-center gap-1.5 min-w-[80px]">
                       <span className={`w-1.5 h-1.5 rounded-full ${statusDot[task.status] || 'bg-gray-400'}`} />
-                      <span className="text-[12px] text-gray-600 capitalize">{task.status.replace('_', ' ')}</span>
+                      <span className="text-[12px] text-gray-600 dark:text-gray-400 capitalize">{task.status.replace('_', ' ')}</span>
                     </div>
                   </div>
                 </div>
@@ -274,26 +274,26 @@ export default function Dashboard() {
             <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">
               Quick actions
             </div>
-            <div className="border border-gray-200 rounded-md">
+            <div className="border border-gray-200 dark:border-gray-800 rounded-md">
               <button
                 onClick={() => navigate(createPageUrl('Tasks'))}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50 border-b border-gray-100"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 border-b border-gray-100 dark:border-gray-800"
               >
-                <Plus className="w-3.5 h-3.5 text-gray-400" />
+                <Plus className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                 <span>Create task</span>
               </button>
               <button
                 onClick={() => navigate(createPageUrl('TimeTracking'))}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50 border-b border-gray-100"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 border-b border-gray-100 dark:border-gray-800"
               >
-                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                 <span>Log time</span>
               </button>
               <button
                 onClick={() => navigate(createPageUrl('Projects'))}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50"
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60"
               >
-                <FolderKanban className="w-3.5 h-3.5 text-gray-400" />
+                <FolderKanban className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                 <span>View projects</span>
               </button>
             </div>
@@ -304,18 +304,18 @@ export default function Dashboard() {
             <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">
               Team overview
             </div>
-            <div className="border border-gray-200 rounded-md">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
-                <span className="text-[13px] text-gray-600">Active projects</span>
-                <span className="text-[13px] text-gray-900 font-medium">{activeProjects}</span>
+            <div className="border border-gray-200 dark:border-gray-800 rounded-md">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                <span className="text-[13px] text-gray-600 dark:text-gray-400">Active projects</span>
+                <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium">{activeProjects}</span>
               </div>
-              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
-                <span className="text-[13px] text-gray-600">Active leads</span>
-                <span className="text-[13px] text-gray-900 font-medium">{activeLeads}</span>
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                <span className="text-[13px] text-gray-600 dark:text-gray-400">Active leads</span>
+                <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium">{activeLeads}</span>
               </div>
               <div className="flex items-center justify-between px-3 py-2">
-                <span className="text-[13px] text-gray-600">All active tasks</span>
-                <span className="text-[13px] text-gray-900 font-medium">{allActiveTasks}</span>
+                <span className="text-[13px] text-gray-600 dark:text-gray-400">All active tasks</span>
+                <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium">{allActiveTasks}</span>
               </div>
             </div>
           </div>
@@ -326,10 +326,10 @@ export default function Dashboard() {
               <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">
                 Attention
               </div>
-              <div className="border border-gray-200 rounded-md px-3 py-2.5">
+              <div className="border border-gray-200 dark:border-gray-800 rounded-md px-3 py-2.5">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                  <span className="text-[13px] text-gray-900 font-medium">
+                  <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium">
                     {myOverdueTasks.length} overdue task{myOverdueTasks.length !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -339,7 +339,7 @@ export default function Dashboard() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 px-2 text-[12px] text-gray-700 hover:bg-gray-100"
+                  className="h-6 px-2 text-[12px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                   onClick={() => navigate(createPageUrl('Tasks'))}
                 >
                   View overdue
@@ -359,28 +359,28 @@ export default function Dashboard() {
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 px-2 text-[12px] text-gray-700 hover:bg-gray-100"
+              className="h-6 px-2 text-[12px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               onClick={() => navigate(createPageUrl('Projects'))}
             >
               View all
               <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
           </div>
-          <div className="border border-gray-200 rounded-md">
+          <div className="border border-gray-200 dark:border-gray-800 rounded-md">
             {myProjects.slice(0, 8).map((project, idx) => (
               <div
                 key={project.id}
                 onClick={() => navigate(createPageUrl(`ProjectDetail?id=${project.id}`))}
-                className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer ${
-                  idx !== Math.min(myProjects.length, 8) - 1 ? 'border-b border-gray-100' : ''
+                className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/60 cursor-pointer ${
+                  idx !== Math.min(myProjects.length, 8) - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''
                 }`}
               >
-                <FolderKanban className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0 text-[13px] text-gray-900 truncate">{project.name}</div>
+                <FolderKanban className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0 text-[13px] text-gray-900 dark:text-gray-100 truncate">{project.name}</div>
                 <span className="text-[12px] text-gray-500 capitalize flex-shrink-0">{project.billing_type}</span>
                 <div className="flex items-center gap-1.5 min-w-[70px] flex-shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                  <span className="text-[12px] text-gray-600 capitalize">{project.status}</span>
+                  <span className="text-[12px] text-gray-600 dark:text-gray-400 capitalize">{project.status}</span>
                 </div>
               </div>
             ))}

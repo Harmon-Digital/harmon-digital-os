@@ -257,7 +257,7 @@ export default function KPIs() {
     return (
       <div className="p-8">
         <div className="text-center py-12">
-          <h2 className="text-[15px] font-semibold text-gray-900">Admin Access Required</h2>
+          <h2 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Admin Access Required</h2>
           <p className="text-[13px] text-gray-500 mt-2">KPI tracking is only available to administrators.</p>
         </div>
       </div>
@@ -270,11 +270,11 @@ export default function KPIs() {
       : null;
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Toolbar */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
-          <h1 className="text-[15px] font-semibold text-gray-900">KPIs</h1>
+          <h1 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">KPIs</h1>
           <span className="text-[13px] text-gray-500">
             {selectedMemberName || "Weekly metrics"}
           </span>
@@ -295,22 +295,22 @@ export default function KPIs() {
               </SelectContent>
             </Select>
 
-            <div className="flex items-center gap-0.5 border border-gray-200 rounded-md h-8 text-[12px]">
+            <div className="flex items-center gap-0.5 border border-gray-200 dark:border-gray-800 rounded-md h-8 text-[12px]">
               <button
                 type="button"
                 onClick={() => navigateWeek(-1)}
-                className="h-full px-1.5 text-gray-500 hover:text-gray-800"
+                className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-200"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
-              <span className="text-gray-700 min-w-[140px] text-center tabular-nums">
+              <span className="text-gray-700 dark:text-gray-300 min-w-[140px] text-center tabular-nums">
                 {formatWeekLabel(selectedWeek)}
               </span>
               <button
                 type="button"
                 onClick={() => navigateWeek(1)}
                 disabled={!canGoForward}
-                className="h-full px-1.5 text-gray-500 hover:text-gray-800 disabled:opacity-40"
+                className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-200 disabled:opacity-40"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
@@ -356,42 +356,42 @@ export default function KPIs() {
         <div className="p-4 lg:p-6 space-y-4">
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-gray-200 dark:border-gray-800 border-t-gray-400 rounded-full animate-spin" />
             </div>
           ) : (
             <>
               {/* Inline metric strip */}
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600 dark:text-gray-400">
                 <span className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                  Goals Tracked <span className="text-gray-900 font-medium">{summaryStats.withTargets}</span>
-                  <span className="text-gray-400">/ {visibleKpis.length}</span>
+                  Goals Tracked <span className="text-gray-900 dark:text-gray-100 font-medium">{summaryStats.withTargets}</span>
+                  <span className="text-gray-400 dark:text-gray-500">/ {visibleKpis.length}</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                  Goals Hit <span className="text-gray-900 font-medium">{summaryStats.goalsHit}</span>
-                  <span className="text-gray-400">/ {summaryStats.withTargets}</span>
+                  Goals Hit <span className="text-gray-900 dark:text-gray-100 font-medium">{summaryStats.goalsHit}</span>
+                  <span className="text-gray-400 dark:text-gray-500">/ {summaryStats.withTargets}</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
                   Bonus Earned{" "}
-                  <span className={`font-medium ${summaryStats.totalBonusEarned > 0 ? "text-green-600" : "text-gray-900"}`}>
+                  <span className={`font-medium ${summaryStats.totalBonusEarned > 0 ? "text-green-600" : "text-gray-900 dark:text-gray-100"}`}>
                     ${summaryStats.totalBonusEarned.toLocaleString()}
                   </span>
                   {summaryStats.totalBonusPotential > 0 && (
-                    <span className="text-gray-400">of ${summaryStats.totalBonusPotential.toLocaleString()}</span>
+                    <span className="text-gray-400 dark:text-gray-500">of ${summaryStats.totalBonusPotential.toLocaleString()}</span>
                   )}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                  Progress <span className="text-gray-900 font-medium">{overallPct !== null ? `${overallPct}%` : "--"}</span>
+                  Progress <span className="text-gray-900 dark:text-gray-100 font-medium">{overallPct !== null ? `${overallPct}%` : "--"}</span>
                 </span>
               </div>
 
               {/* KPI list */}
-              <div className="border border-gray-200 rounded-md overflow-hidden">
+              <div className="border border-gray-200 dark:border-gray-800 rounded-md overflow-hidden">
                 {/* Header row */}
-                <div className="flex items-center gap-3 px-3 h-8 border-b border-gray-200 bg-gray-50 text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                <div className="flex items-center gap-3 px-3 h-8 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 text-[11px] font-medium uppercase tracking-wide text-gray-500">
                   <div className="flex-1 min-w-0">KPI</div>
                   <div className="w-20 text-right">Actual</div>
                   <div className="w-20 text-right">Target</div>
@@ -416,7 +416,7 @@ export default function KPIs() {
                       rows.push(
                         <div
                           key={`cat-${category}`}
-                          className="px-3 h-7 bg-gray-50/60 border-b border-gray-100 flex items-center"
+                          className="px-3 h-7 bg-gray-50 dark:bg-gray-900/60 border-b border-gray-100 dark:border-gray-800 flex items-center"
                         >
                           <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
                             {CATEGORY_LABELS[category] || category}
@@ -443,14 +443,14 @@ export default function KPIs() {
                         rows.push(
                           <React.Fragment key={kpi.slug}>
                             <div
-                              className={`flex items-center gap-3 px-3 py-2 border-b border-gray-100 cursor-pointer ${
-                                isExpanded ? "bg-gray-50" : "hover:bg-gray-50"
+                              className={`flex items-center gap-3 px-3 py-2 border-b border-gray-100 dark:border-gray-800 cursor-pointer ${
+                                isExpanded ? "bg-gray-50 dark:bg-gray-900" : "hover:bg-gray-50 dark:hover:bg-gray-800/60"
                               }`}
                               onClick={() => setExpandedKpi(isExpanded ? null : kpi.slug)}
                             >
                               <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <Icon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                                <span className="text-[13px] font-medium text-gray-900 truncate">{kpi.name}</span>
+                                <Icon className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" />
+                                <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100 truncate">{kpi.name}</span>
                                 {kpi.calcType === "auto" && (
                                   <Zap className="w-3 h-3 text-amber-400 shrink-0" />
                                 )}
@@ -462,12 +462,12 @@ export default function KPIs() {
                                       setEditingKpi(kpi);
                                     }}
                                   >
-                                    <Pencil className="w-3 h-3 text-gray-400" />
+                                    <Pencil className="w-3 h-3 text-gray-400 dark:text-gray-500" />
                                   </button>
                                 )}
                               </div>
 
-                              <div className="w-20 text-right text-[13px] font-medium text-gray-900 tabular-nums">
+                              <div className="w-20 text-right text-[13px] font-medium text-gray-900 dark:text-gray-100 tabular-nums">
                                 {formatKpiValue(actual, kpi.unit)}
                               </div>
 
@@ -493,7 +493,7 @@ export default function KPIs() {
                                     {targetNum !== null ? (
                                       formatKpiValue(targetNum, kpi.unit)
                                     ) : (
-                                      <span className="text-gray-300 italic">set</span>
+                                      <span className="text-gray-300 dark:text-gray-600 italic">set</span>
                                     )}
                                   </span>
                                 )}
@@ -502,7 +502,7 @@ export default function KPIs() {
                               <div className="w-28 flex items-center gap-2 justify-center">
                                 {pct !== null ? (
                                   <>
-                                    <div className="w-14 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className="w-14 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                                       <div
                                         className={`h-full rounded-full ${
                                           pct >= 100
@@ -527,7 +527,7 @@ export default function KPIs() {
                                     </span>
                                   </>
                                 ) : (
-                                  <span className="text-[11px] text-gray-300">--</span>
+                                  <span className="text-[11px] text-gray-300 dark:text-gray-600">--</span>
                                 )}
                               </div>
 
@@ -570,13 +570,13 @@ export default function KPIs() {
                                         className={`text-[11px] px-1.5 py-0.5 rounded-full ${
                                           pct >= 100
                                             ? "bg-green-100 text-green-700 font-medium"
-                                            : "bg-gray-100 text-gray-500"
+                                            : "bg-gray-100 dark:bg-gray-800 text-gray-500"
                                         }`}
                                       >
                                         ${bonusAmt.toLocaleString()}
                                       </span>
                                     ) : (
-                                      <span className="text-gray-300 italic text-[11px]">set</span>
+                                      <span className="text-gray-300 dark:text-gray-600 italic text-[11px]">set</span>
                                     )}
                                   </span>
                                 )}
@@ -598,7 +598,7 @@ export default function KPIs() {
                                     {delta.toFixed(0)}%
                                   </span>
                                 ) : (
-                                  <Minus className="w-3 h-3 text-gray-300 mx-auto" />
+                                  <Minus className="w-3 h-3 text-gray-300 dark:text-gray-600 mx-auto" />
                                 )}
                               </div>
 
@@ -608,8 +608,8 @@ export default function KPIs() {
                             </div>
 
                             {isExpanded && (
-                              <div className="px-3 py-2 bg-gray-50/60 border-b border-gray-100">
-                                <div className="border border-gray-200 rounded-md p-3 bg-white">
+                              <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900/60 border-b border-gray-100 dark:border-gray-800">
+                                <div className="border border-gray-200 dark:border-gray-800 rounded-md p-3 bg-white dark:bg-gray-950">
                                   <div className="h-5 text-[11px] uppercase tracking-wide text-gray-500 mb-1">
                                     {kpi.name} — 8 Week Trend
                                   </div>
@@ -641,12 +641,12 @@ export default function KPIs() {
 
               {/* Empty state */}
               {!selectedTeamMember && currentEntries.length === 0 && (
-                <div className="border border-gray-200 rounded-md py-10 text-center">
-                  <RefreshCw className="w-6 h-6 text-gray-300 mx-auto mb-2" />
-                  <p className="text-[13px] text-gray-600 font-medium">
+                <div className="border border-gray-200 dark:border-gray-800 rounded-md py-10 text-center">
+                  <RefreshCw className="w-6 h-6 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                  <p className="text-[13px] text-gray-600 dark:text-gray-400 font-medium">
                     No data for {formatWeekLabel(selectedWeek)}
                   </p>
-                  <p className="text-[12px] text-gray-400 mt-1">
+                  <p className="text-[12px] text-gray-400 dark:text-gray-500 mt-1">
                     Click "Refresh" to pull metrics from your data.
                   </p>
                 </div>

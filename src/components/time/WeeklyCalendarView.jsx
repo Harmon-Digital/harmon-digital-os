@@ -135,20 +135,20 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, teamM
   return (
     <div className="flex flex-col h-full">
       {/* Week nav */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 text-[13px] shrink-0">
-        <div className="flex items-center gap-0.5 border border-gray-200 rounded-md p-0.5">
-          <button type="button" onClick={() => navigate(-1)} className="px-1.5 py-0.5 text-gray-500 hover:text-gray-900 rounded">‹</button>
-          <button type="button" onClick={goToday} className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 rounded text-[12px]">Today</button>
-          <button type="button" onClick={() => navigate(1)} className="px-1.5 py-0.5 text-gray-500 hover:text-gray-900 rounded">›</button>
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 dark:border-gray-800 text-[13px] shrink-0">
+        <div className="flex items-center gap-0.5 border border-gray-200 dark:border-gray-800 rounded-md p-0.5">
+          <button type="button" onClick={() => navigate(-1)} className="px-1.5 py-0.5 text-gray-500 hover:text-gray-900 dark:text-gray-100 rounded">‹</button>
+          <button type="button" onClick={goToday} className="px-2 py-0.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-[12px]">Today</button>
+          <button type="button" onClick={() => navigate(1)} className="px-1.5 py-0.5 text-gray-500 hover:text-gray-900 dark:text-gray-100 rounded">›</button>
         </div>
-        <span className="text-gray-900 font-medium">{rangeLabel}</span>
+        <span className="text-gray-900 dark:text-gray-100 font-medium">{rangeLabel}</span>
         <span className="ml-auto text-gray-500">
-          Week <span className="text-gray-900 font-medium tabular-nums">{weekTotal.toFixed(1)}h</span>
+          Week <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{weekTotal.toFixed(1)}h</span>
         </span>
       </div>
 
       {/* Day headers (fixed) */}
-      <div className="flex shrink-0 border-b border-gray-200" style={{ paddingLeft: 52 }}>
+      <div className="flex shrink-0 border-b border-gray-200 dark:border-gray-800" style={{ paddingLeft: 52 }}>
         {weekDays.map((day) => {
           const ds = toDateStr(day);
           const isToday = ds === todayStr;
@@ -158,7 +158,7 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, teamM
               <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
                 {day.toLocaleDateString("en-US", { weekday: "short" })}
               </div>
-              <div className={`text-[15px] font-semibold mt-0.5 ${isToday ? "text-gray-900" : "text-gray-700"}`}>
+              <div className={`text-[15px] font-semibold mt-0.5 ${isToday ? "text-gray-900 dark:text-gray-100" : "text-gray-700 dark:text-gray-300"}`}>
                 {isToday ? (
                   <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-900 text-white text-[14px]">{day.getDate()}</span>
                 ) : day.getDate()}
@@ -177,7 +177,7 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, teamM
             {hours.map((h) => (
               <div
                 key={h}
-                className="absolute right-2 text-[11px] text-gray-400 tabular-nums -translate-y-1/2"
+                className="absolute right-2 text-[11px] text-gray-400 dark:text-gray-500 tabular-nums -translate-y-1/2"
                 style={{ top: (h - START_HOUR) * HOUR_HEIGHT }}
               >
                 {formatHour(h)}
@@ -191,7 +191,7 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, teamM
             {hours.map((h) => (
               <div
                 key={h}
-                className="absolute left-0 right-0 border-t border-gray-100"
+                className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-800"
                 style={{ top: (h - START_HOUR) * HOUR_HEIGHT }}
               />
             ))}
@@ -217,7 +217,7 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, teamM
             )}
 
             {/* Day columns with entries */}
-            <div className="absolute inset-0 flex divide-x divide-gray-100" style={{ left: 0 }}>
+            <div className="absolute inset-0 flex divide-x divide-gray-100 dark:divide-gray-800" style={{ left: 0 }}>
               {weekDays.map((day) => {
                 const ds = toDateStr(day);
                 const entries = entriesByDay[ds] || [];
@@ -225,7 +225,7 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, teamM
                 const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
                 return (
-                  <div key={ds} className={`flex-1 relative min-w-[100px] ${isWeekend ? "bg-gray-50/30" : ""} ${isToday ? "bg-blue-50/20" : ""}`}>
+                  <div key={ds} className={`flex-1 relative min-w-[100px] ${isWeekend ? "bg-gray-50 dark:bg-gray-900/30" : ""} ${isToday ? "bg-blue-50/20" : ""}`}>
                     {entries.map((entry) => {
                       const c = projectColorMap[entry.project_id] || COLORS[0];
                       const { top, height } = getBlockStyle(entry, entries);

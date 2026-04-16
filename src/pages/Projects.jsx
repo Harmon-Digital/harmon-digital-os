@@ -279,18 +279,18 @@ export default function Projects() {
     (activeTab === "client" && accountFilter !== "all" ? 1 : 0);
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Consolidated toolbar */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
-          <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px]">
+          <div className="flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5 text-[12px]">
             <button
               type="button"
               onClick={() => setActiveTab("client")}
               className={`px-2.5 py-1 rounded ${
                 activeTab === "client"
                   ? "bg-gray-900 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
               Client <span className="opacity-60">({clientProjectsCount})</span>
@@ -301,7 +301,7 @@ export default function Projects() {
               className={`px-2.5 py-1 rounded ${
                 activeTab === "internal"
                   ? "bg-gray-900 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
               Internal <span className="opacity-60">({internalProjectsCount})</span>
@@ -309,12 +309,12 @@ export default function Projects() {
           </div>
 
           <div className="relative flex-1 max-w-md min-w-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5" />
             <Input
               placeholder="Search projects"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+              className="pl-8 h-8 text-[13px] border-gray-200 dark:border-gray-800 focus-visible:ring-1"
             />
           </div>
 
@@ -349,7 +349,7 @@ export default function Projects() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600">Status</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Status</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
@@ -364,7 +364,7 @@ export default function Projects() {
               {activeTab === "client" && (
                 <>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Billing</label>
+                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Billing</label>
                     <Select value={billingFilter} onValueChange={setBillingFilter}>
                       <SelectTrigger><SelectValue placeholder="Billing" /></SelectTrigger>
                       <SelectContent>
@@ -376,7 +376,7 @@ export default function Projects() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Risk</label>
+                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Risk</label>
                     <Select value={riskFilter} onValueChange={setRiskFilter}>
                       <SelectTrigger><SelectValue placeholder="Risk" /></SelectTrigger>
                       <SelectContent>
@@ -388,7 +388,7 @@ export default function Projects() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Account</label>
+                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Account</label>
                     <Select value={accountFilter} onValueChange={setAccountFilter}>
                       <SelectTrigger><SelectValue placeholder="Account" /></SelectTrigger>
                       <SelectContent>
@@ -505,7 +505,7 @@ function ProjectRow({
 }) {
   return (
     <div
-      className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+      className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60"
       onClick={() => onRowClick(project.id)}
     >
       <ProjectStatusPicker
@@ -519,7 +519,7 @@ function ProjectRow({
         <RiskDot risk={project.risk_level} />
       </div>
 
-      <span className="flex-1 min-w-0 text-[13px] text-gray-900 font-medium">
+      <span className="flex-1 min-w-0 text-[13px] text-gray-900 dark:text-gray-100 font-medium">
         <InlineEdit
           value={project.name}
           onSave={(next) => onInlineRename(project.id, next)}
@@ -536,13 +536,13 @@ function ProjectRow({
             <img
               src={account.logo_url}
               alt=""
-              className="w-4 h-4 rounded object-contain bg-gray-50 border border-gray-100"
+              className="w-4 h-4 rounded object-contain bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
               onError={(e) => {
                 e.target.style.display = "none";
               }}
             />
           ) : (
-            <Building2 className="w-3 h-3 text-gray-400" />
+            <Building2 className="w-3 h-3 text-gray-400 dark:text-gray-500" />
           )}
           <span className="truncate">{account.company_name}</span>
         </span>
@@ -555,7 +555,7 @@ function ProjectRow({
       )}
 
       {activeTab === "client" && project.billing_type && (
-        <span className="hidden lg:inline capitalize text-[11px] text-gray-400 shrink-0">
+        <span className="hidden lg:inline capitalize text-[11px] text-gray-400 dark:text-gray-500 shrink-0">
           {project.billing_type}
         </span>
       )}
@@ -566,7 +566,7 @@ function ProjectRow({
           e.stopPropagation();
           onEdit(project);
         }}
-        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
         title="Edit"
       >
         <Edit className="w-3.5 h-3.5" />
@@ -578,7 +578,7 @@ function ProjectRow({
             e.stopPropagation();
             onDelete(project.id);
           }}
-          className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+          className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-red-50"
           title="Delete"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -619,11 +619,11 @@ function LinearProjectList({
   }, [projects]);
 
   if (loading) {
-    return <div className="p-8 text-center text-sm text-gray-400">Loading…</div>;
+    return <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">Loading…</div>;
   }
   if (projects.length === 0) {
     return (
-      <div className="p-8 text-center text-sm text-gray-400">
+      <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">
         {allCount === 0
           ? `No ${activeTab} projects yet. Click "New Project" to get started.`
           : "No projects match your filters."}
@@ -632,7 +632,7 @@ function LinearProjectList({
   }
 
   return (
-    <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+    <div className="overflow-y-auto flex-1 min-h-0 bg-white dark:bg-gray-950">
       {PROJECT_STATUS_LIST.map((s) => {
         const groupProjects = grouped.get(s.id) || [];
         const isCollapsed = collapsed.has(s.id);
@@ -642,14 +642,14 @@ function LinearProjectList({
             <button
               type="button"
               onClick={() => toggleGroup(s.id)}
-              className="w-full flex items-center gap-2 px-3 h-8 bg-gray-50 border-b border-gray-200 hover:bg-gray-100"
+              className="w-full flex items-center gap-2 px-3 h-8 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <ChevronRight
-                className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                className={`w-3.5 h-3.5 text-gray-400 dark:text-gray-500 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
               />
               <ProjectStatusIcon status={s.id} size={12} />
-              <span className="text-[12px] font-medium text-gray-700">{s.label}</span>
-              <span className="text-[11px] text-gray-400 tabular-nums">{groupProjects.length}</span>
+              <span className="text-[12px] font-medium text-gray-700 dark:text-gray-300">{s.label}</span>
+              <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{groupProjects.length}</span>
             </button>
             {!isCollapsed &&
               groupProjects.map((project) => (

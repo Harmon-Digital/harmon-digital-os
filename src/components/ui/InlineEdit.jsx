@@ -73,14 +73,14 @@ export default function InlineEdit({
           }
         }}
         placeholder={placeholder}
-        className={`bg-white border border-indigo-300 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-indigo-200 text-[13px] text-gray-900 ${inputClass}`}
+        className={`bg-white dark:bg-gray-950 border border-indigo-300 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-indigo-200 text-[13px] text-gray-900 dark:text-gray-100 ${inputClass}`}
       />
     );
   }
 
   return (
     <span className={`group/edit inline-flex items-center gap-1 min-w-0 ${className}`}>
-      <span className="truncate">{value || <span className="text-gray-400">{placeholder}</span>}</span>
+      <span className="truncate">{value || <span className="text-gray-400 dark:text-gray-500">{placeholder}</span>}</span>
       {!disabled && (
         <button
           type="button"
@@ -88,7 +88,7 @@ export default function InlineEdit({
             if (stopPropagation) e.stopPropagation();
             setEditing(true);
           }}
-          className="opacity-0 group-hover/edit:opacity-100 p-0.5 text-gray-400 hover:text-gray-700 transition-opacity flex-shrink-0"
+          className="opacity-0 group-hover/edit:opacity-100 p-0.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 transition-opacity flex-shrink-0"
           title="Edit (or double-click)"
         >
           <Pencil className="w-3 h-3" />

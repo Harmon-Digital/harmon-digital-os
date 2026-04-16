@@ -450,7 +450,7 @@ export default function Tasks() {
   }, [filteredTasks, groupBy, projectsMap, teamMembersMap]);
 
   const statusColors = {
-    todo: "bg-gray-100 text-gray-800 border-gray-200",
+    todo: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-800",
     in_progress: "bg-blue-100 text-blue-800 border-blue-200",
     blocked: "bg-red-100 text-red-800 border-red-200",
     review: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -458,7 +458,7 @@ export default function Tasks() {
   };
 
   const priorityColors = {
-    low: "bg-gray-100 text-gray-600",
+    low: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
     medium: "bg-blue-100 text-blue-700",
     high: "bg-orange-100 text-orange-700",
     urgent: "bg-red-100 text-red-700"
@@ -473,7 +473,7 @@ export default function Tasks() {
   };
 
   const kanbanColumns = [
-    { id: "todo", label: "To Do", color: "bg-gray-500", textColor: "text-gray-500", bgLight: "bg-gray-50" },
+    { id: "todo", label: "To Do", color: "bg-gray-500", textColor: "text-gray-500", bgLight: "bg-gray-50 dark:bg-gray-900" },
     { id: "in_progress", label: "In Progress", color: "bg-blue-500", textColor: "text-blue-500", bgLight: "bg-blue-50" },
     { id: "blocked", label: "Blocked", color: "bg-red-500", textColor: "text-red-500", bgLight: "bg-red-50" },
     { id: "review", label: "Review", color: "bg-yellow-500", textColor: "text-yellow-500", bgLight: "bg-yellow-50" },
@@ -489,50 +489,50 @@ export default function Tasks() {
     : ["completed"];
 
   return (
-    <div className="h-full flex flex-col bg-white">
-      <div className="border-b border-gray-200 bg-white">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         {/* Single consolidated toolbar */}
         <div className="flex items-center gap-2 px-4 h-12">
-          <div className="flex items-center gap-1 rounded-md border border-gray-200 p-0.5 text-[12px]">
+          <div className="flex items-center gap-1 rounded-md border border-gray-200 dark:border-gray-800 p-0.5 text-[12px]">
             <button
               type="button"
               onClick={() => setCompletedFilter("active")}
-              className={`px-2.5 py-1 rounded ${completedFilter === "active" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+              className={`px-2.5 py-1 rounded ${completedFilter === "active" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
             >
               Active
             </button>
             <button
               type="button"
               onClick={() => setCompletedFilter("completed")}
-              className={`px-2.5 py-1 rounded ${completedFilter === "completed" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+              className={`px-2.5 py-1 rounded ${completedFilter === "completed" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
             >
               Completed
             </button>
           </div>
-          <div className="flex items-center gap-1 rounded-md border border-gray-200 p-0.5 text-[12px]">
+          <div className="flex items-center gap-1 rounded-md border border-gray-200 dark:border-gray-800 p-0.5 text-[12px]">
             <button
               type="button"
               onClick={() => setViewFilter("all")}
-              className={`px-2.5 py-1 rounded ${viewFilter === "all" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+              className={`px-2.5 py-1 rounded ${viewFilter === "all" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
             >
               All
             </button>
             <button
               type="button"
               onClick={() => setViewFilter("my")}
-              className={`px-2.5 py-1 rounded ${viewFilter === "my" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+              className={`px-2.5 py-1 rounded ${viewFilter === "my" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
             >
               Mine
             </button>
           </div>
 
           <div className="relative flex-1 max-w-md min-w-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5" />
             <Input
               placeholder="Search tasks"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+              className="pl-8 h-8 text-[13px] border-gray-200 dark:border-gray-800 focus-visible:ring-1"
             />
           </div>
 
@@ -577,7 +577,7 @@ export default function Tasks() {
                   </div>
                   {completedFilter === "active" && (
                     <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-gray-600">Status</label>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Status</label>
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
                         <SelectContent>
@@ -591,7 +591,7 @@ export default function Tasks() {
                     </div>
                   )}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Priority</label>
+                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Priority</label>
                     <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                       <SelectTrigger><SelectValue placeholder="Priority" /></SelectTrigger>
                       <SelectContent>
@@ -604,7 +604,7 @@ export default function Tasks() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Project</label>
+                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Project</label>
                     <Select value={projectFilter} onValueChange={setProjectFilter}>
                       <SelectTrigger><SelectValue placeholder="Project" /></SelectTrigger>
                       <SelectContent>
@@ -616,7 +616,7 @@ export default function Tasks() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Assignee</label>
+                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Assignee</label>
                     <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
                       <SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger>
                       <SelectContent>
@@ -628,7 +628,7 @@ export default function Tasks() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Due Date</label>
+                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Due Date</label>
                     <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
                       <SelectTrigger><SelectValue placeholder="Due Date" /></SelectTrigger>
                       <SelectContent>
@@ -659,11 +659,11 @@ export default function Tasks() {
                 </SelectContent>
               </Select>
             )}
-            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5">
+            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
-                className={`p-1 rounded ${viewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                className={`p-1 rounded ${viewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                 title="List"
               >
                 <List className="w-3.5 h-3.5" />
@@ -671,7 +671,7 @@ export default function Tasks() {
               <button
                 type="button"
                 onClick={() => setViewMode("board")}
-                className={`p-1 rounded ${viewMode === "board" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                className={`p-1 rounded ${viewMode === "board" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                 title="Board"
               >
                 <Kanban className="w-3.5 h-3.5" />
@@ -679,7 +679,7 @@ export default function Tasks() {
               <button
                 type="button"
                 onClick={() => setViewMode("grouped")}
-                className={`p-1 rounded ${viewMode === "grouped" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                className={`p-1 rounded ${viewMode === "grouped" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                 title="Grouped"
               >
                 <Grid3X3 className="w-3.5 h-3.5" />
@@ -711,8 +711,8 @@ export default function Tasks() {
                     <div key={column.id} className="flex-shrink-0 w-64 flex flex-col">
                       <div className="flex items-center gap-2 mb-2 px-1">
                         <span className={`w-2 h-2 rounded-full ${column.color}`} />
-                        <span className="text-[12px] font-medium text-gray-700">{column.label}</span>
-                        <span className="text-[11px] text-gray-400 tabular-nums">{columnTasks.length}</span>
+                        <span className="text-[12px] font-medium text-gray-700 dark:text-gray-300">{column.label}</span>
+                        <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{columnTasks.length}</span>
                       </div>
 
                       <Droppable droppableId={column.id}>
@@ -721,7 +721,7 @@ export default function Tasks() {
                             ref={provided.innerRef}
                             {...provided.droppableProps}
                             className={`flex-1 rounded-md transition-colors ${
-                              snapshot.isDraggingOver ? 'bg-gray-100' : 'bg-gray-50/50'
+                              snapshot.isDraggingOver ? 'bg-gray-100 dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900/50'
                             } p-1.5 overflow-y-auto`}
                           >
                             <div className="space-y-1.5">
@@ -729,7 +729,7 @@ export default function Tasks() {
                                 const pColor =
                                   task.priority === 'urgent' ? 'text-red-600' :
                                   task.priority === 'high' ? 'text-orange-600' :
-                                  task.priority === 'low' ? 'text-gray-400' : 'text-gray-600';
+                                  task.priority === 'low' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400';
                                 return (
                                 <Draggable key={task.id} draggableId={task.id} index={index}>
                                   {(provided, snapshot) => (
@@ -737,7 +737,7 @@ export default function Tasks() {
                                       ref={provided.innerRef}
                                       {...provided.draggableProps}
                                       {...provided.dragHandleProps}
-                                      className={`bg-white border border-gray-200 rounded-md p-2.5 cursor-pointer hover:border-gray-300 transition-all ${
+                                      className={`bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md p-2.5 cursor-pointer hover:border-gray-300 dark:border-gray-700 transition-all ${
                                         snapshot.isDragging ? 'shadow-lg ring-1 ring-gray-300' : ''
                                       }`}
                                       onClick={() => handleOpenDrawer(task)}
@@ -745,9 +745,9 @@ export default function Tasks() {
                                       <div className="flex items-start gap-2">
                                         <div className="flex-1 min-w-0">
                                           {task.ticket_number && (
-                                            <span className="text-[11px] text-gray-400 mr-1.5">#{task.ticket_number}</span>
+                                            <span className="text-[11px] text-gray-400 dark:text-gray-500 mr-1.5">#{task.ticket_number}</span>
                                           )}
-                                          <span className="text-[13px] text-gray-900 font-medium line-clamp-2">{task.title}</span>
+                                          <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium line-clamp-2">{task.title}</span>
                                         </div>
                                         <span className={`text-[10px] capitalize ${pColor} shrink-0`}>{task.priority}</span>
                                       </div>
@@ -758,7 +758,7 @@ export default function Tasks() {
                                         )}
                                       </div>
                                       {task.due_date && (
-                                        <div className="text-[11px] text-gray-400 mt-1">
+                                        <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                                           {parseLocalDate(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                         </div>
                                       )}
@@ -769,7 +769,7 @@ export default function Tasks() {
                               })}
                               {provided.placeholder}
                               {columnTasks.length === 0 && (
-                                <div className="text-center py-6 text-[12px] text-gray-400">No tasks</div>
+                                <div className="text-center py-6 text-[12px] text-gray-400 dark:text-gray-500">No tasks</div>
                               )}
                             </div>
                           </div>
@@ -787,15 +787,15 @@ export default function Tasks() {
           <div className="overflow-y-auto h-full">
             {Object.entries(groupedTasks).map(([groupName, groupTasks]) => (
               <div key={groupName}>
-                <div className="flex items-center gap-2 px-4 h-7 border-b border-gray-100">
+                <div className="flex items-center gap-2 px-4 h-7 border-b border-gray-100 dark:border-gray-800">
                   <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500 capitalize">{groupName}</span>
-                  <span className="text-[11px] text-gray-400 tabular-nums ml-auto">{groupTasks.length}</span>
+                  <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums ml-auto">{groupTasks.length}</span>
                 </div>
                 {groupTasks.map(task => {
                   const pColor =
                     task.priority === 'urgent' ? 'text-red-600' :
                     task.priority === 'high' ? 'text-orange-600' :
-                    task.priority === 'low' ? 'text-gray-400' : 'text-gray-600';
+                    task.priority === 'low' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400';
                   const sDot =
                     task.status === 'completed' ? 'bg-green-500' :
                     task.status === 'in_progress' ? 'bg-blue-500' :
@@ -804,12 +804,12 @@ export default function Tasks() {
                   return (
                     <div
                       key={task.id}
-                      className="group flex items-center gap-3 px-4 h-9 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                      className="group flex items-center gap-3 px-4 h-9 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 cursor-pointer"
                       onClick={() => handleOpenDrawer(task)}
                     >
                       <span className={`w-2 h-2 rounded-full ${sDot} flex-shrink-0`} />
-                      {task.ticket_number && <span className="text-[11px] text-gray-400">#{task.ticket_number}</span>}
-                      <span className="flex-1 text-[13px] text-gray-900 truncate">{task.title}</span>
+                      {task.ticket_number && <span className="text-[11px] text-gray-400 dark:text-gray-500">#{task.ticket_number}</span>}
+                      <span className="flex-1 text-[13px] text-gray-900 dark:text-gray-100 truncate">{task.title}</span>
                       <span className="hidden md:inline text-[12px] text-gray-500 truncate max-w-[140px]">{getProjectName(task.project_id)}</span>
                       <span className="hidden lg:inline text-[12px] text-gray-500 truncate max-w-[120px]">{getTeamMemberName(task.assigned_to)}</span>
                       <span className={`text-[11px] capitalize ${pColor} w-14 text-right`}>{task.priority}</span>
@@ -856,7 +856,7 @@ export default function Tasks() {
             <div className="w-px h-4 bg-gray-700" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button type="button" className="text-gray-300 hover:text-white text-[13px]">Status</button>
+                <button type="button" className="text-gray-300 dark:text-gray-600 hover:text-white text-[13px]">Status</button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => handleBulkStatusChange('todo')}>To Do</DropdownMenuItem>
@@ -869,14 +869,14 @@ export default function Tasks() {
             <button
               type="button"
               onClick={() => setDeleteConfirmDialog({ open: true, taskIds: selectedTasks })}
-              className="text-gray-300 hover:text-red-400 text-[13px]"
+              className="text-gray-300 dark:text-gray-600 hover:text-red-400 text-[13px]"
             >
               Delete
             </button>
             <button
               type="button"
               onClick={() => setSelectedTasks([])}
-              className="ml-1 p-0.5 text-gray-400 hover:text-white rounded hover:bg-gray-800"
+              className="ml-1 p-0.5 text-gray-400 dark:text-gray-500 hover:text-white rounded hover:bg-gray-800"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -1040,7 +1040,7 @@ function AssigneePicker({ value, teamMembers, onChange, children }) {
             e.stopPropagation();
             onChange("");
           }}
-          className={value === "" || !value ? "bg-gray-100 font-medium" : ""}
+          className={value === "" || !value ? "bg-gray-100 dark:bg-gray-800 font-medium" : ""}
         >
           Unassigned
         </DropdownMenuItem>
@@ -1053,7 +1053,7 @@ function AssigneePicker({ value, teamMembers, onChange, children }) {
                 e.stopPropagation();
                 onChange(tm.id);
               }}
-              className={`flex items-center gap-2 ${value === tm.id ? "bg-gray-100 font-medium" : ""}`}
+              className={`flex items-center gap-2 ${value === tm.id ? "bg-gray-100 dark:bg-gray-800 font-medium" : ""}`}
             >
               <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center">
                 {initialsOf(tm.full_name)}
@@ -1085,7 +1085,7 @@ function TaskRow({
 
   return (
     <div
-      className={`group flex items-center gap-2 pl-3 pr-2 h-9 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+      className={`group flex items-center gap-2 pl-3 pr-2 h-9 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
         selected ? "bg-indigo-50/40" : ""
       }`}
       onClick={() => onOpenTask(task)}
@@ -1099,7 +1099,7 @@ function TaskRow({
       </div>
 
       {task.ticket_number && (
-        <span className="hidden sm:inline text-[11px] text-gray-400 tabular-nums w-12 shrink-0 truncate">
+        <span className="hidden sm:inline text-[11px] text-gray-400 dark:text-gray-500 tabular-nums w-12 shrink-0 truncate">
           #{task.ticket_number}
         </span>
       )}
@@ -1120,7 +1120,7 @@ function TaskRow({
 
       <span
         className={`flex-1 min-w-0 text-[13px] ${
-          task.status === "completed" ? "text-gray-400 line-through" : "text-gray-900"
+          task.status === "completed" ? "text-gray-400 dark:text-gray-500 line-through" : "text-gray-900 dark:text-gray-100"
         }`}
       >
         <InlineEdit
@@ -1131,7 +1131,7 @@ function TaskRow({
       </span>
 
       {checklist.length > 0 && (
-        <span className="hidden md:inline text-[11px] text-gray-400 tabular-nums shrink-0">
+        <span className="hidden md:inline text-[11px] text-gray-400 dark:text-gray-500 tabular-nums shrink-0">
           {doneCount}/{checklist.length}
         </span>
       )}
@@ -1168,7 +1168,7 @@ function TaskRow({
               {initialsOf(assignee.full_name)}
             </div>
           ) : (
-            <div className="w-6 h-6 rounded-full border border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-[10px]">
+            <div className="w-6 h-6 rounded-full border border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 text-[10px]">
               ?
             </div>
           )}
@@ -1181,7 +1181,7 @@ function TaskRow({
           e.stopPropagation();
           onDelete(task.id);
         }}
-        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-red-50"
         title="Delete"
       >
         <Trash2 className="w-3.5 h-3.5" />
@@ -1232,11 +1232,11 @@ function LinearTaskList({
   }, [tasks, visibleStatuses]);
 
   if (loading) {
-    return <div className="p-8 text-center text-sm text-gray-400">Loading…</div>;
+    return <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">Loading…</div>;
   }
   if (tasks.length === 0) {
     return (
-      <div className="p-8 text-center text-sm text-gray-400">
+      <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">
         {allTaskCount === 0
           ? "No tasks yet. Click \"New Task\" to get started."
           : "No tasks match your filters."}
@@ -1247,8 +1247,8 @@ function LinearTaskList({
   const allSelected = selectedTasks.length === tasks.length && tasks.length > 0;
 
   return (
-    <div className="overflow-y-auto h-full bg-white">
-      <div className="flex items-center gap-2 px-3 h-8 border-b border-gray-200 bg-gray-50/60 text-[11px] text-gray-500 sticky top-0 z-10">
+    <div className="overflow-y-auto h-full bg-white dark:bg-gray-950">
+      <div className="flex items-center gap-2 px-3 h-8 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/60 text-[11px] text-gray-500 sticky top-0 z-10">
         <div className="flex items-center justify-center w-5 shrink-0" onClick={(e) => e.stopPropagation()}>
           <Checkbox checked={allSelected} onCheckedChange={onToggleSelectAll} />
         </div>
@@ -1263,18 +1263,18 @@ function LinearTaskList({
             <button
               type="button"
               onClick={() => toggleGroup(s.id)}
-              className="w-full flex items-center gap-2 px-3 h-8 bg-gray-50 border-b border-gray-200 hover:bg-gray-100"
+              className="w-full flex items-center gap-2 px-3 h-8 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <ChevronRight
-                className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                className={`w-3.5 h-3.5 text-gray-400 dark:text-gray-500 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
               />
               <StatusIcon status={s.id} size={12} />
-              <span className="text-[12px] font-medium text-gray-700">{s.label}</span>
-              <span className="text-[11px] text-gray-400 tabular-nums">{groupTasks.length}</span>
+              <span className="text-[12px] font-medium text-gray-700 dark:text-gray-300">{s.label}</span>
+              <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{groupTasks.length}</span>
             </button>
             {!isCollapsed &&
               (groupTasks.length === 0 ? (
-                <div className="px-3 py-2 text-[12px] text-gray-400 italic border-b border-gray-100">
+                <div className="px-3 py-2 text-[12px] text-gray-400 dark:text-gray-500 italic border-b border-gray-100 dark:border-gray-800">
                   No tasks
                 </div>
               ) : (
@@ -1328,7 +1328,7 @@ function QuickAddTask({ authUser, currentTeamMember, onCreated }) {
   return (
     <form onSubmit={handleSubmit} className="flex-1 lg:w-80">
       <div className="relative">
-        <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}

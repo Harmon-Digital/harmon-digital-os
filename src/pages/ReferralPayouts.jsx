@@ -207,9 +207,9 @@ export default function ReferralPayouts() {
 
   if (!isAdmin) {
     return (
-      <div className="h-full flex items-center justify-center bg-white">
+      <div className="h-full flex items-center justify-center bg-white dark:bg-gray-950">
         <div className="text-center">
-          <h2 className="text-[15px] font-semibold text-gray-900 mb-1">
+          <h2 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100 mb-1">
             Admin Access Required
           </h2>
           <p className="text-[13px] text-gray-500">
@@ -226,11 +226,11 @@ export default function ReferralPayouts() {
   });
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Consolidated toolbar */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
-          <span className="text-[15px] font-semibold text-gray-900">Referral Payouts</span>
+          <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Referral Payouts</span>
 
           <div className="ml-4">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -247,8 +247,8 @@ export default function ReferralPayouts() {
           </div>
 
           {selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 text-[12px] text-gray-600">
-              <span className="font-medium text-gray-900">{selectedIds.length} selected</span>
+            <div className="flex items-center gap-2 text-[12px] text-gray-600 dark:text-gray-400">
+              <span className="font-medium text-gray-900 dark:text-gray-100">{selectedIds.length} selected</span>
               <Button
                 size="sm"
                 onClick={() => setMarkPaidDialog(true)}
@@ -282,41 +282,41 @@ export default function ReferralPayouts() {
         </div>
 
         {/* Metric pill strip */}
-        <div className="flex items-center gap-5 px-4 h-9 border-t border-gray-100">
-          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+        <div className="flex items-center gap-5 px-4 h-9 border-t border-gray-100 dark:border-gray-800">
+          <span className="text-[13px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             Total pending
-            <span className="text-gray-900 font-medium tabular-nums">
+            <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">
               ${totalPending.toLocaleString()}
             </span>
           </span>
-          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+          <span className="text-[13px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             Active referrals
-            <span className="text-gray-900 font-medium tabular-nums">{referrals.length}</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{referrals.length}</span>
           </span>
-          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+          <span className="text-[13px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
             Period
-            <span className="text-gray-900 font-medium">{currentMonthLabel}</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">{currentMonthLabel}</span>
           </span>
-          <span className="text-[12px] text-gray-400 ml-auto tabular-nums">
+          <span className="text-[12px] text-gray-400 dark:text-gray-500 ml-auto tabular-nums">
             {filteredPayouts.length} {filteredPayouts.length === 1 ? "payout" : "payouts"}
           </span>
         </div>
       </div>
 
       {/* List */}
-      <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+      <div className="overflow-y-auto flex-1 min-h-0 bg-white dark:bg-gray-950">
         {loading ? (
-          <div className="p-8 text-center text-[13px] text-gray-400">Loading…</div>
+          <div className="p-8 text-center text-[13px] text-gray-400 dark:text-gray-500">Loading…</div>
         ) : filteredPayouts.length === 0 ? (
-          <div className="p-10 text-center text-[13px] text-gray-400">
+          <div className="p-10 text-center text-[13px] text-gray-400 dark:text-gray-500">
             <p>No payouts found</p>
           </div>
         ) : (
           <>
-            <div className="h-7 flex items-center px-3 bg-gray-50 border-b border-gray-200">
+            <div className="h-7 flex items-center px-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
               <div className="w-6 flex justify-center">
                 <Checkbox
                   checked={
@@ -329,7 +329,7 @@ export default function ReferralPayouts() {
               <span className="ml-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">
                 {statusFilter === "all" ? "All payouts" : `${statusFilter} payouts`}
               </span>
-              <span className="ml-2 text-[11px] text-gray-400 tabular-nums">
+              <span className="ml-2 text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">
                 {filteredPayouts.length}
               </span>
             </div>
@@ -338,8 +338,8 @@ export default function ReferralPayouts() {
               return (
                 <div
                   key={payout.id}
-                  className={`flex items-center gap-3 px-3 py-2 border-b border-gray-100 hover:bg-gray-50 ${
-                    checked ? "bg-gray-50" : ""
+                  className={`flex items-center gap-3 px-3 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
+                    checked ? "bg-gray-50 dark:bg-gray-900" : ""
                   }`}
                 >
                   <div className="w-6 flex justify-center shrink-0">
@@ -350,7 +350,7 @@ export default function ReferralPayouts() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="text-[13px] text-gray-900 font-medium truncate">
+                    <div className="text-[13px] text-gray-900 dark:text-gray-100 font-medium truncate">
                       {payout.referrals?.referral_partners?.contact_name || "—"}
                     </div>
                     {payout.referrals?.referral_partners?.company_name && (
@@ -360,7 +360,7 @@ export default function ReferralPayouts() {
                     )}
                   </div>
 
-                  <span className="hidden md:inline text-[13px] text-gray-700 truncate max-w-[200px]">
+                  <span className="hidden md:inline text-[13px] text-gray-700 dark:text-gray-300 truncate max-w-[200px]">
                     {payout.referrals?.projects?.name || "—"}
                   </span>
 
@@ -377,7 +377,7 @@ export default function ReferralPayouts() {
                     {payout.payout_type?.replace("_", " ") || "—"}
                   </span>
 
-                  <span className="text-[13px] text-gray-900 font-medium tabular-nums w-24 text-right">
+                  <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium tabular-nums w-24 text-right">
                     ${payout.amount?.toLocaleString()}
                   </span>
 
@@ -392,7 +392,7 @@ export default function ReferralPayouts() {
                     <span className="capitalize">{payout.status}</span>
                   </span>
 
-                  <span className="hidden xl:inline text-[12px] text-gray-400 truncate max-w-[120px]">
+                  <span className="hidden xl:inline text-[12px] text-gray-400 dark:text-gray-500 truncate max-w-[120px]">
                     {payout.payment_reference || "—"}
                   </span>
                 </div>
@@ -423,7 +423,7 @@ export default function ReferralPayouts() {
               </p>
             ) : (
               <div className="space-y-2">
-                <p className="text-sm text-gray-600 mb-3">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                   {generatedPayouts.length} payout(s) will be created:
                 </p>
                 <div className="max-h-60 overflow-y-auto">
@@ -434,10 +434,10 @@ export default function ReferralPayouts() {
                     return (
                       <div
                         key={idx}
-                        className="flex items-center gap-3 px-2 py-2 border-b border-gray-100 text-[13px]"
+                        className="flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 text-[13px]"
                       >
                         <span className="flex-1 min-w-0 truncate">
-                          <span className="text-gray-900 font-medium">
+                          <span className="text-gray-900 dark:text-gray-100 font-medium">
                             {referral?.referral_partners?.contact_name}
                           </span>
                           <span className="text-gray-500">
@@ -445,7 +445,7 @@ export default function ReferralPayouts() {
                             {referral?.projects?.name}
                           </span>
                         </span>
-                        <span className="text-gray-900 font-medium tabular-nums shrink-0">
+                        <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums shrink-0">
                           ${payout.amount.toLocaleString()}
                         </span>
                       </div>
@@ -501,7 +501,7 @@ export default function ReferralPayouts() {
                 placeholder="Check #, Transaction ID, etc."
               />
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
               Total:{" "}
               <span className="font-semibold tabular-nums">
                 $

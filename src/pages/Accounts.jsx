@@ -133,39 +133,39 @@ export default function Accounts() {
     (industryFilter !== "all" ? 1 : 0);
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Page header */}
-      <div className="px-4 pt-4 pb-3 border-b border-gray-200">
+      <div className="px-4 pt-4 pb-3 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between">
-          <h1 className="text-[15px] font-semibold text-gray-900">Accounts</h1>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-gray-600">
+          <h1 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Accounts</h1>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-gray-600 dark:text-gray-400">
             <span className="inline-flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              Active <span className="text-gray-900 font-medium">{stats.active}</span>
+              Active <span className="text-gray-900 dark:text-gray-100 font-medium">{stats.active}</span>
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-              Paused <span className="text-gray-900 font-medium">{stats.paused}</span>
+              Paused <span className="text-gray-900 dark:text-gray-100 font-medium">{stats.paused}</span>
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-              Inactive <span className="text-gray-900 font-medium">{stats.inactive}</span>
+              Inactive <span className="text-gray-900 dark:text-gray-100 font-medium">{stats.inactive}</span>
             </span>
-            <span>Total <span className="text-gray-900 font-medium">{stats.total}</span></span>
+            <span>Total <span className="text-gray-900 dark:text-gray-100 font-medium">{stats.total}</span></span>
           </div>
         </div>
       </div>
 
       {/* Consolidated toolbar */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
           <div className="relative flex-1 max-w-md min-w-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5" />
             <Input
               placeholder="Search accounts"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+              className="pl-8 h-8 text-[13px] border-gray-200 dark:border-gray-800 focus-visible:ring-1"
             />
           </div>
 
@@ -198,7 +198,7 @@ export default function Accounts() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600">Status</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Status</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
@@ -210,7 +210,7 @@ export default function Accounts() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600">Industry</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Industry</label>
                 <Select value={industryFilter} onValueChange={setIndustryFilter}>
                   <SelectTrigger><SelectValue placeholder="Industry" /></SelectTrigger>
                   <SelectContent>
@@ -245,11 +245,11 @@ export default function Accounts() {
       </div>
 
       {/* List */}
-      <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+      <div className="overflow-y-auto flex-1 min-h-0 bg-white dark:bg-gray-950">
         {loading ? (
-          <div className="p-8 text-center text-sm text-gray-400">Loading…</div>
+          <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">Loading…</div>
         ) : filteredAccounts.length === 0 ? (
-          <div className="p-8 text-center text-sm text-gray-400">
+          <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">
             {accounts.length === 0
               ? 'No accounts yet. Click "New Account" to get started.'
               : "No accounts match your filters."}
@@ -267,13 +267,13 @@ export default function Accounts() {
             return (
               <div
                 key={account.id}
-                className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50"
+                className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
               >
                 {account.logo_url ? (
                   <img
                     src={account.logo_url}
                     alt={account.company_name}
-                    className="w-6 h-6 rounded object-contain bg-gray-50 border border-gray-100 flex-shrink-0"
+                    className="w-6 h-6 rounded object-contain bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 flex-shrink-0"
                     onError={(e) => {
                       e.target.style.display = "none";
                       if (e.target.nextSibling) {
@@ -283,13 +283,13 @@ export default function Accounts() {
                   />
                 ) : null}
                 <div
-                  className={`w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium flex-shrink-0 ${account.logo_url ? "hidden" : ""}`}
+                  className={`w-6 h-6 rounded-full bg-gray-200 text-gray-700 dark:text-gray-300 flex items-center justify-center text-[10px] font-medium flex-shrink-0 ${account.logo_url ? "hidden" : ""}`}
                 >
                   {initials || <Building2 className="w-3.5 h-3.5" />}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] text-gray-900 font-medium truncate">
+                  <div className="text-[13px] text-gray-900 dark:text-gray-100 font-medium truncate">
                     {account.company_name}
                     {account.website && (
                       <a
@@ -297,7 +297,7 @@ export default function Accounts() {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="text-gray-400 font-normal ml-1.5 hover:text-gray-700"
+                        className="text-gray-400 dark:text-gray-500 font-normal ml-1.5 hover:text-gray-700 dark:text-gray-300"
                       >
                         · {account.website.replace(/^https?:\/\//, "")}
                       </a>
@@ -315,7 +315,7 @@ export default function Accounts() {
                     e.stopPropagation();
                     handleViewContacts(account);
                   }}
-                  className="hidden md:inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-900 w-24 justify-end"
+                  className="hidden md:inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-24 justify-end"
                 >
                   <Users className="w-3 h-3" />
                   {accountContacts.length}
@@ -333,7 +333,7 @@ export default function Accounts() {
                       setEditingAccount(account);
                       setShowDrawer(true);
                     }}
-                    className="p-1 text-gray-400 hover:text-gray-900"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
                   >
                     <Edit className="w-3.5 h-3.5" />
                   </button>
@@ -343,7 +343,7 @@ export default function Accounts() {
                       e.stopPropagation();
                       setDeleteDialog({ open: true, accountId: account.id });
                     }}
-                    className="p-1 text-gray-400 hover:text-red-600"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -386,10 +386,10 @@ export default function Accounts() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="border-t border-gray-200">
+          <div className="border-t border-gray-200 dark:border-gray-800">
             {getAccountContacts(selectedAccount?.id).length === 0 ? (
               <div className="py-10 text-center">
-                <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                <Users className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                 <p className="text-[13px] text-gray-500">No contacts for this account yet</p>
                 <Link to={createPageUrl("Contacts")}>
                   <Button variant="ghost" className="mt-3 h-7 px-2 text-[13px]">
@@ -404,32 +404,32 @@ export default function Accounts() {
                 return (
                   <div
                     key={contact.id}
-                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50"
+                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
                   >
-                    <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 dark:text-gray-300 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
                       {initials || "?"}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13px] text-gray-900 truncate">
+                      <div className="text-[13px] text-gray-900 dark:text-gray-100 truncate">
                         {contact.first_name} {contact.last_name}
-                        {contact.title && <span className="text-gray-400 font-normal ml-1.5">· {contact.title}</span>}
+                        {contact.title && <span className="text-gray-400 dark:text-gray-500 font-normal ml-1.5">· {contact.title}</span>}
                       </div>
                     </div>
                     <a
                       href={`mailto:${contact.email}`}
-                      className="text-[12px] text-gray-500 hover:text-gray-900 w-52 truncate text-right"
+                      className="text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-52 truncate text-right"
                     >
                       {contact.email}
                     </a>
                     {contact.phone ? (
                       <a
                         href={`tel:${contact.phone}`}
-                        className="text-[12px] text-gray-500 hover:text-gray-900 w-28 text-right"
+                        className="text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-28 text-right"
                       >
                         {contact.phone}
                       </a>
                     ) : (
-                      <span className="text-[12px] text-gray-300 w-28 text-right">—</span>
+                      <span className="text-[12px] text-gray-300 dark:text-gray-600 w-28 text-right">—</span>
                     )}
                     <span className="text-[11px] capitalize text-gray-500 w-20 text-right">
                       {contact.role || "—"}

@@ -207,9 +207,9 @@ export default function Partners() {
 
   if (!isAdmin) {
     return (
-      <div className="h-full flex items-center justify-center bg-white">
+      <div className="h-full flex items-center justify-center bg-white dark:bg-gray-950">
         <div className="text-center">
-          <h2 className="text-[15px] font-semibold text-gray-900 mb-1">
+          <h2 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100 mb-1">
             Admin Access Required
           </h2>
           <p className="text-[13px] text-gray-500">
@@ -221,19 +221,19 @@ export default function Partners() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Consolidated toolbar */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
-          <span className="text-[15px] font-semibold text-gray-900">Partners</span>
+          <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Partners</span>
 
           <div className="relative flex-1 max-w-md min-w-0 ml-2">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5" />
             <Input
               placeholder="Search partners"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+              className="pl-8 h-8 text-[13px] border-gray-200 dark:border-gray-800 focus-visible:ring-1"
             />
           </div>
 
@@ -249,49 +249,49 @@ export default function Partners() {
         </div>
 
         {/* Metric pill strip */}
-        <div className="flex items-center gap-5 px-4 h-9 border-t border-gray-100">
-          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+        <div className="flex items-center gap-5 px-4 h-9 border-t border-gray-100 dark:border-gray-800">
+          <span className="text-[13px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
             Active partners
-            <span className="text-gray-900 font-medium tabular-nums">{stats.totalPartners}</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{stats.totalPartners}</span>
           </span>
-          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+          <span className="text-[13px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             Active referrals
-            <span className="text-gray-900 font-medium tabular-nums">{stats.activeReferrals}</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{stats.activeReferrals}</span>
           </span>
-          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+          <span className="text-[13px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             Total paid
-            <span className="text-gray-900 font-medium tabular-nums">${stats.totalPaid.toLocaleString()}</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">${stats.totalPaid.toLocaleString()}</span>
           </span>
-          <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+          <span className="text-[13px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             Pending payouts
-            <span className="text-gray-900 font-medium tabular-nums">${stats.pendingPayouts.toLocaleString()}</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">${stats.pendingPayouts.toLocaleString()}</span>
           </span>
-          <span className="text-[12px] text-gray-400 ml-auto tabular-nums">
+          <span className="text-[12px] text-gray-400 dark:text-gray-500 ml-auto tabular-nums">
             {filteredPartners.length} {filteredPartners.length === 1 ? "partner" : "partners"}
           </span>
         </div>
       </div>
 
       {/* List */}
-      <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+      <div className="overflow-y-auto flex-1 min-h-0 bg-white dark:bg-gray-950">
         {loading ? (
-          <div className="p-8 text-center text-[13px] text-gray-400">Loading…</div>
+          <div className="p-8 text-center text-[13px] text-gray-400 dark:text-gray-500">Loading…</div>
         ) : filteredPartners.length === 0 ? (
-          <div className="p-10 text-center text-[13px] text-gray-400">
+          <div className="p-10 text-center text-[13px] text-gray-400 dark:text-gray-500">
             <p>No partners yet</p>
             <p className="text-[12px]">Invite your first partner to get started</p>
           </div>
         ) : (
           <>
-            <div className="h-7 flex items-center px-3 bg-gray-50 border-b border-gray-200">
+            <div className="h-7 flex items-center px-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
               <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
                 All partners
               </span>
-              <span className="ml-2 text-[11px] text-gray-400 tabular-nums">
+              <span className="ml-2 text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">
                 {filteredPartners.length}
               </span>
             </div>
@@ -303,14 +303,14 @@ export default function Partners() {
               return (
                 <div
                   key={partner.id}
-                  className="group flex items-center gap-3 px-3 py-2 border-b border-gray-100 hover:bg-gray-50"
+                  className="group flex items-center gap-3 px-3 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
                 >
-                  <div className="w-6 h-6 shrink-0 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-medium">
+                  <div className="w-6 h-6 shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 flex items-center justify-center text-[10px] font-medium">
                     {getInitials(partner.contact_name)}
                   </div>
 
                   <div className="min-w-0 flex-1 flex items-center gap-2">
-                    <span className="text-[13px] text-gray-900 font-medium truncate">
+                    <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium truncate">
                       {partner.contact_name}
                     </span>
                     <span
@@ -335,7 +335,7 @@ export default function Partners() {
                   </span>
 
                   <div className="flex items-center gap-1.5 shrink-0 w-32 justify-end">
-                    <span className="text-[12px] text-gray-900 tabular-nums">
+                    <span className="text-[12px] text-gray-900 dark:text-gray-100 tabular-nums">
                       {activeRefs} active
                     </span>
                     {pendingRefs > 0 && (
@@ -350,7 +350,7 @@ export default function Partners() {
                         setSelectedPartner(partner);
                         setReferralDialog(true);
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-900"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
                       title="Link project"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -363,7 +363,7 @@ export default function Partners() {
                       setEditingPartner({ ...partner });
                       setEditSheet(true);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-900"
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
                     title="Edit"
                   >
                     <Edit className="w-3.5 h-3.5" />
@@ -568,10 +568,10 @@ export default function Partners() {
                       return (
                         <div
                           key={ref.id}
-                          className="flex items-center gap-2 px-2 py-2 border-b border-gray-100 text-[13px]"
+                          className="flex items-center gap-2 px-2 py-2 border-b border-gray-100 dark:border-gray-800 text-[13px]"
                         >
                           <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
-                          <span className="flex-1 truncate text-gray-900">
+                          <span className="flex-1 truncate text-gray-900 dark:text-gray-100">
                             {ref.projects?.name || ref.client_name || "Pending"}
                           </span>
                           <span className="text-[12px] text-gray-500 capitalize">

@@ -208,7 +208,7 @@ export default function SocialMedia() {
   });
 
   const statusColors = {
-    draft: "bg-gray-100 text-gray-800",
+    draft: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200",
     scheduled: "bg-blue-100 text-blue-800",
     published: "bg-green-100 text-green-800"
   };
@@ -272,35 +272,35 @@ export default function SocialMedia() {
   }, [socialPosts]);
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       <div className="overflow-y-auto flex-1 min-h-0">
       {/* Inline metric strip */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 lg:px-6 py-3 text-[13px] text-gray-600 border-b border-gray-100">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 lg:px-6 py-3 text-[13px] text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
         <span className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-          Total <span className="text-gray-900 font-medium tabular-nums">{postCounts.total}</span>
+          Total <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{postCounts.total}</span>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-          Draft <span className="text-gray-900 font-medium tabular-nums">{postCounts.draft}</span>
+          Draft <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{postCounts.draft}</span>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-          Scheduled <span className="text-gray-900 font-medium tabular-nums">{postCounts.scheduled}</span>
+          Scheduled <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{postCounts.scheduled}</span>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-          Published <span className="text-gray-900 font-medium tabular-nums">{postCounts.published}</span>
+          Published <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{postCounts.published}</span>
         </span>
         <span className="flex items-center gap-1.5">
-          Approved <span className="text-gray-900 font-medium tabular-nums">{postCounts.approved}</span>
+          Approved <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{postCounts.approved}</span>
         </span>
       </div>
 
       {/* Consolidated toolbar */}
-      <div className="sticky top-0 z-20 bg-white border-y border-gray-200">
+      <div className="sticky top-0 z-20 bg-white dark:bg-gray-950 border-y border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-2 px-4 h-12">
-          <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px]">
+          <div className="flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5 text-[12px]">
             {[
               { id: "all", label: "All" },
               { id: "draft", label: "Draft" },
@@ -314,7 +314,7 @@ export default function SocialMedia() {
                 className={`px-2.5 py-1 rounded ${
                   statusFilter === s.id
                     ? "bg-gray-900 text-white"
-                    : "text-gray-600 hover:bg-gray-100"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
               >
                 {s.label}
@@ -323,12 +323,12 @@ export default function SocialMedia() {
           </div>
 
           <div className="relative flex-1 max-w-md min-w-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5" />
             <Input
               placeholder="Search posts"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+              className="pl-8 h-8 text-[13px] border-gray-200 dark:border-gray-800 focus-visible:ring-1"
             />
           </div>
 
@@ -361,7 +361,7 @@ export default function SocialMedia() {
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600">Platform</label>
+                    <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Platform</label>
                     <Select value={platformFilter} onValueChange={setPlatformFilter}>
                       <SelectTrigger><SelectValue placeholder="Platform" /></SelectTrigger>
                       <SelectContent>
@@ -379,11 +379,11 @@ export default function SocialMedia() {
           })()}
 
           <div className="ml-auto flex items-center gap-1.5">
-            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5">
+            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
-                className={`p-1 rounded ${viewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                className={`p-1 rounded ${viewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                 title="List"
               >
                 <List className="w-3.5 h-3.5" />
@@ -391,7 +391,7 @@ export default function SocialMedia() {
               <button
                 type="button"
                 onClick={() => setViewMode("calendar")}
-                className={`p-1 rounded ${viewMode === "calendar" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                className={`p-1 rounded ${viewMode === "calendar" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                 title="Calendar"
               >
                 <CalendarIcon className="w-3.5 h-3.5" />
@@ -414,7 +414,7 @@ export default function SocialMedia() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-gray-200 dark:border-gray-800 border-t-gray-400 rounded-full animate-spin" />
         </div>
       ) : viewMode === "list" ? (
         <LinearPostList
@@ -433,24 +433,24 @@ export default function SocialMedia() {
             <button
               type="button"
               onClick={() => navigateMonth(-1)}
-              className="p-1 text-gray-500 hover:text-gray-900 rounded hover:bg-gray-100"
+              className="p-1 text-gray-500 hover:text-gray-900 dark:text-gray-100 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <h2 className="text-[13px] font-semibold text-gray-900">{monthName}</h2>
+            <h2 className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{monthName}</h2>
             <button
               type="button"
               onClick={() => navigateMonth(1)}
-              className="p-1 text-gray-500 hover:text-gray-900 rounded hover:bg-gray-100"
+              className="p-1 text-gray-500 hover:text-gray-900 dark:text-gray-100 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
           {/* Calendar grid */}
-          <div className="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200 rounded overflow-hidden">
+          <div className="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200 dark:border-gray-800 rounded overflow-hidden">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="bg-white px-2 py-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-gray-500">
+              <div key={day} className="bg-white dark:bg-gray-950 px-2 py-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-gray-500">
                 {day}
               </div>
             ))}
@@ -460,11 +460,11 @@ export default function SocialMedia() {
               return (
                 <div
                   key={idx}
-                  className={`min-h-[96px] p-1.5 ${day ? 'bg-white' : 'bg-gray-50'}`}
+                  className={`min-h-[96px] p-1.5 ${day ? 'bg-white dark:bg-gray-950' : 'bg-gray-50 dark:bg-gray-900'}`}
                 >
                   {day && (
                     <>
-                      <div className={`text-[12px] font-medium mb-1 tabular-nums ${isToday ? 'text-gray-900' : 'text-gray-500'}`}>
+                      <div className={`text-[12px] font-medium mb-1 tabular-nums ${isToday ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500'}`}>
                         {isToday ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[11px]">{day.getDate()}</span> : day.getDate()}
                       </div>
                       <div className="space-y-0.5">
@@ -476,7 +476,7 @@ export default function SocialMedia() {
                             <div
                               key={post.id}
                               onClick={() => handleEdit(post)}
-                              className="text-[11px] px-1 py-0.5 rounded truncate cursor-pointer hover:bg-gray-100 flex items-center gap-1 text-gray-700"
+                              className="text-[11px] px-1 py-0.5 rounded truncate cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-1 text-gray-700 dark:text-gray-300"
                             >
                               <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
                               {post.approved && <Check className="w-3 h-3 text-green-600 flex-shrink-0" />}
@@ -485,7 +485,7 @@ export default function SocialMedia() {
                           );
                         })}
                         {postsForDay.length > 3 && (
-                          <div className="text-[11px] text-gray-400 px-1">
+                          <div className="text-[11px] text-gray-400 dark:text-gray-500 px-1">
                             +{postsForDay.length - 3} more
                           </div>
                         )}
@@ -578,7 +578,7 @@ function PostRow({ post, accountsMap, onApprovalToggle, onStatusChange, onEdit, 
   const account = post.client_id ? accountsMap[post.client_id] : null;
   return (
     <div
-      className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+      className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60"
       onClick={() => onEdit(post)}
     >
       <div className="flex items-center justify-center w-5 shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -603,10 +603,10 @@ function PostRow({ post, accountsMap, onApprovalToggle, onStatusChange, onEdit, 
         />
       )}
 
-      <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+      <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 dark:text-gray-100 font-medium">
         {post.title}
         {post.content && (
-          <span className="ml-2 text-gray-400 font-normal">{post.content.slice(0, 60)}</span>
+          <span className="ml-2 text-gray-400 dark:text-gray-500 font-normal">{post.content.slice(0, 60)}</span>
         )}
       </span>
 
@@ -639,7 +639,7 @@ function PostRow({ post, accountsMap, onApprovalToggle, onStatusChange, onEdit, 
           e.stopPropagation();
           onDelete(post.id);
         }}
-        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-red-50"
         title="Delete"
       >
         <Trash2 className="w-3.5 h-3.5" />
@@ -676,7 +676,7 @@ function LinearPostList({
 
   if (posts.length === 0) {
     return (
-      <div className="p-8 text-center text-sm text-gray-400">
+      <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">
         {allPostCount === 0
           ? 'No posts yet. Click "New Post" to get started.'
           : "No posts match your filters."}
@@ -685,7 +685,7 @@ function LinearPostList({
   }
 
   return (
-    <div className="bg-white">
+    <div className="bg-white dark:bg-gray-950">
       {POST_STATUS_LIST.map((s) => {
         const groupPosts = grouped.get(s.id) || [];
         const isCollapsed = collapsed.has(s.id);
@@ -694,18 +694,18 @@ function LinearPostList({
             <button
               type="button"
               onClick={() => toggleGroup(s.id)}
-              className="w-full flex items-center gap-2 px-3 h-8 bg-gray-50 border-b border-gray-200 hover:bg-gray-100"
+              className="w-full flex items-center gap-2 px-3 h-8 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <ChevronRightIcon
-                className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                className={`w-3.5 h-3.5 text-gray-400 dark:text-gray-500 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
               />
               <PostStatusIcon status={s.id} size={12} />
-              <span className="text-[12px] font-medium text-gray-700">{s.label}</span>
-              <span className="text-[11px] text-gray-400 tabular-nums">{groupPosts.length}</span>
+              <span className="text-[12px] font-medium text-gray-700 dark:text-gray-300">{s.label}</span>
+              <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{groupPosts.length}</span>
             </button>
             {!isCollapsed &&
               (groupPosts.length === 0 ? (
-                <div className="px-3 py-2 text-[12px] text-gray-400 italic border-b border-gray-100">
+                <div className="px-3 py-2 text-[12px] text-gray-400 dark:text-gray-500 italic border-b border-gray-100 dark:border-gray-800">
                   No posts
                 </div>
               ) : (

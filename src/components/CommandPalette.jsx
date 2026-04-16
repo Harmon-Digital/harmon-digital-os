@@ -195,7 +195,7 @@ export default function CommandPalette() {
                   : ArrowRight;
                 return (
                   <CommandItem key={r.key} value={`recent ${r.label}`} onSelect={() => go(r.path, r)}>
-                    <Icon className="mr-2 h-4 w-4 text-gray-400" />
+                    <Icon className="mr-2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                     <span className="truncate">{r.label}</span>
                     <CommandShortcut className="text-[10px]">{r.kindLabel}</CommandShortcut>
                   </CommandItem>
@@ -242,7 +242,7 @@ export default function CommandPalette() {
                 value={`page ${link.name} ${link.keywords || ""}`}
                 onSelect={() => go(link.path, { key: `page:${link.path}`, label: link.name, path: link.path, iconKey: "page", kindLabel: "Page" })}
               >
-                <Icon className="mr-2 h-4 w-4 text-gray-400" />
+                <Icon className="mr-2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                 <span>{link.name}</span>
               </CommandItem>
             );
@@ -259,7 +259,7 @@ export default function CommandPalette() {
                   value={`project ${p.name}`}
                   onSelect={() => go(`/ProjectDetail?id=${p.id}`, { key: `project:${p.id}`, label: p.name, path: `/ProjectDetail?id=${p.id}`, iconKey: "project", kindLabel: "Project" })}
                 >
-                  <Briefcase className="mr-2 h-4 w-4 text-gray-400" />
+                  <Briefcase className="mr-2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                   <span className="truncate">{p.name}</span>
                 </CommandItem>
               ))}
@@ -277,10 +277,10 @@ export default function CommandPalette() {
                   value={`task ${t.title} ${t.status || ""}`}
                   onSelect={() => go(`/Tasks?taskId=${t.id}`, { key: `task:${t.id}`, label: t.title, path: `/Tasks?taskId=${t.id}`, iconKey: "task", kindLabel: "Task" })}
                 >
-                  <CheckSquare className="mr-2 h-4 w-4 text-gray-400" />
+                  <CheckSquare className="mr-2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                   <span className="truncate">{t.title}</span>
                   {t.status && (
-                    <span className="ml-auto text-[10px] uppercase tracking-wide text-gray-400">
+                    <span className="ml-auto text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
                       {t.status.replace("_", " ")}
                     </span>
                   )}
@@ -300,7 +300,7 @@ export default function CommandPalette() {
                   value={`channel ${c.name} ${c.description || ""}`}
                   onSelect={() => go(`/Channels?channelId=${c.id}`, { key: `channel:${c.id}`, label: `#${c.name}`, path: `/Channels?channelId=${c.id}`, iconKey: "channel", kindLabel: "Channel" })}
                 >
-                  <Hash className="mr-2 h-4 w-4 text-gray-400" />
+                  <Hash className="mr-2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                   <span>{c.name}</span>
                 </CommandItem>
               ))}
@@ -318,7 +318,7 @@ export default function CommandPalette() {
                   value={`dm ${c._displayName}`}
                   onSelect={() => go(`/Channels?channelId=${c.id}`, { key: `dm:${c.id}`, label: c._displayName, path: `/Channels?channelId=${c.id}`, iconKey: "dm", kindLabel: "DM" })}
                 >
-                  <MessageCircle className="mr-2 h-4 w-4 text-gray-400" />
+                  <MessageCircle className="mr-2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                   <span>{c._displayName}</span>
                 </CommandItem>
               ))}
@@ -336,7 +336,7 @@ export default function CommandPalette() {
                   value={`account ${a.company_name || a.name || ""}`}
                   onSelect={() => go(`/Accounts?id=${a.id}`, { key: `account:${a.id}`, label: a.company_name || a.name, path: `/Accounts?id=${a.id}`, iconKey: "account", kindLabel: "Account" })}
                 >
-                  <Building2 className="mr-2 h-4 w-4 text-gray-400" />
+                  <Building2 className="mr-2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                   <span className="truncate">{a.company_name || a.name}</span>
                 </CommandItem>
               ))}
@@ -356,10 +356,10 @@ export default function CommandPalette() {
                     value={`contact ${name} ${c.email || ""}`}
                     onSelect={() => go(`/Contacts?id=${c.id}`, { key: `contact:${c.id}`, label: name, path: `/Contacts?id=${c.id}`, iconKey: "contact", kindLabel: "Contact" })}
                   >
-                    <UserCircle className="mr-2 h-4 w-4 text-gray-400" />
+                    <UserCircle className="mr-2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                     <span className="truncate">{name}</span>
                     {c.email && (
-                      <span className="ml-auto text-[11px] text-gray-400 truncate max-w-[160px]">{c.email}</span>
+                      <span className="ml-auto text-[11px] text-gray-400 dark:text-gray-500 truncate max-w-[160px]">{c.email}</span>
                     )}
                   </CommandItem>
                 );

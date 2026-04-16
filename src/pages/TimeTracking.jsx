@@ -257,7 +257,7 @@ export default function TimeTracking() {
     if (entry.billable) {
       return { label: "Unbilled", text: "text-amber-600" };
     }
-    return { label: "—", text: "text-gray-400" };
+    return { label: "—", text: "text-gray-400 dark:text-gray-500" };
   };
 
   const isAdmin = userProfile?.role === "admin";
@@ -333,11 +333,11 @@ export default function TimeTracking() {
     (isAdmin && teamMemberFilter !== "me" ? 1 : 0);
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Consolidated toolbar */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
-          <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px]">
+          <div className="flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5 text-[12px]">
             {[
               { key: "today", label: "Today" },
               { key: "week", label: "Week" },
@@ -350,7 +350,7 @@ export default function TimeTracking() {
                 className={`px-2.5 py-1 rounded ${
                   dateRange === key
                     ? "bg-gray-900 text-white"
-                    : "text-gray-600 hover:bg-gray-100"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
               >
                 {label}
@@ -358,33 +358,33 @@ export default function TimeTracking() {
             ))}
           </div>
 
-          <div className="flex items-center gap-0.5 border border-gray-200 rounded-md h-8 text-[12px]">
+          <div className="flex items-center gap-0.5 border border-gray-200 dark:border-gray-800 rounded-md h-8 text-[12px]">
             <button
               type="button"
               onClick={() => navigateWeek(-1)}
-              className="h-full px-1.5 text-gray-500 hover:text-gray-800"
+              className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-200"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
-            <span className="text-gray-700 min-w-[120px] text-center tabular-nums">
+            <span className="text-gray-700 dark:text-gray-300 min-w-[120px] text-center tabular-nums">
               {formatDateRange()}
             </span>
             <button
               type="button"
               onClick={() => navigateWeek(1)}
-              className="h-full px-1.5 text-gray-500 hover:text-gray-800"
+              className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-200"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
           <div className="relative flex-1 max-w-xs min-w-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5" />
             <Input
               placeholder="Search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+              className="pl-8 h-8 text-[13px] border-gray-200 dark:border-gray-800 focus-visible:ring-1"
             />
           </div>
 
@@ -417,7 +417,7 @@ export default function TimeTracking() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600">Project</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Project</label>
                 <Select value={projectFilter} onValueChange={setProjectFilter}>
                   <SelectTrigger><SelectValue placeholder="All Projects" /></SelectTrigger>
                   <SelectContent>
@@ -432,7 +432,7 @@ export default function TimeTracking() {
               </div>
               {isAdmin && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-600">Team</label>
+                  <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Team</label>
                   <Select value={teamMemberFilter} onValueChange={setTeamMemberFilter}>
                     <SelectTrigger><SelectValue placeholder="Team" /></SelectTrigger>
                     <SelectContent>
@@ -451,11 +451,11 @@ export default function TimeTracking() {
           </Popover>
 
           <div className="ml-auto flex items-center gap-1.5">
-            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5">
+            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
-                className={`p-1 rounded ${viewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                className={`p-1 rounded ${viewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                 title="List"
               >
                 <ListIcon className="w-3.5 h-3.5" />
@@ -463,7 +463,7 @@ export default function TimeTracking() {
               <button
                 type="button"
                 onClick={() => setViewMode("calendar")}
-                className={`p-1 rounded ${viewMode === "calendar" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                className={`p-1 rounded ${viewMode === "calendar" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                 title="Calendar"
               >
                 <CalendarIcon className="w-3.5 h-3.5" />
@@ -487,18 +487,18 @@ export default function TimeTracking() {
       {/* Scrollable content */}
       <div className="overflow-y-auto flex-1 min-h-0">
         {/* Inline metric strip */}
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 lg:px-6 py-3 text-[13px] text-gray-600 border-b border-gray-100">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 lg:px-6 py-3 text-[13px] text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-            Total <span className="text-gray-900 font-medium tabular-nums">{totalHours.toFixed(1)}h</span>
+            Total <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{totalHours.toFixed(1)}h</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-            Retainer <span className="text-gray-900 font-medium tabular-nums">{retainerHours.toFixed(1)}h</span>
+            Retainer <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{retainerHours.toFixed(1)}h</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Billable <span className="text-gray-900 font-medium tabular-nums">{hourlyBillableHours.toFixed(1)}h</span>
+            Billable <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{hourlyBillableHours.toFixed(1)}h</span>
           </span>
           {unbilledHours > 0 && (
             <span className="flex items-center gap-1.5">
@@ -507,7 +507,7 @@ export default function TimeTracking() {
             </span>
           )}
           <span className="flex items-center gap-1.5">
-            Entries <span className="text-gray-900 font-medium tabular-nums">{filteredEntries.length}</span>
+            Entries <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{filteredEntries.length}</span>
           </span>
         </div>
 
@@ -660,12 +660,12 @@ function DayGroupedEntryList({
   }, [entries]);
 
   if (loading) {
-    return <div className="p-8 text-center text-sm text-gray-400">Loading…</div>;
+    return <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">Loading…</div>;
   }
   if (entries.length === 0) {
     return (
-      <div className="p-10 text-center text-sm text-gray-400">
-        <Clock className="w-7 h-7 mx-auto mb-2 text-gray-300" />
+      <div className="p-10 text-center text-sm text-gray-400 dark:text-gray-500">
+        <Clock className="w-7 h-7 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
         <p>No time entries found</p>
         <p className="text-xs">Click "Log Time" to get started</p>
       </div>
@@ -673,12 +673,12 @@ function DayGroupedEntryList({
   }
 
   return (
-    <div className="bg-white">
+    <div className="bg-white dark:bg-gray-950">
       {groups.map((g) => (
         <div key={g.day}>
-          <div className="flex items-center gap-2 px-4 h-7 border-b border-gray-100">
+          <div className="flex items-center gap-2 px-4 h-7 border-b border-gray-100 dark:border-gray-800">
             <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">{formatDayLabel(g.day)}</span>
-            <span className="text-[11px] text-gray-400 tabular-nums ml-auto">
+            <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums ml-auto">
               {g.total.toFixed(1)}h · {g.entries.length}
             </span>
           </div>
@@ -689,16 +689,16 @@ function DayGroupedEntryList({
             return (
               <div
                 key={entry.id}
-                className="group flex items-center gap-3 px-4 h-9 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+                className="group flex items-center gap-3 px-4 h-9 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60"
                 onClick={() => onEdit(entry)}
               >
-                <span className="text-[11px] text-gray-400 tabular-nums w-24 shrink-0">
+                <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums w-24 shrink-0">
                   {time || ""}
                 </span>
-                <span className="text-gray-900 font-medium tabular-nums w-10 shrink-0 text-[13px]">
+                <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums w-10 shrink-0 text-[13px]">
                   {parseFloat(entry.hours || 0).toFixed(1)}h
                 </span>
-                <span className="text-[13px] text-gray-900 truncate max-w-[200px]">
+                <span className="text-[13px] text-gray-900 dark:text-gray-100 truncate max-w-[200px]">
                   {getProjectName(entry.project_id)}
                 </span>
                 {entry.task_id && (
@@ -706,7 +706,7 @@ function DayGroupedEntryList({
                     {getTaskTitle(entry.task_id)}
                   </span>
                 )}
-                <span className="flex-1 min-w-0 text-[12px] text-gray-400 truncate">
+                <span className="flex-1 min-w-0 text-[12px] text-gray-400 dark:text-gray-500 truncate">
                   {entry.description || ""}
                 </span>
                 {isAdmin && entry.team_member_id && (
@@ -737,7 +737,7 @@ function DayGroupedEntryList({
                     e.stopPropagation();
                     onDelete(entry.id);
                   }}
-                  className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600"
+                  className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-red-600"
                   title="Delete"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

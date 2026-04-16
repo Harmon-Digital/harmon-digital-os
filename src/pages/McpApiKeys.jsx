@@ -51,7 +51,7 @@ function CopyButton({ text, label = "Copy" }) {
   };
 
   return (
-    <button onClick={handleCopy} className="p-1 text-gray-400 hover:text-gray-900 transition-colors">
+    <button onClick={handleCopy} className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100 transition-colors">
       {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
     </button>
   );
@@ -77,7 +77,7 @@ function CopyButtonWithLabel({ text, label = "Copy" }) {
 function CodeBlock({ children, copyText }) {
   return (
     <div className="relative group">
-      <pre className="bg-gray-50 border border-gray-200 text-gray-800 p-3 rounded-md overflow-x-auto text-[12px] font-mono leading-relaxed">
+      <pre className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200 p-3 rounded-md overflow-x-auto text-[12px] font-mono leading-relaxed">
         <code>{children}</code>
       </pre>
       {copyText && (
@@ -126,10 +126,10 @@ function ServerStatusSection({ serverInfo, loading, onRefresh }) {
       {/* Section header */}
       <div className="flex items-center justify-between px-2 mb-2">
         <div className="flex items-center gap-2">
-          <Server className="w-3.5 h-3.5 text-gray-400" />
+          <Server className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
           <span className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">MCP Server</span>
         </div>
-        <button onClick={onRefresh} disabled={loading} className="p-1 text-gray-400 hover:text-gray-900 transition-colors">
+        <button onClick={onRefresh} disabled={loading} className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100 transition-colors">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
@@ -143,26 +143,26 @@ function ServerStatusSection({ serverInfo, loading, onRefresh }) {
         <div className="space-y-4">
           {/* Inline metric strip */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-2">
-            <span className="text-[13px] text-gray-600">Name <span className="text-gray-900 font-medium">{serverInfo.name}</span></span>
-            <span className="text-[13px] text-gray-600">Version <span className="text-gray-900 font-medium">{serverInfo.version}</span></span>
-            <span className="text-[13px] text-gray-600">Tools <span className="text-gray-900 font-medium">{serverInfo.tools}</span></span>
-            <span className="text-[13px] text-gray-600">Resources <span className="text-gray-900 font-medium">{serverInfo.resources}</span></span>
-            <span className="text-[13px] text-gray-600">Prompts <span className="text-gray-900 font-medium">{serverInfo.prompts}</span></span>
-            <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+            <span className="text-[13px] text-gray-600 dark:text-gray-400">Name <span className="text-gray-900 dark:text-gray-100 font-medium">{serverInfo.name}</span></span>
+            <span className="text-[13px] text-gray-600 dark:text-gray-400">Version <span className="text-gray-900 dark:text-gray-100 font-medium">{serverInfo.version}</span></span>
+            <span className="text-[13px] text-gray-600 dark:text-gray-400">Tools <span className="text-gray-900 dark:text-gray-100 font-medium">{serverInfo.tools}</span></span>
+            <span className="text-[13px] text-gray-600 dark:text-gray-400">Resources <span className="text-gray-900 dark:text-gray-100 font-medium">{serverInfo.resources}</span></span>
+            <span className="text-[13px] text-gray-600 dark:text-gray-400">Prompts <span className="text-gray-900 dark:text-gray-100 font-medium">{serverInfo.prompts}</span></span>
+            <span className="text-[13px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
               Status
               <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-              <span className="text-gray-900 font-medium">Online</span></span>
+              <span className="text-gray-900 dark:text-gray-100 font-medium">Online</span></span>
             </span>
           </div>
 
           {/* Endpoint field */}
           <div className="space-y-1.5 px-2">
             <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">MCP Endpoint</div>
-            <div className="flex items-center gap-1.5 border-b border-gray-200 hover:border-gray-300 transition-colors">
+            <div className="flex items-center gap-1.5 border-b border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:border-gray-700 transition-colors">
               <input
                 value={MCP_ENDPOINT}
                 readOnly
-                className="flex-1 bg-transparent text-[13px] font-mono text-gray-900 py-1.5 outline-none"
+                className="flex-1 bg-transparent text-[13px] font-mono text-gray-900 dark:text-gray-100 py-1.5 outline-none"
               />
               <CopyButton text={MCP_ENDPOINT} />
             </div>
@@ -188,19 +188,19 @@ function ToolCategory({ title, icon, tools }) {
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger className="flex items-center justify-between w-full px-2 py-2 hover:bg-gray-50 transition-colors text-left">
+      <CollapsibleTrigger className="flex items-center justify-between w-full px-2 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors text-left">
         <div className="flex items-center gap-2">
           {icon}
-          <span className="text-[13px] font-medium text-gray-900">{title}</span>
-          <span className="text-[11px] text-gray-400">{tools.length}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100">{title}</span>
+          <span className="text-[11px] text-gray-400 dark:text-gray-500">{tools.length}</span>
         </div>
-        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 dark:text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="ml-6 border-l border-gray-100 pl-4 pb-2 space-y-1">
+        <div className="ml-6 border-l border-gray-100 dark:border-gray-800 pl-4 pb-2 space-y-1">
           {tools.map((tool) => (
             <div key={tool.name} className="py-1">
-              <code className="text-[12px] font-mono text-gray-900 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">{tool.name}</code>
+              <code className="text-[12px] font-mono text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-1.5 py-0.5 rounded">{tool.name}</code>
               {tool.description && (
                 <p className="text-[12px] text-gray-500 mt-0.5">{tool.description}</p>
               )}
@@ -316,14 +316,14 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
   -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_tasks","arguments":{"limit":5}}}'`;
 
   return (
-    <div className="border-t border-gray-200 pt-4">
+    <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
       <Collapsible open={docsOpen} onOpenChange={setDocsOpen}>
         <CollapsibleTrigger className="flex items-center justify-between w-full px-2 text-left">
           <div className="flex items-center gap-2">
-            <BookOpen className="w-3.5 h-3.5 text-gray-400" />
+            <BookOpen className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
             <span className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">Documentation</span>
           </div>
-          <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${docsOpen ? "rotate-180" : ""}`} />
+          <ChevronDown className={`w-3.5 h-3.5 text-gray-400 dark:text-gray-500 transition-transform ${docsOpen ? "rotate-180" : ""}`} />
         </CollapsibleTrigger>
 
         <CollapsibleContent>
@@ -331,30 +331,30 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
             {/* Getting Started */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Terminal className="w-3.5 h-3.5 text-gray-400" />
-                <span className="text-[13px] font-semibold text-gray-900">Getting Started</span>
+                <Terminal className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">Getting Started</span>
               </div>
-              <ol className="space-y-2 text-[13px] text-gray-600 ml-5">
+              <ol className="space-y-2 text-[13px] text-gray-600 dark:text-gray-400 ml-5">
                 <li className="flex gap-2">
-                  <span className="font-medium text-gray-900 shrink-0">1.</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100 shrink-0">1.</span>
                   <span>Create an API key below using the "Create Key" button.</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="font-medium text-gray-900 shrink-0">2.</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100 shrink-0">2.</span>
                   <span>
                     Copy the Claude Desktop config JSON from above and replace{" "}
-                    <code className="bg-gray-50 border border-gray-200 px-1 rounded text-[12px] font-mono">YOUR_API_KEY_HERE</code> with your new key.
+                    <code className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-1 rounded text-[12px] font-mono">YOUR_API_KEY_HERE</code> with your new key.
                   </span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="font-medium text-gray-900 shrink-0">3.</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100 shrink-0">3.</span>
                   <span>
                     Paste the config into your Claude Desktop settings file at{" "}
-                    <code className="bg-gray-50 border border-gray-200 px-1 rounded text-[12px] font-mono">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+                    <code className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-1 rounded text-[12px] font-mono">~/Library/Application Support/Claude/claude_desktop_config.json</code>
                   </span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="font-medium text-gray-900 shrink-0">4.</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100 shrink-0">4.</span>
                   <span>Restart Claude Desktop. You should see the MCP tools available.</span>
                 </li>
               </ol>
@@ -370,24 +370,24 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
             {/* Authentication */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Shield className="w-3.5 h-3.5 text-gray-400" />
-                <span className="text-[13px] font-semibold text-gray-900">Authentication</span>
+                <Shield className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">Authentication</span>
               </div>
-              <div className="border-t border-gray-200">
-                <div className="flex items-center gap-3 px-2 py-2.5 border-b border-gray-100">
+              <div className="border-t border-gray-200 dark:border-gray-800">
+                <div className="flex items-center gap-3 px-2 py-2.5 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex-1">
-                    <span className="text-[13px] font-medium text-gray-900">API Key Mode</span>
+                    <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100">API Key Mode</span>
                     <p className="text-[12px] text-gray-500 mt-0.5">
-                      Pass <code className="bg-gray-50 border border-gray-200 px-1 rounded text-[12px] font-mono">X-API-Key: your_key</code> header.
+                      Pass <code className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-1 rounded text-[12px] font-mono">X-API-Key: your_key</code> header.
                       Uses the service role — full access, bypasses RLS. Best for Claude Desktop and automation.
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 px-2 py-2.5 border-b border-gray-100">
+                <div className="flex items-center gap-3 px-2 py-2.5 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex-1">
-                    <span className="text-[13px] font-medium text-gray-900">JWT Mode</span>
+                    <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100">JWT Mode</span>
                     <p className="text-[12px] text-gray-500 mt-0.5">
-                      Pass <code className="bg-gray-50 border border-gray-200 px-1 rounded text-[12px] font-mono">Authorization: Bearer jwt_token</code> header.
+                      Pass <code className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-1 rounded text-[12px] font-mono">Authorization: Bearer jwt_token</code> header.
                       User-scoped with RLS. Best for per-user access from the frontend.
                     </p>
                   </div>
@@ -398,10 +398,10 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
             {/* Available Tools */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Wrench className="w-3.5 h-3.5 text-gray-400" />
-                <span className="text-[13px] font-semibold text-gray-900">Available Tools</span>
+                <Wrench className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">Available Tools</span>
                 {tools.length > 0 && (
-                  <span className="text-[11px] text-gray-400">{tools.length}</span>
+                  <span className="text-[11px] text-gray-400 dark:text-gray-500">{tools.length}</span>
                 )}
               </div>
               {loadingTools ? (
@@ -410,12 +410,12 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
                   Loading tools from server...
                 </div>
               ) : toolCategories.length > 0 ? (
-                <div className="border-t border-gray-200 divide-y divide-gray-100">
+                <div className="border-t border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
                   {toolCategories.map((cat) => (
                     <ToolCategory
                       key={cat.title}
                       title={cat.title}
-                      icon={<Wrench className="w-3.5 h-3.5 text-gray-400" />}
+                      icon={<Wrench className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />}
                       tools={cat.tools}
                     />
                   ))}
@@ -429,14 +429,14 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
             {resources.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-[13px] font-semibold text-gray-900">Resources</span>
+                  <FileText className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                  <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">Resources</span>
                 </div>
-                <div className="border-t border-gray-200">
+                <div className="border-t border-gray-200 dark:border-gray-800">
                   {resources.map((r) => (
-                    <div key={r.uri} className="px-2 py-2 border-b border-gray-100">
-                      <code className="text-[12px] font-mono text-gray-900">{r.uri}</code>
-                      {r.name && <p className="text-[13px] font-medium text-gray-900 mt-0.5">{r.name}</p>}
+                    <div key={r.uri} className="px-2 py-2 border-b border-gray-100 dark:border-gray-800">
+                      <code className="text-[12px] font-mono text-gray-900 dark:text-gray-100">{r.uri}</code>
+                      {r.name && <p className="text-[13px] font-medium text-gray-900 dark:text-gray-100 mt-0.5">{r.name}</p>}
                       {r.description && <p className="text-[12px] text-gray-500 mt-0.5">{r.description}</p>}
                     </div>
                   ))}
@@ -448,13 +448,13 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
             {prompts.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <MessageSquare className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-[13px] font-semibold text-gray-900">Prompt Templates</span>
+                  <MessageSquare className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                  <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">Prompt Templates</span>
                 </div>
-                <div className="border-t border-gray-200">
+                <div className="border-t border-gray-200 dark:border-gray-800">
                   {prompts.map((p) => (
-                    <div key={p.name} className="px-2 py-2 border-b border-gray-100">
-                      <code className="text-[12px] font-mono text-gray-900">{p.name}</code>
+                    <div key={p.name} className="px-2 py-2 border-b border-gray-100 dark:border-gray-800">
+                      <code className="text-[12px] font-mono text-gray-900 dark:text-gray-100">{p.name}</code>
                       {p.description && <p className="text-[12px] text-gray-500 mt-0.5">{p.description}</p>}
                     </div>
                   ))}
@@ -472,10 +472,10 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
 
 function ApiKeysSection({ keys, loading, onCreateKey, onRevokeKey }) {
   return (
-    <div className="border-t border-gray-200 pt-4">
+    <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
       <div className="flex items-center justify-between px-2 mb-2">
         <div className="flex items-center gap-2">
-          <KeyRound className="w-3.5 h-3.5 text-gray-400" />
+          <KeyRound className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
           <span className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">API Keys</span>
         </div>
         <Button onClick={onCreateKey} size="sm" className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px] gap-1">
@@ -491,18 +491,18 @@ function ApiKeysSection({ keys, loading, onCreateKey, onRevokeKey }) {
         </div>
       ) : keys.length === 0 ? (
         <div className="text-center py-8">
-          <KeyRound className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+          <KeyRound className="w-6 h-6 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
           <p className="text-[13px] text-gray-500">No API keys yet. Create one to get started.</p>
         </div>
       ) : (
         <div>
           {keys.map((key) => (
-            <div key={key.id} className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50">
+            <div key={key.id} className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60">
               {/* Name */}
-              <span className="text-[13px] font-medium text-gray-900 min-w-[120px]">{key.name}</span>
+              <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100 min-w-[120px]">{key.name}</span>
 
               {/* Key prefix - masked */}
-              <code className="text-[12px] font-mono text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">{key.key_prefix}...</code>
+              <code className="text-[12px] font-mono text-gray-500 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-1.5 py-0.5 rounded">{key.key_prefix}...</code>
 
               {/* Created */}
               <span className="text-[13px] text-gray-500 hidden sm:inline">
@@ -510,7 +510,7 @@ function ApiKeysSection({ keys, loading, onCreateKey, onRevokeKey }) {
               </span>
 
               {/* Last used */}
-              <span className="text-[13px] text-gray-400 hidden md:inline">
+              <span className="text-[13px] text-gray-400 dark:text-gray-500 hidden md:inline">
                 {key.last_used_at ? `Used ${new Date(key.last_used_at).toLocaleDateString()}` : "Never used"}
               </span>
 
@@ -533,7 +533,7 @@ function ApiKeysSection({ keys, loading, onCreateKey, onRevokeKey }) {
               {!key.revoked && (
                 <button
                   onClick={() => onRevokeKey(key)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 transition-all"
+                  className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 transition-all"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -743,8 +743,8 @@ export default function McpApiKeys() {
   return (
     <div className="p-4 lg:p-6 max-w-5xl">
       {/* 48px toolbar header */}
-      <div className="flex items-center h-12 border-b border-gray-200 mb-4">
-        <h1 className="text-[15px] font-semibold text-gray-900">MCP API Keys</h1>
+      <div className="flex items-center h-12 border-b border-gray-200 dark:border-gray-800 mb-4">
+        <h1 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">MCP API Keys</h1>
       </div>
 
       <div className="space-y-6">
@@ -795,11 +795,11 @@ export default function McpApiKeys() {
                   Save this key now. You won't be able to see it again.
                 </p>
               </div>
-              <div className="flex items-center gap-1.5 border-b border-gray-200 hover:border-gray-300 transition-colors">
+              <div className="flex items-center gap-1.5 border-b border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:border-gray-700 transition-colors">
                 <input
                   readOnly
                   value={createdKey}
-                  className="flex-1 bg-transparent text-[13px] font-mono text-gray-900 py-1.5 outline-none"
+                  className="flex-1 bg-transparent text-[13px] font-mono text-gray-900 dark:text-gray-100 py-1.5 outline-none"
                 />
                 <CopyButton text={createdKey} />
               </div>

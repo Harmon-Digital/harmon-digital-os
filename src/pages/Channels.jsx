@@ -80,7 +80,7 @@ function renderBody(body, userIdToName) {
     parts.push(
       <span
         key={key++}
-        className="inline-flex items-center px-1 py-px rounded-sm bg-gray-100 text-gray-800 text-[13px] font-medium hover:bg-gray-200 transition-colors"
+        className="inline-flex items-center px-1 py-px rounded-sm bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-[13px] font-medium hover:bg-gray-200 transition-colors"
       >
         @{display}
       </span>,
@@ -936,18 +936,18 @@ export default function Channels() {
   }, [messages]);
 
   return (
-    <div className="flex w-full h-full min-h-0 bg-white">
+    <div className="flex w-full h-full min-h-0 bg-white dark:bg-gray-950">
       {/* Channel list */}
-      <aside className="w-64 border-r border-gray-200 flex flex-col bg-gray-50">
-        <div className="p-3 border-b border-gray-200">
-          <h2 className="text-sm font-semibold text-gray-900 mb-2">Team chat</h2>
+      <aside className="w-64 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900">
+        <div className="p-3 border-b border-gray-200 dark:border-gray-800">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Team chat</h2>
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search"
-              className="pl-7 h-8 text-sm bg-white"
+              className="pl-7 h-8 text-sm bg-white dark:bg-gray-950"
             />
           </div>
         </div>
@@ -968,9 +968,9 @@ export default function Channels() {
               </button>
             </div>
             {loading ? (
-              <div className="text-xs text-gray-400 px-3 py-1">Loading…</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 px-3 py-1">Loading…</div>
             ) : filteredPublic.length === 0 ? (
-              <div className="text-xs text-gray-400 px-3 py-1">
+              <div className="text-xs text-gray-400 dark:text-gray-500 px-3 py-1">
                 {search ? "No matches" : "No channels"}
               </div>
             ) : (
@@ -987,11 +987,11 @@ export default function Channels() {
                       active
                         ? "bg-indigo-100 text-indigo-900 font-medium"
                         : hasUnread
-                          ? "text-gray-900 font-semibold hover:bg-gray-100"
-                          : "text-gray-700 hover:bg-gray-100"
+                          ? "text-gray-900 dark:text-gray-100 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                     }`}
                   >
-                    <Hash className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <Hash className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" />
                     <span className="truncate flex-1">{c.name}</span>
                     {hasUnread && (
                       <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold">
@@ -1020,7 +1020,7 @@ export default function Channels() {
               </button>
             </div>
             {filteredDms.length === 0 ? (
-              <div className="text-xs text-gray-400 px-3 py-1">
+              <div className="text-xs text-gray-400 dark:text-gray-500 px-3 py-1">
                 {search ? "No matches" : "No direct messages"}
               </div>
             ) : (
@@ -1040,8 +1040,8 @@ export default function Channels() {
                       active
                         ? "bg-indigo-100 text-indigo-900 font-medium"
                         : hasUnread
-                          ? "text-gray-900 font-semibold hover:bg-gray-100"
-                          : "text-gray-700 hover:bg-gray-100"
+                          ? "text-gray-900 dark:text-gray-100 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                     }`}
                   >
                     <UserAvatar
@@ -1103,12 +1103,12 @@ export default function Channels() {
           </div>
         )}
         {!selectedChannel ? (
-          <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
+          <div className="flex-1 flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
             Select a channel to start chatting
           </div>
         ) : (
           <>
-            <header className="relative border-b border-gray-200 px-5 py-3">
+            <header className="relative border-b border-gray-200 dark:border-gray-800 px-5 py-3">
               <div className="flex items-center gap-2">
                 {selectedChannel.is_dm ? (
                   <>
@@ -1123,7 +1123,7 @@ export default function Channels() {
                         />
                       );
                     })()}
-                    <h1 className="font-semibold text-gray-900">
+                    <h1 className="font-semibold text-gray-900 dark:text-gray-100">
                       {displayNameForChannel(selectedChannel)}
                     </h1>
                     {(() => {
@@ -1132,14 +1132,14 @@ export default function Channels() {
                       return onlineUserIds.has(pid) ? (
                         <span className="text-xs text-green-600">• Active</span>
                       ) : (
-                        <span className="text-xs text-gray-400">• Offline</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">• Offline</span>
                       );
                     })()}
                   </>
                 ) : (
                   <>
-                    <Hash className="w-4 h-4 text-gray-400" />
-                    <h1 className="font-semibold text-gray-900">{selectedChannel.name}</h1>
+                    <Hash className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <h1 className="font-semibold text-gray-900 dark:text-gray-100">{selectedChannel.name}</h1>
                   </>
                 )}
               </div>
@@ -1167,15 +1167,15 @@ export default function Channels() {
                       <div key={m.id} className="flex items-start gap-2 text-xs">
                         <Pin className="w-3 h-3 text-amber-600 mt-0.5 shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <span className="font-medium text-gray-900">{author}:</span>{" "}
-                          <span className="text-gray-700">
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{author}:</span>{" "}
+                          <span className="text-gray-700 dark:text-gray-300">
                             {m.body.replace(/@\[([^\]]+)\]\([0-9a-f-]+\)/g, "@$1")}
                           </span>
                         </div>
                         <button
                           type="button"
                           onClick={() => togglePin(m)}
-                          className="text-gray-400 hover:text-red-600"
+                          className="text-gray-400 dark:text-gray-500 hover:text-red-600"
                           title="Unpin"
                         >
                           <X className="w-3 h-3" />
@@ -1188,9 +1188,9 @@ export default function Channels() {
 
             <div ref={scrollerRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
               {loadingMessages ? (
-                <div className="text-xs text-gray-400">Loading…</div>
+                <div className="text-xs text-gray-400 dark:text-gray-500">Loading…</div>
               ) : grouped.length === 0 ? (
-                <div className="text-sm text-gray-400 italic">No messages yet. Say hi 👋</div>
+                <div className="text-sm text-gray-400 dark:text-gray-500 italic">No messages yet. Say hi 👋</div>
               ) : (
                 grouped.map((g, gi) => {
                   const author = userIdToName[g.user_id] || "Unknown";
@@ -1204,8 +1204,8 @@ export default function Channels() {
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline gap-2">
-                          <span className="text-sm font-semibold text-gray-900">{author}</span>
-                          <span className="text-xs text-gray-400">{formatTime(first.created_at)}</span>
+                          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{author}</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">{formatTime(first.created_at)}</span>
                         </div>
                         <div className="space-y-1">
                           {g.messages.map((m) => {
@@ -1224,7 +1224,7 @@ export default function Channels() {
                               <div
                                 key={m.id}
                                 className={`group relative flex items-start gap-2 -mx-2 px-2 py-0.5 rounded ${
-                                  m.is_pinned ? "bg-amber-50/50" : "hover:bg-gray-50"
+                                  m.is_pinned ? "bg-amber-50/50" : "hover:bg-gray-50 dark:hover:bg-gray-800/60"
                                 }`}
                               >
                                 <div className="min-w-0 flex-1">
@@ -1268,7 +1268,7 @@ export default function Channels() {
                                         <button
                                           type="button"
                                           onClick={cancelEdit}
-                                          className="px-2 py-0.5 rounded border border-gray-200 hover:bg-gray-100"
+                                          className="px-2 py-0.5 rounded border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800"
                                         >
                                           Cancel
                                         </button>
@@ -1277,10 +1277,10 @@ export default function Channels() {
                                     </div>
                                   ) : (
                                     <>
-                                      <div className="text-sm text-gray-800 whitespace-pre-wrap break-words">
+                                      <div className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
                                         {renderBody(m.body, userIdToName)}
                                         {m.edited_at && (
-                                          <span className="ml-1 text-[11px] text-gray-400">(edited)</span>
+                                          <span className="ml-1 text-[11px] text-gray-400 dark:text-gray-500">(edited)</span>
                                         )}
                                       </div>
                                       {(() => {
@@ -1303,7 +1303,7 @@ export default function Channels() {
                                                     <img
                                                       src={a.file_url}
                                                       alt={a.file_name}
-                                                      className="max-w-[240px] max-h-[240px] rounded-md border border-gray-200 hover:border-gray-300 transition-colors"
+                                                      className="max-w-[240px] max-h-[240px] rounded-md border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:border-gray-700 transition-colors"
                                                     />
                                                   </a>
                                                 ))}
@@ -1315,15 +1315,15 @@ export default function Channels() {
                                                 href={a.file_url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-md pl-2 pr-3 py-1.5 hover:border-gray-300 hover:bg-gray-50 transition-colors max-w-[280px]"
+                                                className="inline-flex items-center gap-2 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md pl-2 pr-3 py-1.5 hover:border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors max-w-[280px]"
                                                 download={a.file_name}
                                               >
                                                 <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
                                                 <div className="flex-1 min-w-0">
-                                                  <div className="text-[12px] text-gray-900 truncate">{a.file_name}</div>
+                                                  <div className="text-[12px] text-gray-900 dark:text-gray-100 truncate">{a.file_name}</div>
                                                   <div className="text-[10px] text-gray-500">{formatFileSize(a.file_size)}</div>
                                                 </div>
-                                                <Download className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                                <Download className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                                               </a>
                                             ))}
                                           </div>
@@ -1339,7 +1339,7 @@ export default function Channels() {
                                               className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-xs ${
                                                 info.mine
                                                   ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                                                  : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                                                  : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60"
                                               }`}
                                             >
                                               <span>{emoji}</span>
@@ -1352,7 +1352,7 @@ export default function Channels() {
                                   )}
                                 </div>
                                 {!isEditing && (
-                                  <div className="opacity-0 group-hover:opacity-100 absolute right-2 -top-3 flex items-center bg-white border border-gray-200 rounded-md shadow-sm">
+                                  <div className="opacity-0 group-hover:opacity-100 absolute right-2 -top-3 flex items-center bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md shadow-sm">
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -1360,7 +1360,7 @@ export default function Channels() {
                                           reactionPickerFor === m.id ? null : m.id,
                                         )
                                       }
-                                      className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-l-md"
+                                      className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 rounded-l-md"
                                       title="Add reaction"
                                     >
                                       <Smile className="w-3.5 h-3.5" />
@@ -1368,8 +1368,8 @@ export default function Channels() {
                                     <button
                                       type="button"
                                       onClick={() => togglePin(m)}
-                                      className={`p-1.5 hover:bg-gray-50 ${
-                                        m.is_pinned ? "text-amber-600" : "text-gray-500 hover:text-gray-700"
+                                      className={`p-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
+                                        m.is_pinned ? "text-amber-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-300"
                                       }`}
                                       title={m.is_pinned ? "Unpin" : "Pin"}
                                     >
@@ -1379,7 +1379,7 @@ export default function Channels() {
                                       <button
                                         type="button"
                                         onClick={() => startEdit(m)}
-                                        className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                                        className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60"
                                         title="Edit"
                                       >
                                         <Pencil className="w-3.5 h-3.5" />
@@ -1389,7 +1389,7 @@ export default function Channels() {
                                       <button
                                         type="button"
                                         onClick={() => handleDeleteMessage(m)}
-                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-gray-50 rounded-r-md"
+                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-gray-50 dark:hover:bg-gray-800/60 rounded-r-md"
                                         title="Delete"
                                       >
                                         <Trash2 className="w-3.5 h-3.5" />
@@ -1398,13 +1398,13 @@ export default function Channels() {
                                   </div>
                                 )}
                                 {reactionPickerFor === m.id && (
-                                  <div className="absolute right-2 top-6 z-10 bg-white border border-gray-200 rounded-lg shadow-lg p-1 flex gap-0.5">
+                                  <div className="absolute right-2 top-6 z-10 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg p-1 flex gap-0.5">
                                     {QUICK_REACTIONS.map((e) => (
                                       <button
                                         key={e}
                                         type="button"
                                         onClick={() => toggleReaction(m.id, e)}
-                                        className="text-lg hover:bg-gray-100 rounded w-8 h-8 flex items-center justify-center"
+                                        className="text-lg hover:bg-gray-100 dark:hover:bg-gray-800 rounded w-8 h-8 flex items-center justify-center"
                                       >
                                         {e}
                                       </button>
@@ -1422,24 +1422,24 @@ export default function Channels() {
               )}
             </div>
 
-            <div className="border-t border-gray-200 p-3">
+            <div className="border-t border-gray-200 dark:border-gray-800 p-3">
               {pendingFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
                   {pendingFiles.map((pf, idx) => (
-                    <div key={idx} className="relative group flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md pl-2 pr-8 py-1.5 max-w-[240px]">
+                    <div key={idx} className="relative group flex items-center gap-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-md pl-2 pr-8 py-1.5 max-w-[240px]">
                       {pf.previewUrl ? (
                         <img src={pf.previewUrl} alt="" className="w-8 h-8 object-cover rounded flex-shrink-0" />
                       ) : (
                         <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <div className="text-[12px] text-gray-900 truncate">{pf.file.name}</div>
+                        <div className="text-[12px] text-gray-900 dark:text-gray-100 truncate">{pf.file.name}</div>
                         <div className="text-[10px] text-gray-500">{formatFileSize(pf.file.size)}</div>
                       </div>
                       <button
                         type="button"
                         onClick={() => removePendingFile(idx)}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-800"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-800 dark:text-gray-200"
                         title="Remove"
                       >
                         <X className="w-3 h-3" />
@@ -1482,13 +1482,13 @@ export default function Channels() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute left-2 bottom-2 p-1.5 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  className="absolute left-2 bottom-2 p-1.5 rounded-md text-gray-500 hover:text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                   title="Attach file"
                 >
                   <Paperclip className="w-4 h-4" />
                 </button>
                 {mentionQuery && filteredMentions.length > 0 && (
-                  <div className="absolute z-10 left-0 bottom-full mb-1 w-64 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
+                  <div className="absolute z-10 left-0 bottom-full mb-1 w-64 max-h-48 overflow-y-auto bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg">
                     {filteredMentions.map((u, i) => (
                       <button
                         key={u.id}
@@ -1499,7 +1499,7 @@ export default function Channels() {
                         }}
                         onMouseEnter={() => setMentionIndex(i)}
                         className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 ${
-                          i === mentionIndex ? "bg-gray-100 text-gray-900" : "hover:bg-gray-50"
+                          i === mentionIndex ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100" : "hover:bg-gray-50 dark:hover:bg-gray-800/60"
                         }`}
                       >
                         <UserAvatar name={u.name} imageUrl={userIdToImage[u.id]} size="sm" />
@@ -1518,7 +1518,7 @@ export default function Channels() {
                   {submitting || uploadingFiles ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </button>
               </div>
-              <div className="text-[11px] text-gray-400 mt-1 ml-1">
+              <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1 ml-1">
                 Enter to send · Shift+Enter for new line · @ to mention · drop or paste files
               </div>
             </div>
@@ -1637,7 +1637,7 @@ function NewDmDialog({ open, onOpenChange, teamMembers, existingDms, onlineUserI
         </DialogHeader>
         <div className="space-y-3 py-1">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -1646,9 +1646,9 @@ function NewDmDialog({ open, onOpenChange, teamMembers, existingDms, onlineUserI
               autoFocus
             />
           </div>
-          <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-md divide-y divide-gray-100">
+          <div className="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-md divide-y divide-gray-100 dark:divide-gray-800">
             {candidates.length === 0 ? (
-              <div className="text-xs text-gray-400 px-3 py-4 text-center">
+              <div className="text-xs text-gray-400 dark:text-gray-500 px-3 py-4 text-center">
                 {query ? "No matches" : "No teammates available"}
               </div>
             ) : (
@@ -1660,7 +1660,7 @@ function NewDmDialog({ open, onOpenChange, teamMembers, existingDms, onlineUserI
                     type="button"
                     onClick={() => openWithUser(tm.user_id)}
                     disabled={submitting}
-                    className="w-full text-left px-3 py-2 flex items-center gap-2.5 hover:bg-gray-50 disabled:opacity-60"
+                    className="w-full text-left px-3 py-2 flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/60 disabled:opacity-60"
                   >
                     <UserAvatar
                       name={tm.full_name}
@@ -1669,12 +1669,12 @@ function NewDmDialog({ open, onOpenChange, teamMembers, existingDms, onlineUserI
                       online={!!isOnline}
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm text-gray-900 truncate">{tm.full_name}</div>
+                      <div className="text-sm text-gray-900 dark:text-gray-100 truncate">{tm.full_name}</div>
                       {tm.role && (
-                        <div className="text-xs text-gray-400 truncate">{tm.role}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500 truncate">{tm.role}</div>
                       )}
                     </div>
-                    <MessageCircle className="w-4 h-4 text-gray-300 shrink-0" />
+                    <MessageCircle className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" />
                   </button>
                 );
               })
@@ -1739,7 +1739,7 @@ function NewChannelDialog({ open, onOpenChange, onCreated }) {
           <div className="space-y-1.5">
             <Label htmlFor="channel-name">Name</Label>
             <div className="relative">
-              <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
               <Input
                 id="channel-name"
                 value={name}
@@ -1749,7 +1749,7 @@ function NewChannelDialog({ open, onOpenChange, onCreated }) {
                 autoFocus
               />
             </div>
-            <p className="text-xs text-gray-400">Lowercase letters, numbers, and dashes.</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Lowercase letters, numbers, and dashes.</p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="channel-description">Description (optional)</Label>

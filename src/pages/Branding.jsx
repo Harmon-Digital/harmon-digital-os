@@ -79,14 +79,14 @@ export default function Branding() {
 
   if (loading) {
     return (
-      <div className="h-full flex flex-col bg-white overflow-hidden">
-        <div className="border-b border-gray-200 bg-white">
+      <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
+        <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
           <div className="flex items-center gap-2 px-4 h-12">
-            <h1 className="text-[15px] font-semibold text-gray-900">Branding</h1>
+            <h1 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Branding</h1>
           </div>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center">
-          <RefreshCw className="w-8 h-8 text-gray-400 animate-spin mb-3" />
+          <RefreshCw className="w-8 h-8 text-gray-400 dark:text-gray-500 animate-spin mb-3" />
           <p className="text-sm text-gray-500">Loading branding settings…</p>
         </div>
       </div>
@@ -94,7 +94,7 @@ export default function Branding() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden settings-form">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden settings-form">
       <style>{`
         .settings-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]),
         .settings-form textarea,
@@ -123,9 +123,9 @@ export default function Branding() {
       `}</style>
 
       {/* Consolidated toolbar */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
-          <h1 className="text-[15px] font-semibold text-gray-900">Branding</h1>
+          <h1 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Branding</h1>
           <div className="ml-auto">
             <Button
               onClick={handleSave}
@@ -149,28 +149,28 @@ export default function Branding() {
           )}
 
           <Tabs defaultValue="identity" className="space-y-5">
-            <TabsList className="h-9 bg-transparent p-0 border-b border-gray-200 rounded-none w-full justify-start gap-5 px-1">
+            <TabsList className="h-9 bg-transparent p-0 border-b border-gray-200 dark:border-gray-800 rounded-none w-full justify-start gap-5 px-1">
               <TabsTrigger
                 value="identity"
-                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 dark:text-gray-100 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
               >
                 Identity
               </TabsTrigger>
               <TabsTrigger
                 value="logos"
-                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 dark:text-gray-100 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
               >
                 Logos
               </TabsTrigger>
               <TabsTrigger
                 value="colors"
-                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 dark:text-gray-100 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
               >
                 Colors
               </TabsTrigger>
               <TabsTrigger
                 value="typography"
-                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 dark:text-gray-100 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
               >
                 Typography
               </TabsTrigger>
@@ -182,7 +182,7 @@ export default function Branding() {
                 <div className="h-7 flex items-center">
                   <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Company</span>
                 </div>
-                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-3 py-2">
                     <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Company name</label>
                     <Input
@@ -230,12 +230,12 @@ export default function Branding() {
                 <div className="h-7 flex items-center">
                   <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Logos & icons</span>
                 </div>
-                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
                   <LogoRow
                     label="Main logo"
                     hint="Square format, 512×512px or larger"
                     src={settings?.logo_url}
-                    bgClass="bg-gray-50"
+                    bgClass="bg-gray-50 dark:bg-gray-900"
                     onFile={(file) => handleFileUpload('logo_url', file)}
                     uploading={uploading}
                     size="lg"
@@ -253,7 +253,7 @@ export default function Branding() {
                     label="Favicon"
                     hint="Browser tab icon, 32×32px or 64×64px"
                     src={settings?.favicon_url}
-                    bgClass="bg-gray-50"
+                    bgClass="bg-gray-50 dark:bg-gray-900"
                     onFile={(file) => handleFileUpload('favicon_url', file)}
                     uploading={uploading}
                     size="sm"
@@ -268,7 +268,7 @@ export default function Branding() {
                 <div className="h-7 flex items-center">
                   <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Brand colors</span>
                 </div>
-                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
                   <ColorRow
                     label="Primary"
                     value={settings?.primary_color || "#4F46E5"}
@@ -323,7 +323,7 @@ export default function Branding() {
                 <div className="h-7 flex items-center">
                   <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Typography</span>
                 </div>
-                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-3 py-2">
                     <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Font family</label>
                     <Input
@@ -336,7 +336,7 @@ export default function Branding() {
                   <div className="flex items-center gap-3 py-2">
                     <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Custom font</label>
                     <div className="flex-1 flex items-center gap-2">
-                      <label className="inline-flex items-center gap-1.5 px-2 h-7 rounded border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer text-[13px] text-gray-700">
+                      <label className="inline-flex items-center gap-1.5 px-2 h-7 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-800/60 cursor-pointer text-[13px] text-gray-700 dark:text-gray-300">
                         <Upload className="w-3.5 h-3.5" />
                         <span>{uploading ? "Uploading…" : "Upload font"}</span>
                         <input
@@ -353,7 +353,7 @@ export default function Branding() {
                       {settings?.font_url && (
                         <span className="text-[11px] text-gray-500 truncate">Custom font uploaded</span>
                       )}
-                      <span className="text-[11px] text-gray-400 ml-auto">.woff, .woff2, .ttf, .otf</span>
+                      <span className="text-[11px] text-gray-400 dark:text-gray-500 ml-auto">.woff, .woff2, .ttf, .otf</span>
                     </div>
                   </div>
                 </div>
@@ -371,7 +371,7 @@ function LogoRow({ label, hint, src, bgClass, onFile, uploading, size = "lg" }) 
   return (
     <div className="flex items-center gap-3 py-3">
       <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">{label}</label>
-      <div className={`${dim} rounded border border-gray-200 ${bgClass} flex items-center justify-center shrink-0 overflow-hidden`}>
+      <div className={`${dim} rounded border border-gray-200 dark:border-gray-800 ${bgClass} flex items-center justify-center shrink-0 overflow-hidden`}>
         {src ? (
           <img
             src={src}
@@ -379,11 +379,11 @@ function LogoRow({ label, hint, src, bgClass, onFile, uploading, size = "lg" }) 
             className="max-w-full max-h-full object-contain p-1"
           />
         ) : (
-          <span className="text-[10px] text-gray-400">No image</span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">No image</span>
         )}
       </div>
       <div className="flex-1 flex items-center gap-2">
-        <label className="inline-flex items-center gap-1.5 px-2 h-7 rounded border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer text-[13px] text-gray-700">
+        <label className="inline-flex items-center gap-1.5 px-2 h-7 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-800/60 cursor-pointer text-[13px] text-gray-700 dark:text-gray-300">
           <Upload className="w-3.5 h-3.5" />
           <span>{uploading ? "Uploading…" : "Upload"}</span>
           <input
@@ -412,7 +412,7 @@ function ColorRow({ label, value, onChange }) {
           type="color"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-8 h-8 rounded border border-gray-200 p-0.5 cursor-pointer bg-transparent"
+          className="w-8 h-8 rounded border border-gray-200 dark:border-gray-800 p-0.5 cursor-pointer bg-transparent"
         />
         <Input
           type="text"
@@ -422,7 +422,7 @@ function ColorRow({ label, value, onChange }) {
           className="w-32 h-8 text-[13px] font-mono"
         />
         <div
-          className="h-8 flex-1 rounded border border-gray-200"
+          className="h-8 flex-1 rounded border border-gray-200 dark:border-gray-800"
           style={{ backgroundColor: value }}
         />
       </div>

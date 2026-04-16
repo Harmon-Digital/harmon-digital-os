@@ -235,7 +235,7 @@ export default function PersonalSettings() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden settings-form">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden settings-form">
       <style>{`
         .settings-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
         .settings-form textarea,
@@ -268,9 +268,9 @@ export default function PersonalSettings() {
       `}</style>
 
       {/* Consolidated toolbar */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
-          <h1 className="text-[15px] font-semibold text-gray-900">Personal Settings</h1>
+          <h1 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Personal Settings</h1>
         </div>
       </div>
 
@@ -287,22 +287,22 @@ export default function PersonalSettings() {
           )}
 
           <Tabs defaultValue="profile" className="space-y-5">
-            <TabsList className="h-9 bg-transparent p-0 border-b border-gray-200 rounded-none w-full justify-start gap-5 px-1">
+            <TabsList className="h-9 bg-transparent p-0 border-b border-gray-200 dark:border-gray-800 rounded-none w-full justify-start gap-5 px-1">
               <TabsTrigger
                 value="profile"
-                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 dark:text-gray-100 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
               >
                 Profile
               </TabsTrigger>
               <TabsTrigger
                 value="notifications"
-                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 dark:text-gray-100 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
               >
                 Notifications
               </TabsTrigger>
               <TabsTrigger
                 value="password"
-                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+                className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 dark:text-gray-100 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
               >
                 Password
               </TabsTrigger>
@@ -347,7 +347,7 @@ export default function PersonalSettings() {
                     />
                   </div>
                   <div className="flex-1">
-                    <p className="text-[13px] font-medium text-gray-900">Profile photo</p>
+                    <p className="text-[13px] font-medium text-gray-900 dark:text-gray-100">Profile photo</p>
                     <p className="text-[11px] text-gray-500 mt-0.5">
                       Click the camera icon to upload. Max 5MB.
                     </p>
@@ -374,7 +374,7 @@ export default function PersonalSettings() {
                   </div>
                 </div>
 
-                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-3 py-2">
                     <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">Full name</label>
                     <Input
@@ -448,10 +448,10 @@ export default function PersonalSettings() {
                 <div className="h-7 flex items-center">
                   <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">General</span>
                 </div>
-                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-3 py-2.5">
                     <div className="flex-1">
-                      <p className="text-[13px] font-medium text-gray-900">Email notifications</p>
+                      <p className="text-[13px] font-medium text-gray-900 dark:text-gray-100">Email notifications</p>
                       <p className="text-[11px] text-gray-500">Master switch for all notification emails</p>
                     </div>
                     <Switch
@@ -461,7 +461,7 @@ export default function PersonalSettings() {
                   </div>
                   <div className="flex items-center gap-3 py-2.5">
                     <div className="flex-1">
-                      <p className="text-[13px] font-medium text-gray-900">Daily digest</p>
+                      <p className="text-[13px] font-medium text-gray-900 dark:text-gray-100">Daily digest</p>
                       <p className="text-[11px] text-gray-500">Use digest mode for lower-noise notifications</p>
                     </div>
                     <Switch
@@ -476,7 +476,7 @@ export default function PersonalSettings() {
                 <div className="h-7 flex items-center">
                   <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Categories</span>
                 </div>
-                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
                   {[
                     ["task_enabled", "Tasks"],
                     ["crm_enabled", "CRM"],
@@ -486,7 +486,7 @@ export default function PersonalSettings() {
                     ["system_enabled", "System / Integrations"],
                   ].map(([key, label]) => (
                     <div key={key} className="flex items-center gap-3 py-2.5">
-                      <p className="flex-1 text-[13px] text-gray-900">{label}</p>
+                      <p className="flex-1 text-[13px] text-gray-900 dark:text-gray-100">{label}</p>
                       <Switch
                         checked={!!notificationPrefs[key]}
                         onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, [key]: checked }))}
@@ -520,7 +520,7 @@ export default function PersonalSettings() {
 
             <TabsContent value="password" className="space-y-4">
               <form onSubmit={handlePasswordChange}>
-                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-3 py-2">
                     <label className="text-[12px] text-gray-500 font-medium w-32 shrink-0">New password</label>
                     <Input

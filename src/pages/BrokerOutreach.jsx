@@ -52,7 +52,7 @@ import { toWeekStart } from "@/config/kpiConfig";
 import { saveEntries } from "@/api/kpiCalculations";
 
 const STATUS_OPTIONS = [
-  { value: "new", label: "New", dot: "bg-gray-400", text: "text-gray-600" },
+  { value: "new", label: "New", dot: "bg-gray-400", text: "text-gray-600 dark:text-gray-400" },
   { value: "contacted", label: "Contacted", dot: "bg-blue-500", text: "text-blue-600" },
   { value: "responded", label: "Responded", dot: "bg-purple-500", text: "text-purple-600" },
   { value: "call_booked", label: "Call Booked", dot: "bg-yellow-500", text: "text-yellow-700" },
@@ -461,25 +461,25 @@ export default function BrokerOutreach() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Consolidated toolbar */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
-          <span className="text-[15px] font-semibold text-gray-900">Broker Outreach</span>
+          <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Broker Outreach</span>
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" className="h-7 w-7 p-0 text-gray-400 hover:text-gray-900">
+              <Button variant="ghost" className="h-7 w-7 p-0 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100">
                 <HelpCircle className="w-3.5 h-3.5" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80" align="start">
               <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-[13px]">
-                  <Info className="w-4 h-4 text-gray-700" />
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 text-[13px]">
+                  <Info className="w-4 h-4 text-gray-700 dark:text-gray-300" />
                   How Partner Outreach Works
                 </h4>
-                <div className="space-y-2 text-[12px] text-gray-600">
+                <div className="space-y-2 text-[12px] text-gray-600 dark:text-gray-400">
                   <p><strong>1. Reach Out</strong> — Contact brokers via call, email, or LinkedIn.</p>
                   <p><strong>2. They Sign Up</strong> — Interested brokers sign up at our partner portal.</p>
                   <p><strong>3. Submit Referrals</strong> — Partners log in and submit client referrals.</p>
@@ -488,7 +488,7 @@ export default function BrokerOutreach() {
                 <div className="pt-2 border-t">
                   <p className="text-[11px] text-gray-500 mb-2">Partner Sign Up Link</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 text-[11px] bg-gray-100 px-2 py-1 rounded truncate">
+                    <code className="flex-1 text-[11px] bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded truncate">
                       {partnerPortalUrl}
                     </code>
                     <Button variant="outline" className="h-7 px-2" onClick={copyPortalLink}>
@@ -500,7 +500,7 @@ export default function BrokerOutreach() {
             </PopoverContent>
           </Popover>
 
-          <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px] ml-2">
+          <div className="flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5 text-[12px] ml-2">
             {VIEWS.map(view => (
               <button
                 key={view.id}
@@ -509,7 +509,7 @@ export default function BrokerOutreach() {
                 className={`px-2.5 py-1 rounded ${
                   activeView === view.id
                     ? "bg-gray-900 text-white"
-                    : "text-gray-600 hover:bg-gray-100"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
               >
                 {view.label}
@@ -534,12 +534,12 @@ export default function BrokerOutreach() {
           )}
 
           <div className="relative flex-1 max-w-xs min-w-0 ml-2">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5" />
             <Input
               placeholder="Search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+              className="pl-8 h-8 text-[13px] border-gray-200 dark:border-gray-800 focus-visible:ring-1"
             />
           </div>
 
@@ -556,23 +556,23 @@ export default function BrokerOutreach() {
 
         {/* KPI metric pills */}
         {kpiStats.length > 0 && (
-          <div className="flex items-center gap-5 px-4 h-9 border-t border-gray-100 overflow-x-auto">
+          <div className="flex items-center gap-5 px-4 h-9 border-t border-gray-100 dark:border-gray-800 overflow-x-auto">
             {kpiStats.map(member => (
               <span
                 key={member.id}
-                className="text-[13px] text-gray-600 flex items-center gap-1.5 shrink-0 group cursor-pointer"
+                className="text-[13px] text-gray-600 dark:text-gray-400 flex items-center gap-1.5 shrink-0 group cursor-pointer"
                 onClick={() => openKpiSettings(member)}
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${member.onTrackForBonus ? "bg-green-500" : "bg-gray-400"}`} />
                 {member.full_name}
                 {member.onTrackForBonus && <Trophy className="w-3 h-3 text-yellow-500" />}
-                <span className="text-gray-900 font-medium tabular-nums">
+                <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">
                   {member.weekCount}/{member.weeklyGoal}
                 </span>
-                <span className="text-gray-400 tabular-nums">
+                <span className="text-gray-400 dark:text-gray-500 tabular-nums">
                   · {member.todayCount}/{member.dailyGoal} today
                 </span>
-                <Settings className="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100" />
+                <Settings className="w-3 h-3 text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100" />
               </span>
             ))}
             <button
@@ -583,7 +583,7 @@ export default function BrokerOutreach() {
                   openKpiSettings(membersWithoutKpi[0]);
                 }
               }}
-              className="text-[12px] text-gray-500 hover:text-gray-900 flex items-center gap-1 shrink-0"
+              className="text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 flex items-center gap-1 shrink-0"
             >
               <Plus className="w-3 h-3" />
               Set KPI
@@ -592,8 +592,8 @@ export default function BrokerOutreach() {
         )}
 
         {kpiStats.length === 0 && teamMembers.length > 0 && (
-          <div className="flex items-center gap-3 px-4 h-9 border-t border-gray-100">
-            <span className="text-[13px] text-gray-600">
+          <div className="flex items-center gap-3 px-4 h-9 border-t border-gray-100 dark:border-gray-800">
+            <span className="text-[13px] text-gray-600 dark:text-gray-400">
               Track daily and weekly reach out goals with bonus incentives.
             </span>
             <Button
@@ -608,16 +608,16 @@ export default function BrokerOutreach() {
       </div>
 
       {/* List */}
-      <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+      <div className="overflow-y-auto flex-1 min-h-0 bg-white dark:bg-gray-950">
         {loading ? (
-          <div className="p-8 text-center text-[13px] text-gray-400">Loading…</div>
+          <div className="p-8 text-center text-[13px] text-gray-400 dark:text-gray-500">Loading…</div>
         ) : (
           <>
-            <div className="h-7 flex items-center px-3 bg-gray-50 border-b border-gray-200">
+            <div className="h-7 flex items-center px-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
               <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
                 {VIEWS.find(v => v.id === activeView)?.label || "All"} brokers
               </span>
-              <span className="ml-2 text-[11px] text-gray-400 tabular-nums">
+              <span className="ml-2 text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">
                 {filteredBrokers.length}
               </span>
             </div>
@@ -633,9 +633,9 @@ export default function BrokerOutreach() {
               return (
                 <div
                   key={broker.id}
-                  className="group flex items-center gap-3 px-3 py-2 border-b border-gray-100 hover:bg-gray-50"
+                  className="group flex items-center gap-3 px-3 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
                 >
-                  <div className="w-6 h-6 shrink-0 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-medium">
+                  <div className="w-6 h-6 shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 flex items-center justify-center text-[10px] font-medium">
                     {getInitials(broker.name)}
                   </div>
 
@@ -654,7 +654,7 @@ export default function BrokerOutreach() {
                       />
                     ) : (
                       <span
-                        className="text-[13px] text-gray-900 font-medium truncate cursor-pointer"
+                        className="text-[13px] text-gray-900 dark:text-gray-100 font-medium truncate cursor-pointer"
                         onClick={() => startEditing(broker.id, "name", broker.name)}
                       >
                         {broker.name || "—"}
@@ -733,7 +733,7 @@ export default function BrokerOutreach() {
                   <span className="hidden xl:inline text-[12px] text-gray-500 tabular-nums w-24 text-right">
                     {broker.last_contact
                       ? new Date(broker.last_contact).toLocaleDateString()
-                      : <span className="text-gray-400">Never</span>}
+                      : <span className="text-gray-400 dark:text-gray-500">Never</span>}
                   </span>
 
                   {isEditingNext ? (
@@ -775,14 +775,14 @@ export default function BrokerOutreach() {
                       href={broker.linkedin_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-gray-400 hover:text-gray-900 shrink-0"
+                      className="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100 shrink-0"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                   ) : (
                     <button
                       type="button"
-                      className="text-gray-300 hover:text-gray-600 text-[12px] shrink-0"
+                      className="text-gray-300 dark:text-gray-600 hover:text-gray-600 dark:text-gray-400 text-[12px] shrink-0"
                       onClick={() => startEditing(broker.id, "linkedin_url", "")}
                     >
                       —
@@ -792,7 +792,7 @@ export default function BrokerOutreach() {
                   <button
                     type="button"
                     onClick={() => openReachOutDialog(broker)}
-                    className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 h-6 rounded border border-gray-200 text-[12px] text-gray-600 hover:text-gray-900 hover:bg-white"
+                    className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 h-6 rounded border border-gray-200 dark:border-gray-800 text-[12px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100 hover:bg-white dark:bg-gray-950"
                   >
                     <TrendingUp className="w-3 h-3" />
                     Log
@@ -801,7 +801,7 @@ export default function BrokerOutreach() {
                   <button
                     type="button"
                     onClick={() => handleDeleteBroker(broker.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600"
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 dark:text-gray-500 hover:text-red-600"
                     title="Delete"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -812,7 +812,7 @@ export default function BrokerOutreach() {
 
             {/* Inline create row */}
             {showInlineCreate ? (
-              <div className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 bg-gray-50/50">
+              <div className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
                 <div className="w-6 h-6 shrink-0" />
                 <Input
                   placeholder="Name *"
@@ -859,14 +859,14 @@ export default function BrokerOutreach() {
                   type="button"
                   onClick={handleInlineCreate}
                   disabled={!inlineCreate.name || !inlineCreate.firm}
-                  className="p-1 text-gray-400 hover:text-gray-900 disabled:opacity-40"
+                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100 disabled:opacity-40"
                 >
                   <Check className={`w-3.5 h-3.5 ${inlineCreate.name && inlineCreate.firm ? 'text-green-600' : ''}`} />
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowInlineCreate(false)}
-                  className="p-1 text-gray-400 hover:text-gray-900"
+                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -875,7 +875,7 @@ export default function BrokerOutreach() {
               <button
                 type="button"
                 onClick={() => setShowInlineCreate(true)}
-                className="w-full flex items-center gap-2 px-3 py-2 border-b border-gray-100 text-[13px] text-gray-400 hover:text-gray-900 hover:bg-gray-50"
+                className="w-full flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-800 text-[13px] text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800/60"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add broker
@@ -893,7 +893,7 @@ export default function BrokerOutreach() {
           </DialogHeader>
           {reachOutBroker && (
             <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-3">
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
                 <p className="font-medium text-[13px]">{reachOutBroker.name}</p>
                 <p className="text-[12px] text-gray-500">{reachOutBroker.firm}</p>
               </div>

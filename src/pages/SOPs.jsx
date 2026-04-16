@@ -109,7 +109,7 @@ export default function SOPs() {
   ];
 
   const statusColors = {
-    draft: "bg-gray-100 text-gray-700",
+    draft: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300",
     published: "bg-green-100 text-green-700",
     archived: "bg-red-100 text-red-700"
   };
@@ -133,19 +133,19 @@ export default function SOPs() {
   }, {});
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Consolidated toolbar */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
-          <h1 className="text-[15px] font-semibold text-gray-900 shrink-0">SOPs</h1>
+          <h1 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100 shrink-0">SOPs</h1>
 
           <div className="relative flex-1 max-w-md min-w-0 ml-2">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5" />
             <Input
               placeholder="Search SOPs"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+              className="pl-8 h-8 text-[13px] border-gray-200 dark:border-gray-800 focus-visible:ring-1"
             />
           </div>
 
@@ -178,7 +178,7 @@ export default function SOPs() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600">Category</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Category</label>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -192,7 +192,7 @@ export default function SOPs() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600">Status</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Status</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -223,11 +223,11 @@ export default function SOPs() {
       </div>
 
       {/* SOPs list */}
-      <div className="overflow-y-auto flex-1 min-h-0 bg-white">
+      <div className="overflow-y-auto flex-1 min-h-0 bg-white dark:bg-gray-950">
         {loading ? (
-          <div className="p-8 text-center text-sm text-gray-400">Loading…</div>
+          <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">Loading…</div>
         ) : filteredSOPs.length === 0 ? (
-          <div className="p-8 text-center text-sm text-gray-400">
+          <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">
             {searchQuery || categoryFilter !== "all" || statusFilter !== "all"
               ? "No SOPs match your filters."
               : 'No SOPs yet. Click "New SOP" to get started.'}
@@ -239,23 +239,23 @@ export default function SOPs() {
               if (groupSops.length === 0) return null;
               return (
                 <div key={cat.value}>
-                  <div className="flex items-center gap-2 px-3 h-7 bg-gray-50 border-b border-gray-200">
+                  <div className="flex items-center gap-2 px-3 h-7 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
                     <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
                       {cat.label}
                     </span>
-                    <span className="text-[11px] text-gray-400 tabular-nums">{groupSops.length}</span>
+                    <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{groupSops.length}</span>
                   </div>
                   {groupSops.map((sop) => (
                     <div
                       key={sop.id}
-                      className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+                      className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60"
                       onClick={() => setViewingSOP(sop)}
                     >
-                      <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                      <FileText className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" />
 
                       <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${statusDotColors[sop.status] || "bg-gray-300"}`} />
 
-                      <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+                      <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 dark:text-gray-100 font-medium">
                         {sop.title}
                       </span>
 
@@ -265,11 +265,11 @@ export default function SOPs() {
                         </span>
                       )}
 
-                      <span className="hidden lg:inline text-[11px] text-gray-400 shrink-0 tabular-nums">
+                      <span className="hidden lg:inline text-[11px] text-gray-400 dark:text-gray-500 shrink-0 tabular-nums">
                         v{sop.version || 1}
                       </span>
 
-                      <span className="hidden lg:inline text-[11px] text-gray-400 shrink-0 tabular-nums w-20 text-right">
+                      <span className="hidden lg:inline text-[11px] text-gray-400 dark:text-gray-500 shrink-0 tabular-nums w-20 text-right">
                         {new Date(sop.created_at).toLocaleDateString()}
                       </span>
 
@@ -284,7 +284,7 @@ export default function SOPs() {
                           setEditingSOP(sop);
                           setShowDrawer(true);
                         }}
-                        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                         title="Edit"
                       >
                         <Edit className="w-3.5 h-3.5" />
@@ -295,7 +295,7 @@ export default function SOPs() {
                           e.stopPropagation();
                           setDeleteDialog({ open: true, sopId: sop.id });
                         }}
-                        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-red-600 hover:bg-red-50"
                         title="Delete"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -308,21 +308,21 @@ export default function SOPs() {
             {/* Uncategorized */}
             {grouped.uncategorized?.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 px-3 h-7 bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center gap-2 px-3 h-7 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
                   <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
                     Uncategorized
                   </span>
-                  <span className="text-[11px] text-gray-400 tabular-nums">{grouped.uncategorized.length}</span>
+                  <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{grouped.uncategorized.length}</span>
                 </div>
                 {grouped.uncategorized.map((sop) => (
                   <div
                     key={sop.id}
-                    className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+                    className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60"
                     onClick={() => setViewingSOP(sop)}
                   >
-                    <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <FileText className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" />
                     <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${statusDotColors[sop.status] || "bg-gray-300"}`} />
-                    <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
+                    <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 dark:text-gray-100 font-medium">
                       {sop.title}
                     </span>
                     <Badge className={`${statusColors[sop.status]} capitalize text-[10px] shrink-0`}>
@@ -387,11 +387,11 @@ export default function SOPs() {
               </Button>
             </div>
             {viewingSOP?.description && (
-              <p className="text-gray-600 mb-4">{viewingSOP.description}</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">{viewingSOP.description}</p>
             )}
           </DialogHeader>
           <div className="mt-4">
-            <div className="bg-white rounded-lg p-6 border prose prose-sm max-w-none">
+            <div className="bg-white dark:bg-gray-950 rounded-lg p-6 border prose prose-sm max-w-none">
               <div dangerouslySetInnerHTML={{ __html: viewingSOP?.content || '' }} />
             </div>
             <div className="mt-4 pt-4 border-t text-xs text-gray-500 flex justify-between">

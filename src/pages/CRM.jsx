@@ -69,7 +69,7 @@ const ACTIVITY_TYPES = [
   { value: "call", label: "Call", icon: PhoneCall, color: "text-green-600", bg: "bg-green-100" },
   { value: "email", label: "Email", icon: Mail, color: "text-blue-600", bg: "bg-blue-100" },
   { value: "meeting", label: "Meeting", icon: CalendarPlus, color: "text-purple-600", bg: "bg-purple-100" },
-  { value: "note", label: "Note", icon: MessageSquare, color: "text-gray-600", bg: "bg-gray-100" },
+  { value: "note", label: "Note", icon: MessageSquare, color: "text-gray-600 dark:text-gray-400", bg: "bg-gray-100 dark:bg-gray-800" },
 ];
 
 export default function CRM() {
@@ -312,7 +312,7 @@ export default function CRM() {
     return (
       <div
         onClick={() => handleOpenLeadDetail(lead)}
-        className={`cursor-pointer bg-white border border-gray-200 rounded p-2 hover:border-gray-300 transition-colors
+        className={`cursor-pointer bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded p-2 hover:border-gray-300 dark:border-gray-700 transition-colors
           ${stale ? "border-amber-300 bg-amber-50/30" : ""}
           ${isDragging ? "ring-1 ring-indigo-400" : ""}
         `}
@@ -320,10 +320,10 @@ export default function CRM() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
             {PriorityIcon && <PriorityIcon className={`w-3 h-3 flex-shrink-0 ${priority.color}`} />}
-            <span className="text-[13px] text-gray-900 font-medium truncate">{lead.company_name}</span>
+            <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium truncate">{lead.company_name}</span>
           </div>
           {lead.estimated_value > 0 && (
-            <span className="text-[11px] text-gray-900 font-medium tabular-nums flex-shrink-0">
+            <span className="text-[11px] text-gray-900 dark:text-gray-100 font-medium tabular-nums flex-shrink-0">
               ${(lead.estimated_value / 1000).toFixed(0)}k
             </span>
           )}
@@ -347,7 +347,7 @@ export default function CRM() {
               </span>
             )}
             {lead.next_action_date && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-400">
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-400 dark:text-gray-500">
                 <Calendar className="w-2.5 h-2.5" />
                 {new Date(lead.next_action_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
               </span>
@@ -375,18 +375,18 @@ export default function CRM() {
     return (
       <div
         onClick={() => handleOpenLeadDetail(lead)}
-        className={`group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${stale ? "bg-amber-50/30" : ""}`}
+        className={`group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 cursor-pointer ${stale ? "bg-amber-50/30" : ""}`}
       >
-        <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+        <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 dark:text-gray-300 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
           {initials}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             {PriorityIcon && <PriorityIcon className={`w-3 h-3 flex-shrink-0 ${priority.color}`} />}
-            <span className="text-[13px] text-gray-900 font-medium truncate">{lead.company_name}</span>
+            <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium truncate">{lead.company_name}</span>
             {lead.contact_name && (
-              <span className="text-gray-400 text-[12px] ml-1 truncate">· {lead.contact_name}</span>
+              <span className="text-gray-400 dark:text-gray-500 text-[12px] ml-1 truncate">· {lead.contact_name}</span>
             )}
           </div>
         </div>
@@ -400,7 +400,7 @@ export default function CRM() {
           <span className="text-[11px] text-gray-500">{column?.label || lead.status}</span>
         </span>
 
-        <span className="text-[13px] text-gray-900 font-medium w-20 text-right tabular-nums">
+        <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium w-20 text-right tabular-nums">
           {lead.estimated_value ? `$${lead.estimated_value.toLocaleString()}` : "—"}
         </span>
 
@@ -419,17 +419,17 @@ export default function CRM() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Page header with inline metric strip */}
-      <div className="px-4 pt-4 pb-3 border-b border-gray-200">
+      <div className="px-4 pt-4 pb-3 border-b border-gray-200 dark:border-gray-800">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
-          <h1 className="text-[15px] font-semibold text-gray-900">Sales Pipeline</h1>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-gray-600">
-            <span>Pipeline <span className="text-gray-900 font-medium">${stats.pipelineValue.toLocaleString()}</span></span>
-            <span>Won <span className="text-gray-900 font-medium">${stats.wonValue.toLocaleString()}</span></span>
+          <h1 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Sales Pipeline</h1>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-gray-600 dark:text-gray-400">
+            <span>Pipeline <span className="text-gray-900 dark:text-gray-100 font-medium">${stats.pipelineValue.toLocaleString()}</span></span>
+            <span>Won <span className="text-gray-900 dark:text-gray-100 font-medium">${stats.wonValue.toLocaleString()}</span></span>
             <span className="inline-flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-              Active <span className="text-gray-900 font-medium">{stats.activeLeads}</span>
+              Active <span className="text-gray-900 dark:text-gray-100 font-medium">{stats.activeLeads}</span>
             </span>
             {stats.staleLeads > 0 && (
               <span className="inline-flex items-center gap-1.5">
@@ -437,21 +437,21 @@ export default function CRM() {
                 Stale <span className="text-amber-600 font-medium">{stats.staleLeads}</span>
               </span>
             )}
-            <span>Win rate <span className="text-gray-900 font-medium">{stats.conversionRate.toFixed(0)}%</span></span>
+            <span>Win rate <span className="text-gray-900 dark:text-gray-100 font-medium">{stats.conversionRate.toFixed(0)}%</span></span>
           </div>
         </div>
       </div>
 
       {/* Consolidated toolbar */}
-      <div className="border-b border-gray-200 bg-white">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <div className="flex items-center gap-2 px-4 h-12">
           <div className="relative flex-1 max-w-md min-w-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5" />
             <Input
               placeholder="Search leads"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-[13px] border-gray-200 focus-visible:ring-1"
+              className="pl-8 h-8 text-[13px] border-gray-200 dark:border-gray-800 focus-visible:ring-1"
             />
           </div>
 
@@ -481,7 +481,7 @@ export default function CRM() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600">Source</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Source</label>
                 <Select value={filters.source} onValueChange={(value) => setFilters({ ...filters, source: value })}>
                   <SelectTrigger><SelectValue placeholder="Source" /></SelectTrigger>
                   <SelectContent>
@@ -494,7 +494,7 @@ export default function CRM() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600">Priority</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Priority</label>
                 <Select value={filters.priority} onValueChange={(value) => setFilters({ ...filters, priority: value })}>
                   <SelectTrigger><SelectValue placeholder="Priority" /></SelectTrigger>
                   <SelectContent>
@@ -504,7 +504,7 @@ export default function CRM() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600">Assignee</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Assignee</label>
                 <Select value={filters.assignedTo} onValueChange={(value) => setFilters({ ...filters, assignedTo: value })}>
                   <SelectTrigger><SelectValue placeholder="Assignee" /></SelectTrigger>
                   <SelectContent>
@@ -519,11 +519,11 @@ export default function CRM() {
           </Popover>
 
           <div className="ml-auto flex items-center gap-1.5">
-            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5">
+            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode("kanban")}
-                className={`p-1 rounded ${viewMode === "kanban" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                className={`p-1 rounded ${viewMode === "kanban" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                 title="Kanban"
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -531,7 +531,7 @@ export default function CRM() {
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
-                className={`p-1 rounded ${viewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                className={`p-1 rounded ${viewMode === "list" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                 title="List"
               >
                 <List className="w-3.5 h-3.5" />
@@ -564,12 +564,12 @@ export default function CRM() {
                   if (isCollapsed) {
                     return (
                       <div key={column.id} className="flex-shrink-0 w-10 cursor-pointer" onClick={() => toggleColumn(column.id)}>
-                        <div className="h-full border border-gray-200 rounded flex flex-col items-center py-3 bg-gray-50 hover:bg-gray-100">
+                        <div className="h-full border border-gray-200 dark:border-gray-800 rounded flex flex-col items-center py-3 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800">
                           <div className={`w-2 h-2 rounded-full ${column.color} mb-2`} />
-                          <span className="text-[11px] text-gray-600" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>
+                          <span className="text-[11px] text-gray-600 dark:text-gray-400" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>
                             {column.label} ({columnLeads.length})
                           </span>
-                          <ChevronRight className="w-3 h-3 text-gray-400 mt-2" />
+                          <ChevronRight className="w-3 h-3 text-gray-400 dark:text-gray-500 mt-2" />
                         </div>
                       </div>
                     );
@@ -580,10 +580,10 @@ export default function CRM() {
                       <div className="flex items-center justify-between px-1 pb-2">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <div className={`w-2 h-2 rounded-full ${column.color}`} />
-                          <span className="text-[11px] font-medium uppercase tracking-wide text-gray-700 truncate">
+                          <span className="text-[11px] font-medium uppercase tracking-wide text-gray-700 dark:text-gray-300 truncate">
                             {column.label}
                           </span>
-                          <span className="text-[11px] text-gray-400 tabular-nums">{columnLeads.length}</span>
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{columnLeads.length}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           {columnValue > 0 && (
@@ -595,7 +595,7 @@ export default function CRM() {
                             <button
                               type="button"
                               onClick={() => toggleColumn(column.id)}
-                              className="text-gray-400 hover:text-gray-700"
+                              className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300"
                             >
                               <ChevronDown className="w-3.5 h-3.5" />
                             </button>
@@ -608,7 +608,7 @@ export default function CRM() {
                           <div
                             ref={provided.innerRef}
                             {...provided.droppableProps}
-                            className={`flex-1 rounded transition-colors ${snapshot.isDraggingOver ? "bg-gray-100" : "bg-gray-50"} p-1.5 overflow-y-auto`}
+                            className={`flex-1 rounded transition-colors ${snapshot.isDraggingOver ? "bg-gray-100 dark:bg-gray-800" : "bg-gray-50 dark:bg-gray-900"} p-1.5 overflow-y-auto`}
                           >
                             <div className="space-y-1.5">
                               {columnLeads.map((lead, index) => (
@@ -622,7 +622,7 @@ export default function CRM() {
                               ))}
                               {provided.placeholder}
                               {columnLeads.length === 0 && (
-                                <div className="text-center py-6 text-gray-400">
+                                <div className="text-center py-6 text-gray-400 dark:text-gray-500">
                                   <Building2 className="w-5 h-5 mx-auto mb-1 opacity-50" />
                                   <p className="text-[11px]">No leads</p>
                                 </div>
@@ -638,9 +638,9 @@ export default function CRM() {
             </div>
           </DragDropContext>
         ) : (
-          <div className="overflow-y-auto h-full bg-white">
+          <div className="overflow-y-auto h-full bg-white dark:bg-gray-950">
             {filteredLeads.length === 0 ? (
-              <div className="p-8 text-center text-sm text-gray-400">
+              <div className="p-8 text-center text-sm text-gray-400 dark:text-gray-500">
                 {leads.length === 0 ? 'No leads yet. Click "New Lead" to get started.' : "No leads match your filters."}
               </div>
             ) : (
@@ -667,7 +667,7 @@ export default function CRM() {
                         <Button variant="ghost" size="sm" className="h-7 px-2 text-[13px]">
                           {(() => {
                             const p = PRIORITY_OPTIONS.find(p => p.value === selectedLead.priority);
-                            return p ? <p.icon className={`w-3.5 h-3.5 ${p.color}`} /> : <Thermometer className="w-3.5 h-3.5 text-gray-400" />;
+                            return p ? <p.icon className={`w-3.5 h-3.5 ${p.color}`} /> : <Thermometer className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />;
                           })()}
                         </Button>
                       </DropdownMenuTrigger>
@@ -682,7 +682,7 @@ export default function CRM() {
                     <Button variant="ghost" size="sm" className="h-7 px-2 text-[13px]" onClick={() => { setEditingLead(selectedLead); setShowLeadForm(true); }}>
                       Edit
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-400 hover:text-red-600" onClick={() => setDeleteDialog({ open: true, leadId: selectedLead.id })}>
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-400 dark:text-gray-500 hover:text-red-600" onClick={() => setDeleteDialog({ open: true, leadId: selectedLead.id })}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -690,17 +690,17 @@ export default function CRM() {
               </SheetHeader>
 
               {/* Inline metric strip */}
-              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
-                <span>Value <span className="text-gray-900 font-medium">${selectedLead.estimated_value?.toLocaleString() || 0}</span></span>
-                <span>Status <span className="text-gray-900 font-medium capitalize">{selectedLead.status}</span></span>
-                <span>Email <span className="text-gray-900 font-medium">{selectedLead.email || "—"}</span></span>
-                <span>Phone <span className="text-gray-900 font-medium">{selectedLead.phone || "—"}</span></span>
+              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600 dark:text-gray-400">
+                <span>Value <span className="text-gray-900 dark:text-gray-100 font-medium">${selectedLead.estimated_value?.toLocaleString() || 0}</span></span>
+                <span>Status <span className="text-gray-900 dark:text-gray-100 font-medium capitalize">{selectedLead.status}</span></span>
+                <span>Email <span className="text-gray-900 dark:text-gray-100 font-medium">{selectedLead.email || "—"}</span></span>
+                <span>Phone <span className="text-gray-900 dark:text-gray-100 font-medium">{selectedLead.phone || "—"}</span></span>
               </div>
 
               {selectedLead.next_action && (
-                <div className="mt-4 border-t border-gray-200 pt-3">
+                <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-3">
                   <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">Next action</div>
-                  <p className="text-[13px] text-gray-900">{selectedLead.next_action}</p>
+                  <p className="text-[13px] text-gray-900 dark:text-gray-100">{selectedLead.next_action}</p>
                   {selectedLead.next_action_date && (
                     <p className="text-[11px] text-gray-500 mt-0.5">Due: {new Date(selectedLead.next_action_date).toLocaleDateString()}</p>
                   )}
@@ -708,16 +708,16 @@ export default function CRM() {
               )}
 
               {isPartnerReferral(selectedLead) && (
-                <div className="mt-4 border-t border-gray-200 pt-3">
+                <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-3">
                   <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center gap-1">
                     <Users className="w-3 h-3" /> Partner Referral
                   </div>
-                  <p className="text-[13px] text-gray-900">{selectedLead.source}</p>
+                  <p className="text-[13px] text-gray-900 dark:text-gray-100">{selectedLead.source}</p>
                 </div>
               )}
 
               {/* Log Activity */}
-              <div className="mt-5 border-t border-gray-200 pt-4">
+              <div className="mt-5 border-t border-gray-200 dark:border-gray-800 pt-4">
                 <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">Log activity</div>
                 <div className="flex gap-1 mb-2 mt-1">
                   {ACTIVITY_TYPES.map(type => (
@@ -728,7 +728,7 @@ export default function CRM() {
                       className={`inline-flex items-center gap-1 h-7 px-2 rounded text-[13px] ${
                         activityType === type.value
                           ? "bg-gray-900 text-white"
-                          : "text-gray-600 hover:bg-gray-100"
+                          : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                       }`}
                     >
                       <type.icon className="w-3.5 h-3.5" />
@@ -753,7 +753,7 @@ export default function CRM() {
               </div>
 
               {/* Activity Timeline */}
-              <div className="mt-5 border-t border-gray-200 pt-4">
+              <div className="mt-5 border-t border-gray-200 dark:border-gray-800 pt-4">
                 <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">Activity timeline</div>
                 {loadingActivities ? (
                   <div className="text-center py-4">
@@ -762,25 +762,25 @@ export default function CRM() {
                 ) : activities.length === 0 ? (
                   <p className="text-[13px] text-gray-500 text-center py-4">No activities yet</p>
                 ) : (
-                  <div className="border-t border-gray-200">
+                  <div className="border-t border-gray-200 dark:border-gray-800">
                     {activities.map((activity) => {
                       const typeInfo = ACTIVITY_TYPES.find(t => t.value === activity.type);
                       const Icon = typeInfo?.icon || MessageSquare;
                       return (
-                        <div key={activity.id} className="flex items-start gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50">
-                          <div className={`w-6 h-6 rounded-full ${typeInfo?.bg || "bg-gray-100"} flex items-center justify-center flex-shrink-0`}>
-                            <Icon className={`w-3.5 h-3.5 ${typeInfo?.color || "text-gray-600"}`} />
+                        <div key={activity.id} className="flex items-start gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                          <div className={`w-6 h-6 rounded-full ${typeInfo?.bg || "bg-gray-100 dark:bg-gray-800"} flex items-center justify-center flex-shrink-0`}>
+                            <Icon className={`w-3.5 h-3.5 ${typeInfo?.color || "text-gray-600 dark:text-gray-400"}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-[13px] text-gray-900 font-medium">{typeInfo?.label || activity.type}</span>
-                              <span className="text-[11px] text-gray-400">
+                              <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium">{typeInfo?.label || activity.type}</span>
+                              <span className="text-[11px] text-gray-400 dark:text-gray-500">
                                 {new Date(activity.created_at).toLocaleDateString()} at {new Date(activity.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                               </span>
                             </div>
-                            <p className="text-[12px] text-gray-600 mt-0.5">{activity.description}</p>
+                            <p className="text-[12px] text-gray-600 dark:text-gray-400 mt-0.5">{activity.description}</p>
                             {activity.user_profiles?.full_name && (
-                              <p className="text-[11px] text-gray-400 mt-0.5">by {activity.user_profiles.full_name}</p>
+                              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">by {activity.user_profiles.full_name}</p>
                             )}
                           </div>
                         </div>

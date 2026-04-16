@@ -367,7 +367,7 @@ export default function ProjectDetail() {
     return (
       <div className="p-8">
         <div className="text-center py-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Project not found</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Project not found</h2>
           <Link to={createPageUrl("Projects")}>
             <Button>Back to Projects</Button>
           </Link>
@@ -577,16 +577,16 @@ export default function ProjectDetail() {
       <div className="flex items-center gap-3 mb-4 text-[13px]">
         <Link
           to={createPageUrl("Projects")}
-          className="inline-flex items-center text-gray-500 hover:text-gray-900 shrink-0"
+          className="inline-flex items-center text-gray-500 hover:text-gray-900 dark:text-gray-100 shrink-0"
         >
           <ArrowLeft className="w-3.5 h-3.5 mr-1" />
           Projects
         </Link>
-        <span className="text-gray-300">/</span>
+        <span className="text-gray-300 dark:text-gray-600">/</span>
         {account?.logo_url ? (
-          <img src={account.logo_url} alt="" className="w-5 h-5 rounded object-contain bg-gray-50 border border-gray-100 shrink-0" />
+          <img src={account.logo_url} alt="" className="w-5 h-5 rounded object-contain bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shrink-0" />
         ) : (
-          <Users className="w-4 h-4 text-gray-400 shrink-0" />
+          <Users className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
         )}
         {account?.company_name && (
           <span className="text-gray-500 truncate">{account.company_name}</span>
@@ -594,7 +594,7 @@ export default function ProjectDetail() {
       </div>
 
       <div className="flex items-center justify-between gap-3 mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900 truncate">{project.name}</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 truncate">{project.name}</h1>
         <div className="flex items-center gap-2 shrink-0">
           <Badge className={`${statusColors[project.status]} capitalize text-[11px]`}>
             {project.status.replace('_', ' ')}
@@ -613,7 +613,7 @@ export default function ProjectDetail() {
               <TrendingUp className="w-3.5 h-3.5 text-blue-500 self-center" />
               <span className="text-gray-500">Revenue</span>
               <span className="font-semibold text-blue-600">${timeBasedRevenue.toLocaleString()}</span>
-              <span className="text-[11px] text-gray-400">· {billableHours.toFixed(1)}h</span>
+              <span className="text-[11px] text-gray-400 dark:text-gray-500">· {billableHours.toFixed(1)}h</span>
             </span>
             <span className="inline-flex items-baseline gap-1.5">
               <CheckCircle className="w-3.5 h-3.5 text-green-500 self-center" />
@@ -631,7 +631,7 @@ export default function ProjectDetail() {
               <span className={`font-semibold ${billedRevenue - laborCost >= 0 ? "text-green-600" : "text-red-600"}`}>
                 ${(billedRevenue - laborCost).toLocaleString()}
               </span>
-              <span className="text-[11px] text-gray-400">
+              <span className="text-[11px] text-gray-400 dark:text-gray-500">
                 · {billedRevenue > 0 ? (((billedRevenue - laborCost) / billedRevenue) * 100).toFixed(0) : 0}%
               </span>
             </span>
@@ -643,7 +643,7 @@ export default function ProjectDetail() {
             <span className="text-gray-500">Hours</span>
             <span className="font-semibold">{totalHours.toFixed(1)}h</span>
             {!isInternalProject && (
-              <span className="text-[11px] text-gray-400">· {billableHours.toFixed(1)}h billable</span>
+              <span className="text-[11px] text-gray-400 dark:text-gray-500">· {billableHours.toFixed(1)}h billable</span>
             )}
           </span>
         )}
@@ -652,7 +652,7 @@ export default function ProjectDetail() {
           <span className="text-gray-500">This Week</span>
           <span className="font-semibold">{weeklyHours.toFixed(1)}h</span>
           {weeklyMinimum > 0 && (
-            <span className={`text-[11px] ${weeklyProgress >= 100 ? "text-green-500" : "text-gray-400"}`}>
+            <span className={`text-[11px] ${weeklyProgress >= 100 ? "text-green-500" : "text-gray-400 dark:text-gray-500"}`}>
               · {weeklyProgress.toFixed(0)}% of {weeklyMinimum}h
             </span>
           )}
@@ -663,9 +663,9 @@ export default function ProjectDetail() {
       {budgetHours > 0 && (
         <div className="mb-6">
           <div className="flex items-center justify-between text-[12px] mb-1.5">
-            <span className="text-gray-700 font-medium">
+            <span className="text-gray-700 dark:text-gray-300 font-medium">
               {isRetainer ? `Retainer · ${currentMonth}` : "Hours budget"}
-              <span className="ml-2 text-gray-400 font-normal">
+              <span className="ml-2 text-gray-400 dark:text-gray-500 font-normal">
                 {isRetainer
                   ? `${currentMonthHours.toFixed(1)} / ${monthlyBudget}h this month`
                   : `${totalHours.toFixed(1)} / ${budgetHours}h total`}
@@ -686,20 +686,20 @@ export default function ProjectDetail() {
           />
           {isRetainer && monthlyHistory.length > 0 && (
             <details className="mt-3">
-              <summary className="text-[12px] text-gray-500 hover:text-gray-700 cursor-pointer select-none">
+              <summary className="text-[12px] text-gray-500 hover:text-gray-700 dark:text-gray-300 cursor-pointer select-none">
                 Last 6 months
               </summary>
-              <div className="mt-2 space-y-1.5 pl-3 border-l border-gray-100">
+              <div className="mt-2 space-y-1.5 pl-3 border-l border-gray-100 dark:border-gray-800">
                 {monthlyHistory.map((month, idx) => (
                   <div key={idx} className="space-y-0.5">
                     <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-gray-600">{month.label}</span>
-                      <span className={month.isOverBudget ? "text-red-600 font-semibold" : "text-gray-900"}>
+                      <span className="text-gray-600 dark:text-gray-400">{month.label}</span>
+                      <span className={month.isOverBudget ? "text-red-600 font-semibold" : "text-gray-900 dark:text-gray-100"}>
                         {month.hours.toFixed(1)}h / {month.budget}h
                         {month.isOverBudget && ` (+${(month.hours - month.budget).toFixed(1)}h)`}
                       </span>
                     </div>
-                    <div className="relative h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="relative h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                       <div
                         className={`absolute top-0 left-0 h-full transition-all ${
                           month.hours >= month.budget
@@ -721,7 +721,7 @@ export default function ProjectDetail() {
 
       {/* Linear-style tabs: thin underlined row */}
       <Tabs defaultValue="details" className="space-y-4">
-        <TabsList className="h-9 bg-transparent p-0 border-b border-gray-200 rounded-none w-full justify-start gap-5 px-1">
+        <TabsList className="h-9 bg-transparent p-0 border-b border-gray-200 dark:border-gray-800 rounded-none w-full justify-start gap-5 px-1">
           {[
             { v: "details", label: "Details" },
             { v: "tasks", label: "Tasks" },
@@ -735,7 +735,7 @@ export default function ProjectDetail() {
             <TabsTrigger
               key={t.v}
               value={t.v}
-              className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
+              className="relative h-9 px-0 text-[13px] font-medium text-gray-500 rounded-none bg-transparent shadow-none data-[state=active]:text-gray-900 dark:text-gray-100 data-[state=active]:bg-transparent data-[state=active]:shadow-none after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-transparent data-[state=active]:after:bg-gray-900"
             >
               {t.label}
             </TabsTrigger>
@@ -745,25 +745,25 @@ export default function ProjectDetail() {
         <TabsContent value="details" className="space-y-6 project-detail-form">
           {/* Billing Type Overview - Compact inline stats (not for internal projects) */}
           {!isInternalProject && project.billing_type === 'exit' && (
-            <div className="flex flex-wrap gap-3 p-3 bg-white rounded-lg border">
-              <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+            <div className="flex flex-wrap gap-3 p-3 bg-white dark:bg-gray-950 rounded-lg border">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 <TrendingUp className="w-4 h-4" /> Exit
               </span>
-              <span className="text-sm text-gray-600">Baseline: <span className="font-semibold">${(project.baseline_valuation || 0).toLocaleString()}</span></span>
-              <span className="text-sm text-gray-600">Fee: <span className="font-semibold text-green-600">{project.valuation_percentage || 8}%</span></span>
-              <span className="text-sm text-gray-600">Retainer: <span className="font-semibold">${(project.monthly_retainer || 0).toLocaleString()}/mo</span></span>
-              <span className="text-sm text-gray-600">Target: <span className="font-semibold">{project.exit_target_date ? new Date(project.exit_target_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Not set'}</span></span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Baseline: <span className="font-semibold">${(project.baseline_valuation || 0).toLocaleString()}</span></span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Fee: <span className="font-semibold text-green-600">{project.valuation_percentage || 8}%</span></span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Retainer: <span className="font-semibold">${(project.monthly_retainer || 0).toLocaleString()}/mo</span></span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Target: <span className="font-semibold">{project.exit_target_date ? new Date(project.exit_target_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Not set'}</span></span>
             </div>
           )}
 
           {!isInternalProject && project.billing_type === 'retainer' && (
-            <div className="flex flex-wrap gap-3 p-3 bg-white rounded-lg border">
-              <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+            <div className="flex flex-wrap gap-3 p-3 bg-white dark:bg-gray-950 rounded-lg border">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 <Users className="w-4 h-4" /> Retainer
               </span>
-              <span className="text-sm text-gray-600">Monthly: <span className="font-semibold">${(project.monthly_retainer || 0).toLocaleString()}</span></span>
-              <span className="text-sm text-gray-600">Hours: <span className="font-semibold text-purple-600">{project.retainer_hours_included || project.budget_hours || 0}h</span>/mo</span>
-              <span className="text-sm text-gray-600">Used: <span className="font-semibold">{currentMonthHours.toFixed(1)}h</span></span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Monthly: <span className="font-semibold">${(project.monthly_retainer || 0).toLocaleString()}</span></span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Hours: <span className="font-semibold text-purple-600">{project.retainer_hours_included || project.budget_hours || 0}h</span>/mo</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Used: <span className="font-semibold">{currentMonthHours.toFixed(1)}h</span></span>
               <span className={`text-sm ${hoursRemaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {hoursRemaining >= 0 ? `${hoursRemaining.toFixed(1)}h left` : `${Math.abs(hoursRemaining).toFixed(1)}h over`}
               </span>
@@ -771,15 +771,15 @@ export default function ProjectDetail() {
           )}
 
           {!isInternalProject && project.billing_type === 'hourly' && (
-            <div className="flex flex-wrap gap-3 p-3 bg-white rounded-lg border">
-              <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+            <div className="flex flex-wrap gap-3 p-3 bg-white dark:bg-gray-950 rounded-lg border">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 <Clock className="w-4 h-4" /> Hourly
               </span>
-              <span className="text-sm text-gray-600">Rate: <span className="font-semibold">${(project.hourly_rate || 0).toLocaleString()}/hr</span></span>
-              <span className="text-sm text-gray-600">Billable: <span className="font-semibold text-blue-600">{billableHours.toFixed(1)}h</span></span>
-              <span className="text-sm text-gray-600">Revenue: <span className="font-semibold text-green-600">${(billableHours * (project.hourly_rate || 0)).toLocaleString()}</span></span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Rate: <span className="font-semibold">${(project.hourly_rate || 0).toLocaleString()}/hr</span></span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Billable: <span className="font-semibold text-blue-600">{billableHours.toFixed(1)}h</span></span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Revenue: <span className="font-semibold text-green-600">${(billableHours * (project.hourly_rate || 0)).toLocaleString()}</span></span>
               {(billableHours - billedHours) > 0 && (
-                <span className="text-sm text-gray-600">Unbilled: <span className="font-semibold text-orange-600">${((billableHours - billedHours) * (project.hourly_rate || 0)).toLocaleString()}</span></span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Unbilled: <span className="font-semibold text-orange-600">${((billableHours - billedHours) * (project.hourly_rate || 0)).toLocaleString()}</span></span>
               )}
             </div>
           )}
@@ -1099,7 +1099,7 @@ export default function ProjectDetail() {
         <TabsContent value="tasks" className="space-y-3">
           {/* Toolbar: status segments + search + filter + new task */}
           <div className="flex flex-wrap items-center gap-2 text-[13px]">
-            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5 text-[12px]">
+            <div className="flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5 text-[12px]">
               {[
                 { id: "active", label: "Active" },
                 { id: "all", label: "All" },
@@ -1109,19 +1109,19 @@ export default function ProjectDetail() {
                   key={s.id}
                   type="button"
                   onClick={() => setTaskStatusFilter(s.id)}
-                  className={`px-2 py-0.5 rounded ${taskStatusFilter === s.id ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                  className={`px-2 py-0.5 rounded ${taskStatusFilter === s.id ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                 >
                   {s.label}
                 </button>
               ))}
             </div>
             <div className="relative flex-1 max-w-xs min-w-0">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5" />
               <Input
                 placeholder="Search tasks"
                 value={taskSearch}
                 onChange={(e) => setTaskSearch(e.target.value)}
-                className="pl-7 h-7 text-[13px] border-gray-200 focus-visible:ring-1"
+                className="pl-7 h-7 text-[13px] border-gray-200 dark:border-gray-800 focus-visible:ring-1"
               />
             </div>
             {(() => {
@@ -1141,7 +1141,7 @@ export default function ProjectDetail() {
                     <div className="flex items-center justify-between">
                       <span className="text-[13px] font-semibold">Filters</span>
                       {fc > 0 && (
-                        <button type="button" className="text-[12px] text-gray-500 hover:text-gray-900" onClick={() => { setTaskPriorityFilter("all"); setTaskAssigneeFilter("all"); }}>
+                        <button type="button" className="text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100" onClick={() => { setTaskPriorityFilter("all"); setTaskAssigneeFilter("all"); }}>
                           Clear
                         </button>
                       )}
@@ -1179,14 +1179,14 @@ export default function ProjectDetail() {
               size="sm"
               variant="ghost"
               onClick={() => { setEditingTask(null); setShowTaskDrawer(true); }}
-              className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+              className="h-7 px-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <Plus className="w-3.5 h-3.5 mr-1" /> New task
             </Button>
           </div>
 
           {/* Dense filtered list */}
-          <div className="border-t border-gray-200">
+          <div className="border-t border-gray-200 dark:border-gray-800">
             {(() => {
               const filtered = tasks.filter(task => {
                 if (taskStatusFilter === "active" && task.status === "completed") return false;
@@ -1211,15 +1211,15 @@ export default function ProjectDetail() {
                 const priorityColor =
                   task.priority === 'urgent' ? 'text-red-600' :
                   task.priority === 'high' ? 'text-orange-600' :
-                  task.priority === 'low' ? 'text-gray-400' : 'text-gray-600';
+                  task.priority === 'low' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400';
                 return (
                   <div
                     key={task.id}
-                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 cursor-pointer"
                     onClick={() => { setEditingTask(task); setShowTaskDrawer(true); }}
                   >
                     <span className={`w-2 h-2 rounded-full ${statusDot} flex-shrink-0`} />
-                    <span className="flex-1 text-[13px] text-gray-900 truncate">{task.title}</span>
+                    <span className="flex-1 text-[13px] text-gray-900 dark:text-gray-100 truncate">{task.title}</span>
                     <span className={`text-[11px] capitalize ${priorityColor} w-14 text-right`}>{task.priority}</span>
                     <span className="text-[12px] text-gray-500 w-28 truncate text-right">{getUserName(task.assigned_to) || '—'}</span>
                     <span className="text-[12px] text-gray-500 w-20 text-right">
@@ -1227,7 +1227,7 @@ export default function ProjectDetail() {
                     </span>
                     <button
                       onClick={(e) => { e.stopPropagation(); setDeleteConfirmDialog({ open: true, type: 'task', id: task.id }); }}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 dark:text-gray-500 hover:text-red-600"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1240,23 +1240,23 @@ export default function ProjectDetail() {
 
         <TabsContent value="time" className="space-y-3">
           {/* Inline metric strip */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
-            <span>Total <span className="text-gray-900 font-medium">{totalHours.toFixed(1)}h</span></span>
-            <span>This month <span className="text-gray-900 font-medium">{currentMonthHours.toFixed(1)}h</span></span>
-            <span>{project?.billing_type === 'hourly' ? 'Billable' : 'Tracked'} <span className="text-gray-900 font-medium">{billableHours.toFixed(1)}h</span></span>
-            <span>Entries <span className="text-gray-900 font-medium">{timeEntries.length}</span></span>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600 dark:text-gray-400">
+            <span>Total <span className="text-gray-900 dark:text-gray-100 font-medium">{totalHours.toFixed(1)}h</span></span>
+            <span>This month <span className="text-gray-900 dark:text-gray-100 font-medium">{currentMonthHours.toFixed(1)}h</span></span>
+            <span>{project?.billing_type === 'hourly' ? 'Billable' : 'Tracked'} <span className="text-gray-900 dark:text-gray-100 font-medium">{billableHours.toFixed(1)}h</span></span>
+            <span>Entries <span className="text-gray-900 dark:text-gray-100 font-medium">{timeEntries.length}</span></span>
             <div className="flex-1" />
             <Button
               size="sm"
               variant="ghost"
               onClick={() => { setEditingTimeEntry(null); setShowTimeDrawer(true); }}
-              className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+              className="h-7 px-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <Plus className="w-3.5 h-3.5 mr-1" /> Log time
             </Button>
           </div>
 
-          <div className="border-t border-gray-200">
+          <div className="border-t border-gray-200 dark:border-gray-800">
             {timeEntries.length === 0 ? (
               <div className="py-10 text-center text-[13px] text-gray-500">No time logged yet</div>
             ) : (
@@ -1267,16 +1267,16 @@ export default function ProjectDetail() {
                 return (
                   <div
                     key={entry.id}
-                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 cursor-pointer"
                     onClick={() => { setEditingTimeEntry(entry); setShowTimeDrawer(true); }}
                   >
                     <span className="text-[12px] text-gray-500 w-20">
                       {parseLocalDate(entry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </span>
-                    <span className="text-[13px] text-gray-900 w-32 truncate">{getTeamMemberNameById(entry.team_member_id)}</span>
-                    <span className="flex-1 text-[13px] text-gray-600 truncate">{entry.description || '—'}</span>
+                    <span className="text-[13px] text-gray-900 dark:text-gray-100 w-32 truncate">{getTeamMemberNameById(entry.team_member_id)}</span>
+                    <span className="flex-1 text-[13px] text-gray-600 dark:text-gray-400 truncate">{entry.description || '—'}</span>
                     <span className={`text-[12px] ${typeColor} w-24 text-right`}>{typeLabel}</span>
-                    <span className="text-[13px] text-gray-900 font-medium w-12 text-right">{entry.hours}h</span>
+                    <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium w-12 text-right">{entry.hours}h</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1284,7 +1284,7 @@ export default function ProjectDetail() {
                         if (canDelete) setDeleteConfirmDialog({ open: true, type: 'time', id: entry.id });
                         else alert("You can only delete your own time entries.");
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 dark:text-gray-500 hover:text-red-600"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1308,20 +1308,20 @@ export default function ProjectDetail() {
         )}
 
         <TabsContent value="contacts" className="space-y-3">
-          <div className="flex items-center text-[13px] text-gray-600">
+          <div className="flex items-center text-[13px] text-gray-600 dark:text-gray-400">
             <span>{contacts.length} contact{contacts.length === 1 ? '' : 's'}</span>
             <div className="flex-1" />
             <Button
               size="sm"
               variant="ghost"
               onClick={() => { setEditingContact(null); setShowContactDrawer(true); }}
-              className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+              className="h-7 px-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <Plus className="w-3.5 h-3.5 mr-1" /> New contact
             </Button>
           </div>
 
-          <div className="border-t border-gray-200">
+          <div className="border-t border-gray-200 dark:border-gray-800">
             {contacts.length === 0 ? (
               <div className="py-10 text-center text-[13px] text-gray-500">No contacts</div>
             ) : (
@@ -1330,38 +1330,38 @@ export default function ProjectDetail() {
                 return (
                   <div
                     key={contact.id}
-                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50"
+                    className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
                   >
-                    <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 dark:text-gray-300 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
                       {initials || '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13px] text-gray-900 truncate">
+                      <div className="text-[13px] text-gray-900 dark:text-gray-100 truncate">
                         {contact.first_name} {contact.last_name}
-                        {contact.title && <span className="text-gray-400 font-normal ml-1.5">· {contact.title}</span>}
+                        {contact.title && <span className="text-gray-400 dark:text-gray-500 font-normal ml-1.5">· {contact.title}</span>}
                       </div>
                     </div>
-                    <a href={`mailto:${contact.email}`} className="text-[12px] text-gray-500 hover:text-gray-900 w-52 truncate text-right" onClick={(e) => e.stopPropagation()}>
+                    <a href={`mailto:${contact.email}`} className="text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-52 truncate text-right" onClick={(e) => e.stopPropagation()}>
                       {contact.email}
                     </a>
                     {contact.phone ? (
-                      <a href={`tel:${contact.phone}`} className="text-[12px] text-gray-500 hover:text-gray-900 w-28 text-right" onClick={(e) => e.stopPropagation()}>
+                      <a href={`tel:${contact.phone}`} className="text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-28 text-right" onClick={(e) => e.stopPropagation()}>
                         {contact.phone}
                       </a>
                     ) : (
-                      <span className="text-[12px] text-gray-300 w-28 text-right">—</span>
+                      <span className="text-[12px] text-gray-300 dark:text-gray-600 w-28 text-right">—</span>
                     )}
                     <span className="text-[11px] capitalize text-gray-500 w-20 text-right">{contact.role || '—'}</span>
                     <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
                       <button
                         onClick={() => { setEditingContact(contact); setShowContactDrawer(true); }}
-                        className="p-1 text-gray-400 hover:text-gray-900"
+                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setDeleteConfirmDialog({ open: true, type: 'contact', id: contact.id })}
-                        className="p-1 text-gray-400 hover:text-red-600"
+                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -1376,28 +1376,28 @@ export default function ProjectDetail() {
         <TabsContent value="billing" className="space-y-5">
           {/* Inline billing metric strip */}
           {project && (
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600">
-              <span>Type <span className="text-gray-900 font-medium capitalize">{project.billing_type}</span></span>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600 dark:text-gray-400">
+              <span>Type <span className="text-gray-900 dark:text-gray-100 font-medium capitalize">{project.billing_type}</span></span>
               {project.billing_type === 'hourly' && (
                 <>
-                  <span>Rate <span className="text-gray-900 font-medium">${project.hourly_rate || 0}/hr</span></span>
-                  <span>Billable <span className="text-gray-900 font-medium">${(billableHours * (project.hourly_rate || 0)).toLocaleString()}</span></span>
+                  <span>Rate <span className="text-gray-900 dark:text-gray-100 font-medium">${project.hourly_rate || 0}/hr</span></span>
+                  <span>Billable <span className="text-gray-900 dark:text-gray-100 font-medium">${(billableHours * (project.hourly_rate || 0)).toLocaleString()}</span></span>
                 </>
               )}
               {(project.billing_type === 'retainer' || project.billing_type === 'exit') && (
-                <span>Retainer <span className="text-gray-900 font-medium">${(project.monthly_retainer || 0).toLocaleString()}/mo</span></span>
+                <span>Retainer <span className="text-gray-900 dark:text-gray-100 font-medium">${(project.monthly_retainer || 0).toLocaleString()}/mo</span></span>
               )}
               {project.billing_type === 'exit' && (
-                <span>Success fee <span className="text-gray-900 font-medium">{project.valuation_percentage || 8}%</span></span>
+                <span>Success fee <span className="text-gray-900 dark:text-gray-100 font-medium">{project.valuation_percentage || 8}%</span></span>
               )}
-              <span>Invoices <span className="text-gray-900 font-medium">{invoices.length}</span></span>
+              <span>Invoices <span className="text-gray-900 dark:text-gray-100 font-medium">{invoices.length}</span></span>
             </div>
           )}
 
           {/* Invoices section */}
           <div>
             <div className="flex items-center h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500">Invoices</div>
-            <div className="border-t border-gray-200">
+            <div className="border-t border-gray-200 dark:border-gray-800">
               {invoices.length === 0 ? (
                 <div className="py-8 text-center text-[13px] text-gray-500">No invoices yet</div>
               ) : (
@@ -1407,14 +1407,14 @@ export default function ProjectDetail() {
                     invoice.status === 'sent' ? 'text-blue-600' :
                     invoice.status === 'overdue' ? 'text-red-600' : 'text-gray-500';
                   return (
-                    <div key={invoice.id} className="flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50">
-                      <span className="flex-1 text-[13px] text-gray-900 truncate">
+                    <div key={invoice.id} className="flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                      <span className="flex-1 text-[13px] text-gray-900 dark:text-gray-100 truncate">
                         {invoice.invoice_number || `INV-${invoice.id.slice(0, 8)}`}
                       </span>
                       <span className="text-[12px] text-gray-500 w-24 text-right">
                         {invoice.due_date ? parseLocalDate(invoice.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                       </span>
-                      <span className="text-[13px] text-gray-900 font-medium w-24 text-right">
+                      <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium w-24 text-right">
                         ${(invoice.total || 0).toLocaleString()}
                       </span>
                       <span className={`text-[11px] capitalize ${statusColor} w-20 text-right`}>{invoice.status}</span>
@@ -1429,11 +1429,11 @@ export default function ProjectDetail() {
           {subscriptions.length > 0 && (
             <div>
               <div className="flex items-center h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500">Active subscriptions</div>
-              <div className="border-t border-gray-200">
+              <div className="border-t border-gray-200 dark:border-gray-800">
                 {subscriptions.map(sub => (
-                  <div key={sub.id} className="flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50">
-                    <span className="flex-1 text-[13px] text-gray-900 truncate">{sub.product_name || 'Subscription'}</span>
-                    <span className="text-[13px] text-gray-900 w-28 text-right">
+                  <div key={sub.id} className="flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                    <span className="flex-1 text-[13px] text-gray-900 dark:text-gray-100 truncate">{sub.product_name || 'Subscription'}</span>
+                    <span className="text-[13px] text-gray-900 dark:text-gray-100 w-28 text-right">
                       ${(sub.amount || 0).toLocaleString()}/{sub.interval || 'month'}
                     </span>
                     <span className="text-[12px] text-gray-500 w-24 text-right">
@@ -1457,7 +1457,7 @@ export default function ProjectDetail() {
             className="hidden"
             onChange={handleDocumentUpload}
           />
-          <div className="flex items-center text-[13px] text-gray-600">
+          <div className="flex items-center text-[13px] text-gray-600 dark:text-gray-400">
             <span>{documents.length} file{documents.length === 1 ? '' : 's'}</span>
             <div className="flex-1" />
             <Button
@@ -1465,7 +1465,7 @@ export default function ProjectDetail() {
               variant="ghost"
               onClick={() => document.getElementById('document-upload').click()}
               disabled={uploadingDocument}
-              className="h-7 px-2 text-[13px] text-gray-700 hover:bg-gray-100"
+              className="h-7 px-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               {uploadingDocument ? (
                 <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Uploading</>
@@ -1475,16 +1475,16 @@ export default function ProjectDetail() {
             </Button>
           </div>
 
-          <div className="border-t border-gray-200">
+          <div className="border-t border-gray-200 dark:border-gray-800">
             {documents.length === 0 ? (
               <div className="py-10 text-center text-[13px] text-gray-500">
                 No documents yet. Upload contracts, proposals, and other project files.
               </div>
             ) : (
               documents.map(doc => (
-                <div key={doc.id} className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50">
-                  <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <span className="flex-1 text-[13px] text-gray-900 truncate">{doc.name}</span>
+                <div key={doc.id} className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                  <FileText className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                  <span className="flex-1 text-[13px] text-gray-900 dark:text-gray-100 truncate">{doc.name}</span>
                   <span className="text-[12px] text-gray-500 w-20 text-right">
                     {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : '—'}
                   </span>
@@ -1496,13 +1496,13 @@ export default function ProjectDetail() {
                       href={doc.file_path}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1 text-gray-400 hover:text-gray-900"
+                      className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
                     >
                       <Download className="w-3.5 h-3.5" />
                     </a>
                     <button
                       onClick={() => handleDeleteDocument(doc.id, doc.file_path)}
-                      className="p-1 text-gray-400 hover:text-red-600"
+                      className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -1515,13 +1515,13 @@ export default function ProjectDetail() {
 
         {/* Ticket API Tab */}
         <TabsContent value="api" className="space-y-5 max-w-3xl">
-          <div className="flex items-center gap-2 text-[13px] text-gray-600">
+          <div className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400">
             <Ticket className="w-4 h-4" />
             <span>Create tickets from Zapier, Make, Typeform, or any webhook.</span>
           </div>
 
           {!project.api_key ? (
-            <div className="py-10 text-center border-t border-gray-200">
+            <div className="py-10 text-center border-t border-gray-200 dark:border-gray-800">
               <p className="text-[13px] text-gray-500 mb-3">No API key generated yet</p>
               <Button onClick={generateApiKey} size="sm" className="bg-gray-900 hover:bg-gray-800 text-white h-7 text-[13px]">
                 Generate API key
@@ -1535,15 +1535,15 @@ export default function ProjectDetail() {
                   <span>Endpoint</span>
                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-200 normal-case tracking-normal">POST</span>
                 </div>
-                <div className="flex items-center gap-1.5 border-b border-gray-200 hover:border-gray-300 focus-within:border-indigo-300 transition-colors">
+                <div className="flex items-center gap-1.5 border-b border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:border-gray-700 focus-within:border-indigo-300 transition-colors">
                   <input
                     value={`${window.location.origin}/functions/createTicket`}
                     readOnly
-                    className="flex-1 bg-transparent text-[13px] font-mono text-gray-900 py-1.5 outline-none"
+                    className="flex-1 bg-transparent text-[13px] font-mono text-gray-900 dark:text-gray-100 py-1.5 outline-none"
                   />
                   <button
                     onClick={() => copyToClipboard(`${window.location.origin}/functions/createTicket`, 'url')}
-                    className="p-1 text-gray-400 hover:text-gray-900"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
                   >
                     {copySuccess.url ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
@@ -1556,27 +1556,27 @@ export default function ProjectDetail() {
                   <span>API key</span>
                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 normal-case tracking-normal">Secret</span>
                 </div>
-                <div className="flex items-center gap-1.5 border-b border-gray-200 hover:border-gray-300 focus-within:border-indigo-300 transition-colors">
+                <div className="flex items-center gap-1.5 border-b border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:border-gray-700 focus-within:border-indigo-300 transition-colors">
                   <input
                     value={project.api_key}
                     readOnly
                     type="password"
-                    className="flex-1 bg-transparent text-[13px] font-mono text-gray-900 py-1.5 outline-none"
+                    className="flex-1 bg-transparent text-[13px] font-mono text-gray-900 dark:text-gray-100 py-1.5 outline-none"
                   />
                   <button
                     onClick={() => copyToClipboard(project.api_key, 'key')}
-                    className="p-1 text-gray-400 hover:text-gray-900"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
                   >
                     {copySuccess.key ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                 </div>
-                <p className="text-[11px] text-gray-500">Keep secret. Include in the <code className="text-gray-700">X-API-Key</code> header.</p>
+                <p className="text-[11px] text-gray-500">Keep secret. Include in the <code className="text-gray-700 dark:text-gray-300">X-API-Key</code> header.</p>
               </div>
 
               {/* Example Request */}
               <div className="space-y-1.5">
                 <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Example request</div>
-                <pre className="bg-gray-50 border border-gray-200 text-gray-800 p-3 rounded-md overflow-x-auto text-[12px] font-mono leading-relaxed">
+                <pre className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200 p-3 rounded-md overflow-x-auto text-[12px] font-mono leading-relaxed">
 {`curl -X POST ${window.location.origin}/functions/createTicket \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: ${project.api_key}" \\
@@ -1594,7 +1594,7 @@ export default function ProjectDetail() {
               {/* Field Documentation */}
               <div className="space-y-1.5">
                 <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Request body</div>
-                <div className="border-t border-gray-200">
+                <div className="border-t border-gray-200 dark:border-gray-800">
                   {[
                     { name: 'title', desc: 'Ticket title/summary', required: true },
                     { name: 'description', desc: 'Detailed description' },
@@ -1607,9 +1607,9 @@ export default function ProjectDetail() {
                     { name: 'due_date', desc: 'Due date in YYYY-MM-DD format' },
                     { name: 'estimated_hours', desc: 'Estimated hours to complete' },
                   ].map(f => (
-                    <div key={f.name} className="flex items-start gap-3 px-2 py-1.5 border-b border-gray-100">
-                      <code className="text-[12px] font-mono text-gray-900 w-36 flex-shrink-0">{f.name}</code>
-                      <span className="flex-1 text-[12px] text-gray-600">{f.desc}</span>
+                    <div key={f.name} className="flex items-start gap-3 px-2 py-1.5 border-b border-gray-100 dark:border-gray-800">
+                      <code className="text-[12px] font-mono text-gray-900 dark:text-gray-100 w-36 flex-shrink-0">{f.name}</code>
+                      <span className="flex-1 text-[12px] text-gray-600 dark:text-gray-400">{f.desc}</span>
                       {f.required && <span className="text-[10px] font-medium uppercase tracking-wide text-red-600">required</span>}
                     </div>
                   ))}
@@ -1619,11 +1619,11 @@ export default function ProjectDetail() {
               {/* Integration Tips */}
               <div className="space-y-1.5">
                 <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Integration tips</div>
-                <ul className="text-[12px] text-gray-600 space-y-1 leading-relaxed">
-                  <li><span className="text-gray-900 font-medium">Zapier/Make:</span> Use "Webhooks by Zapier" or "HTTP Request" module</li>
-                  <li><span className="text-gray-900 font-medium">Typeform:</span> Set up webhook in Settings → Webhooks</li>
-                  <li><span className="text-gray-900 font-medium">Slack:</span> Create slash command or use incoming webhooks</li>
-                  <li><span className="text-gray-900 font-medium">Email:</span> Use email parser services like Mailgun or SendGrid</li>
+                <ul className="text-[12px] text-gray-600 dark:text-gray-400 space-y-1 leading-relaxed">
+                  <li><span className="text-gray-900 dark:text-gray-100 font-medium">Zapier/Make:</span> Use "Webhooks by Zapier" or "HTTP Request" module</li>
+                  <li><span className="text-gray-900 dark:text-gray-100 font-medium">Typeform:</span> Set up webhook in Settings → Webhooks</li>
+                  <li><span className="text-gray-900 dark:text-gray-100 font-medium">Slack:</span> Create slash command or use incoming webhooks</li>
+                  <li><span className="text-gray-900 dark:text-gray-100 font-medium">Email:</span> Use email parser services like Mailgun or SendGrid</li>
                   <li>Tickets appear instantly in the <Link to={createPageUrl("Tasks")} className="text-indigo-600 hover:underline">Tasks page</Link></li>
                   <li>Each ticket gets an auto-incremented number (#1, #2, #3…)</li>
                 </ul>
@@ -1632,7 +1632,7 @@ export default function ProjectDetail() {
               {/* Response Example */}
               <div className="space-y-1.5">
                 <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Example response</div>
-                <pre className="bg-gray-50 border border-gray-200 text-gray-800 p-3 rounded-md overflow-x-auto text-[12px] font-mono leading-relaxed">
+                <pre className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200 p-3 rounded-md overflow-x-auto text-[12px] font-mono leading-relaxed">
 {`{
   "success": true,
   "ticket": {
