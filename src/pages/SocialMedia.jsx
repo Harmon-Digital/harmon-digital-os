@@ -6,23 +6,9 @@ import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Edit, Search, Trash2, ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon, Check, Target, Trophy, Settings, Filter, List, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Search, Trash2, ChevronLeft, ChevronRight, Check, Filter, List, Calendar as CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PostStatusIcon, PostStatusPicker, PlatformChip, STATUS_LIST as POST_STATUS_LIST } from "../components/social/PostIcons";
-import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { toWeekStart } from "@/config/kpiConfig";
-import { saveEntries } from "@/api/kpiCalculations";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Sheet,
   SheetContent,
@@ -45,7 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SocialPostForm from "../components/social/SocialPostForm";
 
 export default function SocialMedia() {
@@ -64,13 +49,6 @@ export default function SocialMedia() {
   const [viewMode, setViewMode] = useState("list"); // list or calendar
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // KPI state
-  const [kpiEntries, setKpiEntries] = useState([]);
-  const [showKpiSettings, setShowKpiSettings] = useState(false);
-  const [kpiMember, setKpiMember] = useState(null);
-  const [kpiWeeklyGoal, setKpiWeeklyGoal] = useState(0);
-  const [kpiBonus, setKpiBonus] = useState(0);
-
   useEffect(() => {
     loadData();
   }, []);
@@ -78,93 +56,19 @@ export default function SocialMedia() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const currentWeekStart = toWeekStart(new Date());
-      const [postsRes, accountsData, teamMembersData, kpiRes] = await Promise.all([
+      const [postsRes, accountsData, teamMembersData] = await Promise.all([
         supabase.from("social_posts").select("*").order("scheduled_date", { ascending: false }),
         Account.list(),
         TeamMember.list(),
-        supabase.from("kpi_entries").select("*").eq("slug", "social_posts").eq("month", currentWeekStart).not("team_member_id", "is", null),
       ]);
       setSocialPosts(postsRes.data || []);
       setAccounts(accountsData);
       setTeamMembers(teamMembersData.filter(m => m.status === "active"));
-      setKpiEntries(kpiRes.data || []);
     } catch (error) {
       console.error("Error loading social media:", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  // KPI stats from kpi_entries (same data as KPI page)
-  const kpiStats = useMemo(() => {
-    const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const weekStartStr = toWeekStart(today);
-    const startOfWeek = new Date(weekStartStr + "T00:00:00");
-
-    return teamMembers
-      .map(member => {
-        const kpiEntry = kpiEntries.find(e => e.team_member_id === member.id);
-        const weeklyGoal = kpiEntry ? Number(kpiEntry.target_value) || 0 : 0;
-        const bonusAmount = kpiEntry ? Number(kpiEntry.bonus_amount) || 0 : 0;
-
-        if (weeklyGoal <= 0) return null;
-
-        const dailyGoal = Math.ceil(weeklyGoal / 5);
-        // Count published posts assigned to this member
-        const memberPosts = socialPosts.filter(p => p.assigned_to === member.id && p.status === "published");
-        const todayCount = memberPosts.filter(p => parseLocalDate(p.scheduled_date) >= startOfDay).length;
-        const weekCount = memberPosts.filter(p => parseLocalDate(p.scheduled_date) >= startOfWeek).length;
-
-        const dailyProgress = dailyGoal > 0 ? (todayCount / dailyGoal) * 100 : 0;
-        const weeklyProgress = weeklyGoal > 0 ? (weekCount / weeklyGoal) * 100 : 0;
-        const dayOfWeek = today.getDay();
-        const workingDaysPassed = dayOfWeek === 0 ? 5 : Math.min(dayOfWeek, 5);
-        const expectedProgress = (workingDaysPassed / 5) * 100;
-        const onTrackForBonus = weeklyProgress >= 100 || weeklyProgress >= expectedProgress;
-
-        return {
-          ...member,
-          todayCount,
-          weekCount,
-          dailyGoal,
-          weeklyGoal,
-          bonusAmount,
-          dailyProgress: Math.min(dailyProgress, 100),
-          weeklyProgress: Math.min(weeklyProgress, 100),
-          onTrackForBonus,
-        };
-      })
-      .filter(Boolean);
-  }, [teamMembers, socialPosts, kpiEntries]);
-
-  const handleSaveKpi = async () => {
-    if (!kpiMember) return;
-    const currentWeekStart = toWeekStart(new Date());
-    const existingStat = kpiStats.find(s => s.id === kpiMember.id);
-
-    await saveEntries([{
-      slug: "social_posts",
-      month: currentWeekStart,
-      actual_value: existingStat?.weekCount || 0,
-      target_value: kpiWeeklyGoal,
-      bonus_amount: kpiBonus || null,
-      team_member_id: kpiMember.id,
-    }]);
-
-    setShowKpiSettings(false);
-    setKpiMember(null);
-    loadData();
-  };
-
-  const openKpiSettings = (member) => {
-    setKpiMember(member);
-    const kpiEntry = kpiEntries.find(e => e.team_member_id === member.id);
-    const weeklyGoal = kpiEntry ? Number(kpiEntry.target_value) || 0 : 0;
-    setKpiWeeklyGoal(weeklyGoal);
-    setKpiBonus(kpiEntry ? Number(kpiEntry.bonus_amount) || 0 : 0);
-    setShowKpiSettings(true);
   };
 
   const notifyAdmins = async ({ title, message, link = "/SocialMedia", priority = "normal", source = "social.update" }) => {
@@ -353,111 +257,42 @@ export default function SocialMedia() {
     });
   };
 
+  // Post status counts for inline strip
+  const postCounts = useMemo(() => {
+    const counts = { total: socialPosts.length, draft: 0, scheduled: 0, published: 0, approved: 0 };
+    for (const p of socialPosts) {
+      if (p.status === "draft") counts.draft++;
+      else if (p.status === "scheduled") counts.scheduled++;
+      else if (p.status === "published") counts.published++;
+      if (p.approved) counts.approved++;
+    }
+    return counts;
+  }, [socialPosts]);
+
   return (
     <div className="h-full flex flex-col bg-white overflow-hidden">
       <div className="overflow-y-auto flex-1 min-h-0">
-      <div className="p-6 lg:p-8 pb-0">
-      {/* KPI Dashboard */}
-      {kpiStats.length > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Target className="w-5 h-5 text-pink-600" />
-              Team KPIs
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {kpiStats.map(member => (
-              <Card key={member.id} className={`${member.onTrackForBonus ? 'border-green-300 bg-green-50/50' : ''}`}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">{member.full_name}</span>
-                      {member.onTrackForBonus && (
-                        <Trophy className="w-4 h-4 text-yellow-500" />
-                      )}
-                    </div>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => openKpiSettings(member)}>
-                      <Settings className="w-3 h-3 text-gray-400" />
-                    </Button>
-                  </div>
-
-                  {/* Daily Progress */}
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-gray-600">Today</span>
-                      <span className="font-medium">{member.todayCount} / {member.dailyGoal}</span>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${member.dailyProgress >= 100 ? 'bg-green-500' : 'bg-pink-500'}`}
-                        style={{ width: `${member.dailyProgress}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Weekly Progress */}
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-gray-600">This Week</span>
-                      <span className="font-medium">{member.weekCount} / {member.weeklyGoal}</span>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${member.weeklyProgress >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-                        style={{ width: `${member.weeklyProgress}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Bonus Info */}
-                  {member.bonusAmount > 0 && (
-                    <div className={`text-xs px-2 py-1 rounded-full text-center ${member.onTrackForBonus ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {member.onTrackForBonus ? '\u2713 On track for' : 'Goal:'} ${member.bonusAmount} bonus
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-
-            {/* Add KPI Card */}
-            <Card className="border-dashed border-2 border-gray-200 hover:border-gray-300 cursor-pointer" onClick={() => {
-              const membersWithoutKpi = teamMembers.filter(tm => !kpiEntries.find(e => e.team_member_id === tm.id));
-              if (membersWithoutKpi.length > 0) {
-                openKpiSettings(membersWithoutKpi[0]);
-              }
-            }}>
-              <CardContent className="p-4 flex items-center justify-center h-full min-h-[140px]">
-                <div className="text-center text-gray-400">
-                  <Plus className="w-6 h-6 mx-auto mb-1" />
-                  <span className="text-sm">Set Team KPIs</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
-
-      {/* Setup prompt if no KPIs */}
-      {kpiStats.length === 0 && teamMembers.length > 0 && !loading && (
-        <Card className="mb-6 bg-pink-50 border-pink-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Target className="w-8 h-8 text-pink-600" />
-                <div>
-                  <h3 className="font-medium text-gray-900">Set Up Team KPIs</h3>
-                  <p className="text-sm text-gray-600">Track weekly posting goals with bonus incentives</p>
-                </div>
-              </div>
-              <Button onClick={() => openKpiSettings(teamMembers[0])}>
-                Configure
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
+      {/* Inline metric strip */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 lg:px-6 py-3 text-[13px] text-gray-600 border-b border-gray-100">
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+          Total <span className="text-gray-900 font-medium tabular-nums">{postCounts.total}</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+          Draft <span className="text-gray-900 font-medium tabular-nums">{postCounts.draft}</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          Scheduled <span className="text-gray-900 font-medium tabular-nums">{postCounts.scheduled}</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+          Published <span className="text-gray-900 font-medium tabular-nums">{postCounts.published}</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          Approved <span className="text-gray-900 font-medium tabular-nums">{postCounts.approved}</span>
+        </span>
       </div>
 
       {/* Consolidated toolbar */}
@@ -566,10 +401,10 @@ export default function SocialMedia() {
                 setShowDrawer(true);
               }}
               size="sm"
-              className="bg-indigo-600 hover:bg-indigo-700 h-8 shrink-0"
+              className="bg-gray-900 hover:bg-gray-800 text-white h-8 shrink-0 text-[13px]"
             >
               <Plus className="w-3.5 h-3.5 mr-1" />
-              New Post
+              New post
             </Button>
           </div>
         </div>
@@ -590,63 +425,65 @@ export default function SocialMedia() {
           onDelete={(id) => setDeleteDialog({ open: true, postId: id })}
         />
       ) : (
-        <div className="p-6 lg:p-8">
-        {/* Calendar View */}
-        <div className="bg-white rounded-lg border shadow-sm p-4">
-          {/* Calendar Header */}
-          <div className="flex items-center justify-between mb-4">
-            <Button variant="ghost" size="sm" onClick={() => navigateMonth(-1)}>
+        <div className="p-4 lg:p-6">
+          {/* Calendar header */}
+          <div className="flex items-center justify-between mb-3">
+            <button
+              type="button"
+              onClick={() => navigateMonth(-1)}
+              className="p-1 text-gray-500 hover:text-gray-900 rounded hover:bg-gray-100"
+            >
               <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <h2 className="text-lg font-semibold">{monthName}</h2>
-            <Button variant="ghost" size="sm" onClick={() => navigateMonth(1)}>
+            </button>
+            <h2 className="text-[13px] font-semibold text-gray-900">{monthName}</h2>
+            <button
+              type="button"
+              onClick={() => navigateMonth(1)}
+              className="p-1 text-gray-500 hover:text-gray-900 rounded hover:bg-gray-100"
+            >
               <ChevronRight className="w-4 h-4" />
-            </Button>
+            </button>
           </div>
 
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden">
-            {/* Day Headers */}
+          {/* Calendar grid */}
+          <div className="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200 rounded overflow-hidden">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="bg-gray-50 p-2 text-center text-sm font-medium text-gray-600">
+              <div key={day} className="bg-white px-2 py-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-gray-500">
                 {day}
               </div>
             ))}
-
-            {/* Calendar Days */}
             {calendarDays.map((day, idx) => {
               const postsForDay = getPostsForDate(day);
               const isToday = day && day.toDateString() === new Date().toDateString();
-
               return (
                 <div
                   key={idx}
-                  className={`bg-white min-h-[100px] p-2 ${!day ? 'bg-gray-50' : ''}`}
+                  className={`min-h-[96px] p-1.5 ${day ? 'bg-white' : 'bg-gray-50'}`}
                 >
                   {day && (
                     <>
-                      <div className={`text-sm font-medium mb-1 ${isToday ? 'text-indigo-600' : 'text-gray-700'}`}>
-                        {day.getDate()}
+                      <div className={`text-[12px] font-medium mb-1 tabular-nums ${isToday ? 'text-gray-900' : 'text-gray-500'}`}>
+                        {isToday ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-900 text-white text-[11px]">{day.getDate()}</span> : day.getDate()}
                       </div>
-                      <div className="space-y-1">
-                        {postsForDay.slice(0, 3).map(post => (
-                          <div
-                            key={post.id}
-                            onClick={() => handleEdit(post)}
-                            className={`text-xs p-1 rounded truncate cursor-pointer hover:opacity-80 flex items-center gap-1 ${
-                              post.status === 'published'
-                                ? 'bg-green-100 text-green-800'
-                                : post.status === 'scheduled'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {post.approved && <Check className="w-3 h-3" />}
-                            {post.title}
-                          </div>
-                        ))}
+                      <div className="space-y-0.5">
+                        {postsForDay.slice(0, 3).map(post => {
+                          const dot =
+                            post.status === 'published' ? 'bg-green-500' :
+                            post.status === 'scheduled' ? 'bg-blue-500' : 'bg-gray-300';
+                          return (
+                            <div
+                              key={post.id}
+                              onClick={() => handleEdit(post)}
+                              className="text-[11px] px-1 py-0.5 rounded truncate cursor-pointer hover:bg-gray-100 flex items-center gap-1 text-gray-700"
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
+                              {post.approved && <Check className="w-3 h-3 text-green-600 flex-shrink-0" />}
+                              <span className="truncate">{post.title}</span>
+                            </div>
+                          );
+                        })}
                         {postsForDay.length > 3 && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-[11px] text-gray-400 px-1">
                             +{postsForDay.length - 3} more
                           </div>
                         )}
@@ -657,7 +494,6 @@ export default function SocialMedia() {
               );
             })}
           </div>
-        </div>
         </div>
       )}
       </div>
@@ -711,68 +547,6 @@ export default function SocialMedia() {
         </DialogContent>
       </Dialog>
 
-      {/* KPI Settings Sheet */}
-      <Sheet open={showKpiSettings} onOpenChange={setShowKpiSettings}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Set Posting Goals</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6 space-y-6">
-            <div className="space-y-2">
-              <Label>Team Member</Label>
-              <Select value={kpiMember?.id || ""} onValueChange={(id) => {
-                const member = teamMembers.find(m => m.id === id);
-                if (member) {
-                  setKpiMember(member);
-                  const entry = kpiEntries.find(e => e.team_member_id === id);
-                  const wg = entry ? Number(entry.target_value) || 0 : 0;
-                  setKpiWeeklyGoal(wg);
-                  setKpiBonus(entry ? Number(entry.bonus_amount) || 0 : 0);
-                }
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select team member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teamMembers.map(member => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Weekly Goal (posts per week)</Label>
-              <Input
-                type="number"
-                value={kpiWeeklyGoal}
-                onChange={(e) => setKpiWeeklyGoal(parseInt(e.target.value) || 0)}
-                placeholder="e.g., 5"
-              />
-              <p className="text-xs text-gray-500">
-                Daily target: {kpiWeeklyGoal > 0 ? Math.ceil(kpiWeeklyGoal / 5) : 0} per day (weekly / 5)
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Bonus Amount ($)</Label>
-              <Input
-                type="number"
-                value={kpiBonus}
-                onChange={(e) => setKpiBonus(parseFloat(e.target.value) || 0)}
-                placeholder="e.g., 50"
-              />
-              <p className="text-xs text-gray-500">Bonus earned when weekly goal is met</p>
-            </div>
-
-            <Button className="w-full" onClick={handleSaveKpi} disabled={!kpiMember}>
-              Save KPI Settings
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

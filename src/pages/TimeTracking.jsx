@@ -7,28 +7,15 @@ import { Input } from "@/components/ui/input";
 import {
   Plus,
   Calendar as CalendarIcon,
-  Edit,
   Trash2,
   Search,
   Clock,
-  TrendingUp,
-  DollarSign,
-  FileText,
   ChevronLeft,
   ChevronRight,
   Filter,
   List as ListIcon,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Sheet,
   SheetContent,
@@ -51,7 +38,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TimeEntryForm from "../components/time/TimeEntryForm";
 import WeeklyCalendarView from "../components/time/WeeklyCalendarView";
 
@@ -222,33 +208,31 @@ export default function TimeTracking() {
 
   const getBillingDisplay = (entry) => {
     const project = getProject(entry.project_id);
-    if (!project) return { label: "Unknown", color: "bg-gray-100 text-gray-700" };
+    if (!project) return { label: "Unknown", dot: "bg-gray-300", text: "text-gray-500" };
 
     if (project.billing_type === 'retainer' || project.billing_type === 'exit') {
-      return { label: "Retainer", color: "bg-purple-100 text-purple-700" };
+      return { label: "Retainer", dot: "bg-purple-500", text: "text-purple-600" };
     }
-
     if (entry.billable) {
-      return { label: "Billable", color: "bg-emerald-100 text-emerald-700" };
+      return { label: "Billable", dot: "bg-green-500", text: "text-green-600" };
     }
-    return { label: "Internal", color: "bg-gray-100 text-gray-600" };
+    return { label: "Internal", dot: "bg-gray-300", text: "text-gray-500" };
   };
 
   const getStatusDisplay = (entry) => {
     const project = getProject(entry.project_id);
-    if (!project) return { label: "Unknown", color: "bg-gray-100 text-gray-700" };
+    if (!project) return { label: "Unknown", text: "text-gray-500" };
 
     if (project.billing_type === 'retainer' || project.billing_type === 'exit') {
-      return { label: "Tracked", color: "bg-blue-100 text-blue-700" };
+      return { label: "Tracked", text: "text-blue-600" };
     }
-
     if (entry.client_billed) {
-      return { label: "Billed", color: "bg-blue-100 text-blue-700" };
+      return { label: "Billed", text: "text-blue-600" };
     }
     if (entry.billable) {
-      return { label: "Unbilled", color: "bg-amber-100 text-amber-700" };
+      return { label: "Unbilled", text: "text-amber-600" };
     }
-    return { label: "N/A", color: "bg-gray-100 text-gray-600" };
+    return { label: "—", text: "text-gray-400" };
   };
 
   const isAdmin = userProfile?.role === "admin";
@@ -466,10 +450,10 @@ export default function TimeTracking() {
                 setShowDrawer(true);
               }}
               size="sm"
-              className="bg-indigo-600 hover:bg-indigo-700 h-8 shrink-0"
+              className="bg-gray-900 hover:bg-gray-800 text-white h-8 shrink-0 text-[13px]"
             >
               <Plus className="w-3.5 h-3.5 mr-1" />
-              Log Time
+              Log time
             </Button>
           </div>
         </div>
@@ -477,63 +461,30 @@ export default function TimeTracking() {
 
       {/* Scrollable content */}
       <div className="overflow-y-auto flex-1 min-h-0">
-      <div className="p-4 lg:p-6 space-y-4">
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <Clock className="w-5 h-5 text-indigo-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Total Hours</p>
-              <p className="text-2xl font-bold text-gray-900">{totalHours.toFixed(1)}</p>
-            </div>
-          </div>
+        {/* Inline metric strip */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 lg:px-6 py-3 text-[13px] text-gray-600 border-b border-gray-100">
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+            Total <span className="text-gray-900 font-medium tabular-nums">{totalHours.toFixed(1)}h</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+            Retainer <span className="text-gray-900 font-medium tabular-nums">{retainerHours.toFixed(1)}h</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            Billable <span className="text-gray-900 font-medium tabular-nums">{hourlyBillableHours.toFixed(1)}h</span>
+          </span>
+          {unbilledHours > 0 && (
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              Unbilled <span className="text-amber-600 font-medium tabular-nums">{unbilledHours.toFixed(1)}h</span>
+            </span>
+          )}
+          <span className="flex items-center gap-1.5">
+            Entries <span className="text-gray-900 font-medium tabular-nums">{filteredEntries.length}</span>
+          </span>
         </div>
-
-        <div className="bg-white rounded-xl border p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <TrendingUp className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Retainer</p>
-              <p className="text-2xl font-bold text-purple-600">{retainerHours.toFixed(1)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-100 rounded-lg">
-              <DollarSign className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Billable</p>
-              <p className="text-2xl font-bold text-emerald-600">{hourlyBillableHours.toFixed(1)}</p>
-              {unbilledHours > 0 && (
-                <p className="text-xs text-amber-600">{unbilledHours.toFixed(1)}h unbilled</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <FileText className="w-5 h-5 text-gray-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Entries</p>
-              <p className="text-2xl font-bold text-gray-900">{filteredEntries.length}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      </div>
 
       {viewMode === "list" ? (
         <DayGroupedEntryList
@@ -692,10 +643,10 @@ function DayGroupedEntryList({
     <div className="bg-white">
       {groups.map((g) => (
         <div key={g.day}>
-          <div className="flex items-center gap-2 px-4 h-8 bg-gray-50 border-y border-gray-200">
-            <span className="text-[12px] font-medium text-gray-700">{formatDayLabel(g.day)}</span>
+          <div className="flex items-center gap-2 px-4 h-7 border-b border-gray-100">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">{formatDayLabel(g.day)}</span>
             <span className="text-[11px] text-gray-400 tabular-nums ml-auto">
-              {g.total.toFixed(1)}h · {g.entries.length} {g.entries.length === 1 ? "entry" : "entries"}
+              {g.total.toFixed(1)}h · {g.entries.length}
             </span>
           </div>
           {g.entries.map((entry) => {
@@ -705,15 +656,13 @@ function DayGroupedEntryList({
             return (
               <div
                 key={entry.id}
-                className="group flex items-center gap-3 px-4 h-10 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+                className="group flex items-center gap-3 px-4 h-9 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
                 onClick={() => onEdit(entry)}
               >
-                {time && (
-                  <span className="text-[11px] text-gray-400 tabular-nums w-24 shrink-0">
-                    {time}
-                  </span>
-                )}
-                <span className="font-semibold text-indigo-600 tabular-nums w-10 shrink-0 text-[13px]">
+                <span className="text-[11px] text-gray-400 tabular-nums w-24 shrink-0">
+                  {time || ""}
+                </span>
+                <span className="text-gray-900 font-medium tabular-nums w-10 shrink-0 text-[13px]">
                   {parseFloat(entry.hours || 0).toFixed(1)}h
                 </span>
                 <span className="text-[13px] text-gray-900 truncate max-w-[200px]">
@@ -736,27 +685,26 @@ function DayGroupedEntryList({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (billing.label === "Billable" || billing.label === "Billable (Unbilled)") {
+                    if (billing.label === "Billable") {
                       onToggleBillable(entry.id, entry.billable);
                     }
                   }}
-                  className="shrink-0"
+                  className={`shrink-0 inline-flex items-center gap-1.5 text-[11px] ${billing.text} w-20`}
                   title={billing.label}
                 >
-                  <Badge className={`${billing.color} text-[10px] font-medium`}>
-                    {billing.label}
-                  </Badge>
+                  <span className={`w-1.5 h-1.5 rounded-full ${billing.dot}`} />
+                  {billing.label}
                 </button>
-                <Badge className={`${status.color} text-[10px] font-medium shrink-0`}>
+                <span className={`shrink-0 text-[11px] ${status.text} w-16 text-right`}>
                   {status.label}
-                </Badge>
+                </span>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(entry.id);
                   }}
-                  className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                  className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-600"
                   title="Delete"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
