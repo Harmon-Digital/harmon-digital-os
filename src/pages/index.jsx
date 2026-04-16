@@ -40,6 +40,7 @@ import KPIs from "./KPIs";
 import BotChannel from "./BotChannel";
 import Channels from "./Channels";
 import McpApiKeys from "./McpApiKeys";
+import ClientPortalAdmin from "./ClientPortalAdmin";
 
 // Partner portal pages
 import PartnerLogin from "./partner/PartnerLogin";
@@ -90,6 +91,7 @@ const PAGES = {
   BotChannel,
   Channels,
   McpApiKeys,
+  ClientPortalAdmin,
 };
 
 function _getCurrentPage(url) {
@@ -336,6 +338,14 @@ function PagesContent() {
         <ProtectedRoute>
           <Layout currentPageName={currentPage}>
             <McpApiKeys />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/ClientPortalAdmin" element={
+        <ProtectedRoute>
+          <Layout currentPageName={currentPage}>
+            <ClientPortalAdmin />
           </Layout>
         </ProtectedRoute>
       } />

@@ -7,6 +7,8 @@ const CORS = {
   "Access-Control-Max-Age": "86400",
 };
 
+const APP_ORIGIN = Deno.env.get("APP_ORIGIN") || "https://os.harmon-digital.com";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
@@ -18,7 +20,6 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Verify caller is an admin
   const userClient = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  let payload: { contactId?: string };
+  let payload: { action?: string; contactId?: string };
   try {
     payload = await req.json();
   } catch {
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { contactId } = payload;
+  const { contactId, action = "invite" } = payload;
   if (!contactId) {
     return new Response(JSON.stringify({ error: "contactId required" }), {
       status: 400,
@@ -67,18 +68,85 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Load the contact
-  const { data: contact, error: contactErr } = await admin
+  const { data: contact } = await admin
     .from("contacts")
     .select("id, first_name, last_name, email, account_id, portal_user_id")
     .eq("id", contactId)
     .maybeSingle();
-  if (contactErr || !contact) {
+  if (!contact) {
     return new Response(JSON.stringify({ error: "Contact not found" }), {
       status: 404,
       headers: { ...CORS, "Content-Type": "application/json" },
     });
   }
+
+  const fullName = `${contact.first_name || ""} ${contact.last_name || ""}`.trim() || contact.email;
+
+  // --- REVOKE ---
+  if (action === "revoke") {
+    if (!contact.portal_user_id) {
+      return new Response(JSON.stringify({ error: "No portal access to revoke" }), {
+        status: 400,
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
+    }
+    try {
+      await admin.auth.admin.deleteUser(contact.portal_user_id);
+      await admin
+        .from("contacts")
+        .update({ portal_user_id: null, portal_invited_at: null, portal_last_login_at: null })
+        .eq("id", contactId);
+      return new Response(
+        JSON.stringify({ success: true, revoked: true }),
+        { headers: { ...CORS, "Content-Type": "application/json" } }
+      );
+    } catch (err) {
+      console.error("revoke failed:", err);
+      return new Response(JSON.stringify({ error: (err as Error).message }), {
+        status: 500,
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
+    }
+  }
+
+  // --- RESEND ---
+  if (action === "resend") {
+    if (!contact.email) {
+      return new Response(JSON.stringify({ error: "Contact has no email" }), {
+        status: 400,
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
+    }
+    try {
+      const { error: resendErr } = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email: contact.email,
+        options: { redirectTo: `${APP_ORIGIN}/client/login` },
+      });
+      if (resendErr) throw resendErr;
+      await admin
+        .from("contacts")
+        .update({ portal_invited_at: new Date().toISOString() })
+        .eq("id", contactId);
+      await admin.from("client_invitations").insert({
+        contact_id: contactId,
+        invited_by: user.id,
+        email: contact.email,
+      });
+      return new Response(
+        JSON.stringify({ success: true, resent: true }),
+        { headers: { ...CORS, "Content-Type": "application/json" } }
+      );
+    } catch (err) {
+      console.error("resend failed:", err);
+      return new Response(JSON.stringify({ error: (err as Error).message }), {
+        status: 500,
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
+    }
+  }
+
+  // --- INVITE (default) ---
   if (!contact.email) {
     return new Response(JSON.stringify({ error: "Contact has no email" }), {
       status: 400,
@@ -86,21 +154,16 @@ Deno.serve(async (req) => {
     });
   }
   if (contact.portal_user_id) {
-    return new Response(JSON.stringify({ error: "Contact already has portal access", alreadyInvited: true }), {
-      status: 400,
-      headers: { ...CORS, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Contact already has portal access", alreadyInvited: true }),
+      { status: 400, headers: { ...CORS, "Content-Type": "application/json" } }
+    );
   }
 
-  const fullName = `${contact.first_name || ""} ${contact.last_name || ""}`.trim() || contact.email;
-  const appOrigin = Deno.env.get("APP_ORIGIN") || "https://os.harmon-digital.com";
-
-  // Invite via Supabase Auth admin API
   const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(contact.email, {
-    redirectTo: `${appOrigin}/client/login`,
+    redirectTo: `${APP_ORIGIN}/client/login`,
     data: { full_name: fullName, role: "client" },
   });
-
   if (inviteErr || !invited?.user) {
     console.error("inviteUserByEmail failed:", inviteErr);
     return new Response(JSON.stringify({ error: inviteErr?.message || "Invite failed" }), {
@@ -111,18 +174,13 @@ Deno.serve(async (req) => {
 
   const newUserId = invited.user.id;
 
-  // Create or update the user_profiles row with role=client
-  const { error: profileErr } = await admin
+  await admin
     .from("user_profiles")
-    .upsert({
-      id: newUserId,
-      email: contact.email,
-      full_name: fullName,
-      role: "client",
-    }, { onConflict: "id" });
-  if (profileErr) console.error("upsert profile failed:", profileErr);
+    .upsert(
+      { id: newUserId, email: contact.email, full_name: fullName, role: "client" },
+      { onConflict: "id" }
+    );
 
-  // Link the contact to the auth user
   await admin
     .from("contacts")
     .update({
@@ -131,7 +189,6 @@ Deno.serve(async (req) => {
     })
     .eq("id", contactId);
 
-  // Log the invite
   await admin.from("client_invitations").insert({
     contact_id: contactId,
     invited_by: user.id,

@@ -38,6 +38,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  UserCheck,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
@@ -94,6 +95,7 @@ function buildGroups(user) {
         { icon: TrendingUp, label: "KPIs", path: "KPIs" },
         { icon: Handshake, label: "Partners", path: "Partners" },
         { icon: Receipt, label: "Referral Payouts", path: "ReferralPayouts" },
+        { icon: UserCheck, label: "Client Portal", path: "ClientPortalAdmin" },
         { icon: FileText, label: "SOPs", path: "SOPs" },
         { icon: Building2, label: "Branding", path: "Branding" },
         { icon: KeyRound, label: "API Keys", path: "McpApiKeys" },
