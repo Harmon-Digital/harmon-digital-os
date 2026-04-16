@@ -28,33 +28,13 @@ function buildEmailTemplate(params: {
   const { type, title, message, link, brand } = params;
 
   const companyName = brand?.company_name || "Harmon Digital";
-  const primary = brand?.primary_color || "#4F46E5";
-  const secondary = brand?.secondary_color || "#3B82F6";
-  const accent = brand?.accent_color || "#10B981";
   const logo = brand?.logo_url || "https://os.harmon-digital.com/logo.png";
 
-  const palette = {
-    error: {
-      label: "Error",
-      color: "#DC2626",
-      softBg: "#FEF2F2",
-      border: "#FCA5A5",
-      icon: "🔴",
-    },
-    warning: {
-      label: "Warning",
-      color: "#D97706",
-      softBg: "#FFFBEB",
-      border: "#FCD34D",
-      icon: "⚠️",
-    },
-    info: {
-      label: "Notification",
-      color: primary,
-      softBg: "#EEF2FF",
-      border: "#C7D2FE",
-      icon: "ℹ️",
-    },
+  // Small colored dot per type — subtle, not overwhelming
+  const dot = {
+    error: { color: "#dc2626", label: "Error" },
+    warning: { color: "#d97706", label: "Warning" },
+    info: { color: "#6b7280", label: "Notification" },
   }[type];
 
   const safeTitle = escapeHtml(title);
@@ -67,60 +47,99 @@ function buildEmailTemplate(params: {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <title>${safeTitle}</title>
 </head>
-<body style="margin:0; padding:0; background:#F8FAFC; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color:#111827;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC; padding:32px 16px;">
+<body style="margin:0; padding:0; background:#fafafa; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color:#111827; -webkit-font-smoothing:antialiased;">
+  <!-- Preheader (hidden preview text) -->
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${escapeHtml(message).slice(0, 120)}</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fafafa; padding:40px 16px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px; background:#FFFFFF; border:1px solid #E5E7EB; border-radius:14px; overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+          <!-- Wordmark row -->
           <tr>
-            <td style="background:#000000; padding:18px 24px; border-bottom:3px solid ${primary};">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <td style="padding:0 4px 20px 4px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <img src="${logo}" alt="${escapeHtml(companyName)}" width="24" height="24" style="display:inline-block; vertical-align:middle; border:0; border-radius:4px; margin-right:8px;" />
-                    <span style="font-size:16px; font-weight:700; color:#FFFFFF; vertical-align:middle;">${escapeHtml(companyName)} OS</span>
+                    <img src="${logo}" alt="" width="20" height="20" style="display:inline-block; vertical-align:middle; border:0; border-radius:4px; margin-right:8px;" />
+                  </td>
+                  <td style="vertical-align:middle;">
+                    <span style="font-size:13px; font-weight:600; color:#111827; letter-spacing:-0.01em;">${escapeHtml(companyName)}</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
+          <!-- Card -->
           <tr>
-            <td style="padding:24px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${palette.softBg}; border:1px solid ${palette.border}; border-radius:12px;">
+            <td style="background:#ffffff; border:1px solid #e5e7eb; border-radius:8px;">
+              <!-- Type label + dot -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td style="padding:18px 18px 16px 18px;">
-                    <p style="margin:0 0 8px 0; font-size:12px; letter-spacing:0.06em; text-transform:uppercase; font-weight:700; color:${palette.color};">${palette.icon} ${palette.label}</p>
-                    <h1 style="margin:0 0 10px 0; font-size:22px; line-height:1.25; color:#111827;">${safeTitle}</h1>
-                    <p style="margin:0; font-size:15px; line-height:1.65; color:#374151;">${safeMessage}</p>
+                  <td style="padding:24px 28px 0 28px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="vertical-align:middle; padding-right:6px;">
+                          <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:${dot.color};"></span>
+                        </td>
+                        <td style="vertical-align:middle;">
+                          <span style="font-size:11px; font-weight:500; color:#6b7280; letter-spacing:0.02em; text-transform:uppercase;">${dot.label}</span>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
-            </td>
-          </tr>
 
-          ${link ? `
-          <tr>
-            <td style="padding:0 24px 24px 24px;">
-              <table role="presentation" cellpadding="0" cellspacing="0">
+              <!-- Title -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td style="background:${primary}; border-radius:10px;">
-                    <a href="${ctaHref}" style="display:inline-block; padding:12px 18px; font-size:14px; font-weight:600; color:#FFFFFF; text-decoration:none;">Open in Harmon OS →</a>
+                  <td style="padding:8px 28px 0 28px;">
+                    <h1 style="margin:0; font-size:18px; line-height:1.4; font-weight:600; color:#111827; letter-spacing:-0.01em;">${safeTitle}</h1>
                   </td>
                 </tr>
               </table>
+
+              <!-- Message -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding:10px 28px 24px 28px;">
+                    <p style="margin:0; font-size:14px; line-height:1.6; color:#4b5563;">${safeMessage}</p>
+                  </td>
+                </tr>
+              </table>
+
+              ${link ? `
+              <!-- CTA -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding:0 28px 28px 28px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="background:#111827; border-radius:6px;">
+                          <a href="${ctaHref}" style="display:inline-block; padding:9px 14px; font-size:13px; font-weight:500; color:#ffffff; text-decoration:none; letter-spacing:-0.005em;">Open</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              ` : ""}
             </td>
           </tr>
-          ` : ""}
 
+          <!-- Footer -->
           <tr>
-            <td style="padding:18px 24px 24px 24px; border-top:1px solid #E5E7EB;">
-              <p style="margin:0; text-align:center; font-size:12px; line-height:1.5; color:#6B7280;">
-                <a href="https://os.harmon-digital.com" style="color:${secondary}; text-decoration:none; font-weight:600;">os.harmon-digital.com</a>
-                <span style="margin:0 8px; color:#9CA3AF;">•</span>
-                <a href="https://harmon-digital.com" style="color:#6B7280; text-decoration:none;">harmon-digital.com</a>
+            <td style="padding:20px 4px 0 4px;">
+              <p style="margin:0; font-size:11px; line-height:1.5; color:#9ca3af;">
+                <a href="https://os.harmon-digital.com" style="color:#6b7280; text-decoration:none;">os.harmon-digital.com</a>
+                <span style="margin:0 6px; color:#d1d5db;">·</span>
+                <a href="https://os.harmon-digital.com/PersonalSettings" style="color:#6b7280; text-decoration:none;">Notification preferences</a>
               </p>
             </td>
           </tr>
@@ -244,6 +263,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Plain-text fallback derived from the source data (better for deliverability + a11y)
+    const textBody = (() => {
+      const lines = [subject];
+      if (record?.message) lines.push("", record.message);
+      else if (payload.message) lines.push("", payload.message);
+      if (record?.link) lines.push("", `Open: https://os.harmon-digital.com${record.link}`);
+      lines.push("", "—", "Harmon Digital OS", "https://os.harmon-digital.com");
+      return lines.join("\n");
+    })();
+
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -255,6 +284,7 @@ Deno.serve(async (req) => {
         to: [to],
         subject,
         html: htmlBody,
+        text: textBody,
       }),
     });
 
