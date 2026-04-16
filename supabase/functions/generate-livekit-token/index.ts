@@ -1,4 +1,3 @@
-import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const LIVEKIT_URL = Deno.env.get("LIVEKIT_URL");
@@ -11,31 +10,31 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-async function buildLivekitToken({
-  apiKey,
-  apiSecret,
-  identity,
-  name,
-  roomName,
+// Base64url encode (no padding)
+function b64url(input: string | Uint8Array): string {
+  const bytes = typeof input === "string" ? new TextEncoder().encode(input) : input;
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+async function signLivekitJwt(
+  apiKey: string,
+  apiSecret: string,
+  identity: string,
+  name: string,
+  roomName: string,
   ttlSeconds = 60 * 60 * 4,
-}: {
-  apiKey: string;
-  apiSecret: string;
-  identity: string;
-  name?: string;
-  roomName: string;
-  ttlSeconds?: number;
-}) {
-  // LiveKit JWT claims
-  // https://docs.livekit.io/realtime/concepts/authentication/
+) {
   const now = Math.floor(Date.now() / 1000);
-  const payload: Record<string, unknown> = {
+  const header = { alg: "HS256", typ: "JWT" };
+  const payload = {
     iss: apiKey,
     sub: identity,
     iat: now,
     nbf: now,
-    exp: getNumericDate(ttlSeconds),
-    name: name || identity,
+    exp: now + ttlSeconds,
+    name,
     video: {
       room: roomName,
       roomJoin: true,
@@ -45,17 +44,24 @@ async function buildLivekitToken({
     },
   };
 
-  // Convert API secret to a CryptoKey for HS256 signing
+  const headerB64 = b64url(JSON.stringify(header));
+  const payloadB64 = b64url(JSON.stringify(payload));
+  const signingInput = `${headerB64}.${payloadB64}`;
+
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
     enc.encode(apiSecret),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign", "verify"],
+    ["sign"],
   );
+  const sigBytes = new Uint8Array(
+    await crypto.subtle.sign("HMAC", key, enc.encode(signingInput)),
+  );
+  const sigB64 = b64url(sigBytes);
 
-  return await create({ alg: "HS256", typ: "JWT" }, payload, key);
+  return `${signingInput}.${sigB64}`;
 }
 
 Deno.serve(async (req) => {
@@ -63,14 +69,20 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: CORS });
   }
 
+  console.log(`[livekit-token] ${req.method} request received`);
+
   if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
+    console.error("[livekit-token] missing env vars:", {
+      url: !!LIVEKIT_URL,
+      key: !!LIVEKIT_API_KEY,
+      secret: !!LIVEKIT_API_SECRET,
+    });
     return new Response(
       JSON.stringify({ error: "LIVEKIT credentials not configured on server" }),
       { status: 500, headers: { ...CORS, "Content-Type": "application/json" } },
     );
   }
 
-  // Verify caller's JWT
   const authHeader = req.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "Missing auth" }), {
@@ -87,6 +99,7 @@ Deno.serve(async (req) => {
 
   const { data: { user }, error: userErr } = await supabase.auth.getUser();
   if (userErr || !user) {
+    console.error("[livekit-token] user verify failed:", userErr?.message);
     return new Response(JSON.stringify({ error: "Invalid auth" }), {
       status: 401,
       headers: { ...CORS, "Content-Type": "application/json" },
@@ -111,7 +124,6 @@ Deno.serve(async (req) => {
     );
   }
 
-  // Verify caller has access to channel (RLS check)
   const { data: channel } = await supabase
     .from("chat_channels")
     .select("id")
@@ -125,20 +137,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const token = await buildLivekitToken({
-      apiKey: LIVEKIT_API_KEY,
-      apiSecret: LIVEKIT_API_SECRET,
-      identity: identity || user.id,
-      name: name || user.email || "User",
+    const token = await signLivekitJwt(
+      LIVEKIT_API_KEY,
+      LIVEKIT_API_SECRET,
+      identity || user.id,
+      name || user.email || "User",
       roomName,
-    });
-
+    );
+    console.log("[livekit-token] success for user", user.id, "room", roomName);
     return new Response(
       JSON.stringify({ token, url: LIVEKIT_URL }),
       { headers: { ...CORS, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    console.error("Token generation failed:", err);
+    console.error("[livekit-token] sign failed:", (err as Error).message);
     return new Response(
       JSON.stringify({ error: (err as Error).message || "Token generation failed" }),
       { status: 500, headers: { ...CORS, "Content-Type": "application/json" } },
