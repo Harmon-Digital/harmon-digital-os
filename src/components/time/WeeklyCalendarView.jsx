@@ -1,286 +1,206 @@
-import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import React, { useState, useMemo, useCallback } from "react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
-export default function WeeklyCalendarView({ timeEntries, projects, users, teamMembers, onEditEntry }) {
+const NEUTRAL_COLORS = [
+  { bg: "bg-gray-100", border: "border-gray-300", text: "text-gray-800" },
+  { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-800" },
+  { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-800" },
+  { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-800" },
+  { bg: "bg-green-50", border: "border-green-200", text: "text-green-800" },
+  { bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-800" },
+  { bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-800" },
+  { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-800" },
+];
+
+function toDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export default function WeeklyCalendarView({ timeEntries, projects, users, teamMembers, onEditEntry, onMoveEntry }) {
   const members = teamMembers || users || [];
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
-    const today = new Date();
-    const day = today.getDay();
-    const diff = day === 0 ? -6 : 1 - day; // Adjust to Monday
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + diff);
-    return monday;
-  });
-
-  // Time slots from 6 AM to 11 PM
-  const timeSlots = Array.from({ length: 18 }, (_, i) => i + 6); // 6 AM to 11 PM
-
-  const getWeekDays = (startDate) => {
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
-      days.push(date);
-    }
-    return days;
-  };
-
-  const previousWeek = () => {
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() - 7);
-    setCurrentWeekStart(newDate);
-  };
-
-  const nextWeek = () => {
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() + 7);
-    setCurrentWeekStart(newDate);
-  };
-
-  const thisWeek = () => {
     const today = new Date();
     const day = today.getDay();
     const diff = day === 0 ? -6 : 1 - day;
     const monday = new Date(today);
     monday.setDate(today.getDate() + diff);
-    setCurrentWeekStart(monday);
-  };
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  });
 
-  const weekDays = getWeekDays(currentWeekStart);
-  const weekEnd = new Date(currentWeekStart);
-  weekEnd.setDate(weekEnd.getDate() + 6);
+  const weekDays = useMemo(() => {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(currentWeekStart);
+      d.setDate(currentWeekStart.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, [currentWeekStart]);
 
-  const getEntriesForDay = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-    return timeEntries.filter(entry => entry.date === dateStr);
-  };
+  const navigate = useCallback((dir) => {
+    setCurrentWeekStart((prev) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + dir * 7);
+      return d;
+    });
+  }, []);
 
-  const getProjectName = (projectId) => {
-    return projects.find(p => p.id === projectId)?.name || "Unknown";
-  };
-
-  const getUserName = (userId) => {
-    return members.find(u => u.id === userId)?.full_name || "Unknown";
-  };
-
-  const getProjectColor = (projectId) => {
-    const colors = [
-      { bg: 'bg-blue-500', text: 'text-white' },
-      { bg: 'bg-green-500', text: 'text-white' },
-      { bg: 'bg-purple-500', text: 'text-white' },
-      { bg: 'bg-orange-500', text: 'text-white' },
-      { bg: 'bg-pink-500', text: 'text-white' },
-      { bg: 'bg-indigo-500', text: 'text-white' },
-      { bg: 'bg-red-500', text: 'text-white' },
-      { bg: 'bg-teal-500', text: 'text-white' },
-    ];
-    const index = projects.findIndex(p => p.id === projectId);
-    return colors[index % colors.length];
-  };
-
-  const isToday = (date) => {
+  const goToday = useCallback(() => {
     const today = new Date();
-    return date.toDateString() === today.toDateString();
-  };
+    const day = today.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diff);
+    monday.setHours(0, 0, 0, 0);
+    setCurrentWeekStart(monday);
+  }, []);
 
-  const totalHoursForDay = (date) => {
-    return getEntriesForDay(date).reduce((sum, entry) => sum + (entry.hours || 0), 0);
-  };
+  const projectColorMap = useMemo(() => {
+    const map = {};
+    projects.forEach((p, i) => {
+      map[p.id] = NEUTRAL_COLORS[i % NEUTRAL_COLORS.length];
+    });
+    return map;
+  }, [projects]);
 
-  const formatHour = (hour) => {
-    if (hour === 0) return '12 AM';
-    if (hour === 12) return '12 PM';
-    if (hour > 12) return `${hour - 12} PM`;
-    return `${hour} AM`;
-  };
+  const getProjectName = (pid) => projects.find((p) => p.id === pid)?.name || "—";
 
-  // Helper to extract time from HH:MM:SS or HH:MM format
-  const extractTimeFromString = (timeStr) => {
-    if (!timeStr) return null;
+  const entriesByDay = useMemo(() => {
+    const map = {};
+    weekDays.forEach((d) => (map[toDateStr(d)] = []));
+    timeEntries.forEach((e) => {
+      const key = e.date;
+      if (map[key]) map[key].push(e);
+    });
+    return map;
+  }, [timeEntries, weekDays]);
 
-    // Handle HH:MM:SS or HH:MM format
-    if (typeof timeStr === 'string' && timeStr.includes(':')) {
-      const parts = timeStr.split(':').map(Number);
-      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        return parts[0] + parts[1] / 60;
-      }
-    }
+  const todayStr = toDateStr(new Date());
+  const weekEnd = weekDays[6];
+  const rangeLabel = `${currentWeekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${weekEnd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
 
-    // Try parsing as ISO date (legacy)
-    try {
-      const date = new Date(timeStr);
-      if (!isNaN(date.getTime())) {
-        return date.getHours() + date.getMinutes() / 60;
-      }
-    } catch (e) {
-      // Ignore
-    }
+  const weekTotal = timeEntries
+    .filter((e) => {
+      const ds = e.date;
+      return ds >= toDateStr(weekDays[0]) && ds <= toDateStr(weekDays[6]);
+    })
+    .reduce((s, e) => s + (e.hours || 0), 0);
 
-    return null;
-  };
-
-  // Calculate position for time entries based on actual start/end times
-  const getTimeBlockStyle = (entry, dayEntries) => {
-    let startHour = extractTimeFromString(entry.start_time);
-    let endHour = extractTimeFromString(entry.end_time);
-    
-    // Fallback: if no start_time, position entries evenly throughout the day
-    if (startHour === null) {
-      const entryIndex = dayEntries.findIndex(e => e.id === entry.id);
-      const totalEntries = dayEntries.length;
-      const workingStartHour = 8;
-      const workingHours = 9; // 8 AM to 5 PM
-      const hoursPerEntry = workingHours / totalEntries;
-      startHour = workingStartHour + (entryIndex * hoursPerEntry);
-      endHour = startHour + (entry.hours || 1);
-    }
-    
-    // Calculate position relative to 6 AM (start of calendar)
-    const startOffset = (startHour - 6) * 60; // In pixels (60px per hour)
-    const height = ((endHour || (startHour + entry.hours)) - startHour) * 60;
-    
-    return {
-      top: `${startOffset}px`,
-      height: `${Math.max(height, 50)}px`, // Minimum 50px for readability
-    };
+  const handleDragEnd = (result) => {
+    if (!result.destination || result.source.droppableId === result.destination.droppableId) return;
+    const entryId = result.draggableId;
+    const newDate = result.destination.droppableId;
+    if (onMoveEntry) onMoveEntry(entryId, newDate);
   };
 
   return (
-    <div className="space-y-4">
-      {/* Week Navigation */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={previousWeek}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={thisWeek}>
-            This Week
-          </Button>
-          <Button variant="outline" size="sm" onClick={nextWeek}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+    <div className="flex flex-col h-full">
+      {/* Compact week nav — sits inline inside the already-existing toolbar area */}
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 text-[13px]">
+        <div className="flex items-center gap-0.5 border border-gray-200 rounded-md p-0.5">
+          <button type="button" onClick={() => navigate(-1)} className="px-1.5 py-0.5 text-gray-500 hover:text-gray-900 rounded">
+            ‹
+          </button>
+          <button type="button" onClick={goToday} className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 rounded text-[12px]">
+            Today
+          </button>
+          <button type="button" onClick={() => navigate(1)} className="px-1.5 py-0.5 text-gray-500 hover:text-gray-900 rounded">
+            ›
+          </button>
         </div>
-        <div className="text-lg font-semibold text-gray-900">
-          {currentWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-        </div>
+        <span className="text-gray-900 font-medium">{rangeLabel}</span>
+        <span className="ml-auto text-gray-500">
+          Week total <span className="text-gray-900 font-medium tabular-nums">{weekTotal.toFixed(1)}h</span>
+        </span>
       </div>
 
-      {/* Calendar Grid */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <div className="min-w-[1000px]">
-              {/* Header with days */}
-              <div className="grid grid-cols-8 border-b bg-gray-50">
-                <div className="p-2 border-r"></div>
-                {weekDays.map((day, index) => (
-                  <div 
-                    key={index} 
-                    className={`p-3 text-center border-r ${isToday(day) ? 'bg-indigo-50' : ''}`}
-                  >
-                    <div className="text-xs font-medium text-gray-500 uppercase">
-                      {day.toLocaleDateString('en-US', { weekday: 'short' })}
-                    </div>
-                    <div className={`text-2xl font-bold mt-1 ${isToday(day) ? 'text-indigo-600' : 'text-gray-900'}`}>
-                      {day.getDate()}
-                    </div>
-                    {totalHoursForDay(day) > 0 && (
-                      <div className="text-xs text-gray-600 mt-1">
-                        {totalHoursForDay(day).toFixed(1)}h
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+      {/* Day columns */}
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="flex-1 overflow-x-auto min-h-0">
+          <div className="grid grid-cols-7 min-w-[840px] h-full divide-x divide-gray-100">
+            {weekDays.map((day) => {
+              const ds = toDateStr(day);
+              const entries = entriesByDay[ds] || [];
+              const dayTotal = entries.reduce((s, e) => s + (e.hours || 0), 0);
+              const isToday = ds === todayStr;
+              const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
-              {/* Time slots grid */}
-              <div className="relative">
-                {timeSlots.map((hour) => (
-                  <div key={hour} className="grid grid-cols-8 border-b" style={{ height: '60px' }}>
-                    {/* Time label */}
-                    <div className="p-2 text-xs text-gray-500 text-right pr-4 border-r bg-gray-50">
-                      {formatHour(hour)}
-                    </div>
-                    
-                    {/* Day columns */}
-                    {weekDays.map((day, dayIndex) => (
-                      <div 
-                        key={dayIndex} 
-                        className={`border-r relative ${isToday(day) ? 'bg-indigo-50 bg-opacity-30' : ''}`}
-                      />
-                    ))}
-                  </div>
-                ))}
-
-                {/* Time entry blocks overlay */}
-                {weekDays.map((day, dayIndex) => {
-                  const dayEntries = getEntriesForDay(day);
-                  return (
+              return (
+                <Droppable droppableId={ds} key={ds}>
+                  {(provided, snapshot) => (
                     <div
-                      key={dayIndex}
-                      className="absolute top-0 pointer-events-none"
-                      style={{
-                        left: `${((dayIndex + 1) / 8) * 100}%`,
-                        width: `${(1 / 8) * 100}%`,
-                        height: '100%',
-                      }}
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`flex flex-col min-h-0 ${snapshot.isDraggingOver ? "bg-gray-50" : isWeekend ? "bg-gray-50/40" : "bg-white"}`}
                     >
-                      {dayEntries.map((entry) => {
-                        const style = getTimeBlockStyle(entry, dayEntries);
-                        const colors = getProjectColor(entry.project_id);
-                        
-                        return (
-                          <div
-                            key={entry.id}
-                            className={`absolute left-1 right-1 ${colors.bg} ${colors.text} rounded p-2 text-xs shadow-md cursor-pointer hover:shadow-lg transition-shadow pointer-events-auto overflow-hidden`}
-                            style={style}
-                            onClick={() => onEditEntry && onEditEntry(entry)}
-                          >
-                            <div className="font-semibold line-clamp-1">
-                              {getProjectName(entry.project_id)}
-                            </div>
-                            <div className="text-xs opacity-90 mt-1">
-                              {entry.hours}h
-                            </div>
-                            {entry.description && (
-                              <div className="text-xs opacity-80 line-clamp-2 mt-1">
-                                {entry.description}
-                              </div>
-                            )}
-                            {entry.billable && (
-                              <Badge className="mt-1 text-xs bg-white bg-opacity-20">
-                                Billable
-                              </Badge>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                      {/* Day header */}
+                      <div className={`px-2 py-2 text-center border-b ${isToday ? "border-gray-900" : "border-gray-100"}`}>
+                        <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                          {day.toLocaleDateString("en-US", { weekday: "short" })}
+                        </div>
+                        <div className={`text-[15px] font-semibold mt-0.5 ${isToday ? "text-gray-900" : "text-gray-700"}`}>
+                          {isToday ? (
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-900 text-white text-[14px]">
+                              {day.getDate()}
+                            </span>
+                          ) : (
+                            day.getDate()
+                          )}
+                        </div>
+                        {dayTotal > 0 && (
+                          <div className="text-[11px] text-gray-500 tabular-nums mt-0.5">{dayTotal.toFixed(1)}h</div>
+                        )}
+                      </div>
 
-      {/* Week Summary */}
-      <Card className="bg-gray-50">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-gray-600">Week Total</div>
-            <div className="text-2xl font-bold text-gray-900">
-              {weekDays.reduce((sum, day) => sum + totalHoursForDay(day), 0).toFixed(1)}h
-            </div>
+                      {/* Entries */}
+                      <div className="flex-1 p-1 space-y-1 overflow-y-auto">
+                        {entries.map((entry, index) => {
+                          const c = projectColorMap[entry.project_id] || NEUTRAL_COLORS[0];
+                          const startFmt = entry.start_time
+                            ? (() => {
+                                const [h, m] = String(entry.start_time).split(":").map(Number);
+                                const d = new Date();
+                                d.setHours(h || 0, m || 0);
+                                return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+                              })()
+                            : null;
+
+                          return (
+                            <Draggable key={entry.id} draggableId={entry.id} index={index}>
+                              {(prov, snap) => (
+                                <div
+                                  ref={prov.innerRef}
+                                  {...prov.draggableProps}
+                                  {...prov.dragHandleProps}
+                                  className={`${c.bg} ${c.text} border-l-2 ${c.border} rounded-sm px-1.5 py-1 cursor-pointer hover:brightness-95 transition-all ${
+                                    snap.isDragging ? "shadow-md ring-1 ring-gray-300" : ""
+                                  }`}
+                                  onClick={() => onEditEntry && onEditEntry(entry)}
+                                >
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[12px] font-medium tabular-nums">{entry.hours}h</span>
+                                    {startFmt && <span className="text-[10px] opacity-70">{startFmt}</span>}
+                                  </div>
+                                  <div className="text-[11px] font-medium truncate">{getProjectName(entry.project_id)}</div>
+                                  {entry.description && (
+                                    <div className="text-[10px] opacity-70 truncate">{entry.description}</div>
+                                  )}
+                                </div>
+                              )}
+                            </Draggable>
+                          );
+                        })}
+                        {provided.placeholder}
+                      </div>
+                    </div>
+                  )}
+                </Droppable>
+              );
+            })}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </DragDropContext>
     </div>
   );
 }

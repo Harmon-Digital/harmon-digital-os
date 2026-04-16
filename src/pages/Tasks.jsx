@@ -674,21 +674,15 @@ export default function Tasks() {
         {viewMode === "board" && (
           <DragDropContext onDragEnd={handleDragEnd}>
             <div className="h-full overflow-x-auto">
-              <div className="inline-flex h-full gap-4 p-6 lg:p-8 min-w-full">
+              <div className="inline-flex h-full gap-3 px-4 py-3 min-w-full">
                 {(completedFilter === "active" ? kanbanColumns.filter(c => c.id !== "completed") : kanbanColumns.filter(c => c.id === "completed")).map((column) => {
                   const columnTasks = getTasksByStatus(column.id);
                   return (
-                    <div key={column.id} className="flex-shrink-0 w-80 flex flex-col">
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${column.color}`}></div>
-                            <h3 className="font-semibold text-gray-900">{column.label}</h3>
-                            <Badge variant="secondary" className="bg-gray-100">
-                              {columnTasks.length}
-                            </Badge>
-                          </div>
-                        </div>
+                    <div key={column.id} className="flex-shrink-0 w-64 flex flex-col">
+                      <div className="flex items-center gap-2 mb-2 px-1">
+                        <span className={`w-2 h-2 rounded-full ${column.color}`} />
+                        <span className="text-[12px] font-medium text-gray-700">{column.label}</span>
+                        <span className="text-[11px] text-gray-400 tabular-nums">{columnTasks.length}</span>
                       </div>
 
                       <Droppable droppableId={column.id}>
@@ -696,91 +690,56 @@ export default function Tasks() {
                           <div
                             ref={provided.innerRef}
                             {...provided.droppableProps}
-                            className={`flex-1 rounded-xl transition-colors ${
-                              snapshot.isDraggingOver 
-                                ? `${column.bgLight} ring-2 ring-${column.color}` 
-                                : 'bg-gray-50'
-                            } p-3 overflow-y-auto`}
+                            className={`flex-1 rounded-md transition-colors ${
+                              snapshot.isDraggingOver ? 'bg-gray-100' : 'bg-gray-50/50'
+                            } p-1.5 overflow-y-auto`}
                           >
-                            <div className="space-y-3">
-                              {columnTasks.map((task, index) => (
+                            <div className="space-y-1.5">
+                              {columnTasks.map((task, index) => {
+                                const pColor =
+                                  task.priority === 'urgent' ? 'text-red-600' :
+                                  task.priority === 'high' ? 'text-orange-600' :
+                                  task.priority === 'low' ? 'text-gray-400' : 'text-gray-600';
+                                return (
                                 <Draggable key={task.id} draggableId={task.id} index={index}>
                                   {(provided, snapshot) => (
                                     <div
                                       ref={provided.innerRef}
                                       {...provided.draggableProps}
                                       {...provided.dragHandleProps}
+                                      className={`bg-white border border-gray-200 rounded-md p-2.5 cursor-pointer hover:border-gray-300 transition-all ${
+                                        snapshot.isDragging ? 'shadow-lg ring-1 ring-gray-300' : ''
+                                      }`}
+                                      onClick={() => handleOpenDrawer(task)}
                                     >
-                                      <Card 
-                                        className={`cursor-pointer hover:shadow-lg transition-all ${
-                                          snapshot.isDragging 
-                                            ? 'shadow-2xl ring-2 ring-indigo-400 rotate-2' 
-                                            : ''
-                                        }`}
-                                        onClick={() => handleOpenDrawer(task)}
-                                      >
-                                        <CardContent className="p-4">
-                                          <div className="space-y-3">
-                                            <div>
-                                              <div className="flex items-start justify-between gap-2">
-                                                <div className="flex-1">
-                                                  {task.ticket_number && (
-                                                    <div className="text-xs text-gray-500 mb-1">
-                                                      #{task.ticket_number}
-                                                      {task.source && task.source !== 'manual' && (
-                                                        <span className="ml-2">{sourceIcons[task.source]}</span>
-                                                      )}
-                                                    </div>
-                                                  )}
-                                                  <h4 className="font-semibold text-gray-900 line-clamp-2">
-                                                    {task.title}
-                                                  </h4>
-                                                </div>
-                                                <Badge className={priorityColors[task.priority]}>
-                                                  {task.priority}
-                                                </Badge>
-                                              </div>
-                                              {task.description && stripHtml(task.description) && (
-                                                <p className="text-sm text-gray-600 mt-2 line-clamp-2">{stripHtml(task.description)}</p>
-                                              )}
-                                              {task.requester_name && (
-                                                <p className="text-xs text-gray-500 mt-2">
-                                                  Requested by: {task.requester_name}
-                                                </p>
-                                              )}
-                                            </div>
-
-                                            <div className="space-y-1">
-                                              <Badge variant="outline" className="text-xs">
-                                                {getProjectName(task.project_id)}
-                                              </Badge>
-                                              {task.assigned_to && (
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                  {getTeamMemberName(task.assigned_to)}
-                                                </p>
-                                              )}
-                                            </div>
-
-                                            {task.due_date && (
-                                              <div className="pt-2 border-t border-gray-100">
-                                                <p className="text-xs text-gray-500">
-                                                  Due: {parseLocalDate(task.due_date).toLocaleDateString()}
-                                                </p>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </CardContent>
-                                      </Card>
+                                      <div className="flex items-start gap-2">
+                                        <div className="flex-1 min-w-0">
+                                          {task.ticket_number && (
+                                            <span className="text-[11px] text-gray-400 mr-1.5">#{task.ticket_number}</span>
+                                          )}
+                                          <span className="text-[13px] text-gray-900 font-medium line-clamp-2">{task.title}</span>
+                                        </div>
+                                        <span className={`text-[10px] capitalize ${pColor} shrink-0`}>{task.priority}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-1.5 text-[11px] text-gray-500">
+                                        <span className="truncate">{getProjectName(task.project_id)}</span>
+                                        {task.assigned_to && (
+                                          <span className="truncate ml-auto">{getTeamMemberName(task.assigned_to)}</span>
+                                        )}
+                                      </div>
+                                      {task.due_date && (
+                                        <div className="text-[11px] text-gray-400 mt-1">
+                                          {parseLocalDate(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </Draggable>
-                              ))}
+                                );
+                              })}
                               {provided.placeholder}
-                              
                               {columnTasks.length === 0 && (
-                                <div className="text-center py-8 text-gray-400">
-                                  <p className="text-sm">No tasks</p>
-                                </div>
+                                <div className="text-center py-6 text-[12px] text-gray-400">No tasks</div>
                               )}
                             </div>
                           </div>
@@ -795,72 +754,42 @@ export default function Tasks() {
         )}
 
         {viewMode === "grouped" && (
-          <div className="p-6 lg:p-8 space-y-6 overflow-y-auto h-full">
+          <div className="overflow-y-auto h-full">
             {Object.entries(groupedTasks).map(([groupName, groupTasks]) => (
-              <Card key={groupName}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between text-base">
-                    <span className="capitalize">{groupName}</span>
-                    <Badge variant="secondary">{groupTasks.length} tasks</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Task</TableHead>
-                        <TableHead>Project</TableHead>
-                        <TableHead>Assigned To</TableHead>
-                        <TableHead>Priority</TableHead>
-                        <TableHead>Due Date</TableHead>
-                        <TableHead className="w-12"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {groupTasks.map(task => (
-                        <TableRow key={task.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleOpenDrawer(task)}>
-                          <TableCell>
-                            <div>
-                              {task.ticket_number && (
-                                <div className="text-xs text-gray-500 mb-1">
-                                  #{task.ticket_number}
-                                  {task.source && task.source !== 'manual' && (
-                                    <span className="ml-2">{sourceIcons[task.source]}</span>
-                                  )}
-                                </div>
-                              )}
-                              <div className="font-medium">{task.title}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm">{getProjectName(task.project_id)}</TableCell>
-                          <TableCell className="text-sm">{getTeamMemberName(task.assigned_to)}</TableCell>
-                          <TableCell>
-                            <Badge className={priorityColors[task.priority]}>
-                              {task.priority}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {task.due_date ? parseLocalDate(task.due_date).toLocaleDateString() : '—'}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenDrawer(task);
-                              }}
-                              className="text-gray-400 hover:text-gray-600"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              <div key={groupName}>
+                <div className="flex items-center gap-2 px-4 h-7 border-b border-gray-100">
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500 capitalize">{groupName}</span>
+                  <span className="text-[11px] text-gray-400 tabular-nums ml-auto">{groupTasks.length}</span>
+                </div>
+                {groupTasks.map(task => {
+                  const pColor =
+                    task.priority === 'urgent' ? 'text-red-600' :
+                    task.priority === 'high' ? 'text-orange-600' :
+                    task.priority === 'low' ? 'text-gray-400' : 'text-gray-600';
+                  const sDot =
+                    task.status === 'completed' ? 'bg-green-500' :
+                    task.status === 'in_progress' ? 'bg-blue-500' :
+                    task.status === 'blocked' ? 'bg-red-500' :
+                    task.status === 'review' ? 'bg-yellow-500' : 'bg-gray-300';
+                  return (
+                    <div
+                      key={task.id}
+                      className="group flex items-center gap-3 px-4 h-9 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleOpenDrawer(task)}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${sDot} flex-shrink-0`} />
+                      {task.ticket_number && <span className="text-[11px] text-gray-400">#{task.ticket_number}</span>}
+                      <span className="flex-1 text-[13px] text-gray-900 truncate">{task.title}</span>
+                      <span className="hidden md:inline text-[12px] text-gray-500 truncate max-w-[140px]">{getProjectName(task.project_id)}</span>
+                      <span className="hidden lg:inline text-[12px] text-gray-500 truncate max-w-[120px]">{getTeamMemberName(task.assigned_to)}</span>
+                      <span className={`text-[11px] capitalize ${pColor} w-14 text-right`}>{task.priority}</span>
+                      <span className="text-[12px] text-gray-500 w-20 text-right">
+                        {task.due_date ? parseLocalDate(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             ))}
           </div>
         )}
@@ -889,54 +818,38 @@ export default function Tasks() {
       </div>
 
       {selectedTasks.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white rounded-lg shadow-2xl p-4 z-50">
-          <div className="flex items-center gap-4">
-            <span className="font-medium">
-              {selectedTasks.length} task{selectedTasks.length !== 1 ? 's' : ''} selected
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white rounded-md shadow-lg px-3 py-2 z-50">
+          <div className="flex items-center gap-3 text-[13px]">
+            <span className="font-medium tabular-nums">
+              {selectedTasks.length} selected
             </span>
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="secondary" size="sm">
-                    Change Status
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => handleBulkStatusChange('todo')}>
-                    To Do
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleBulkStatusChange('in_progress')}>
-                    In Progress
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleBulkStatusChange('blocked')}>
-                    Blocked
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleBulkStatusChange('review')}>
-                    Review
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleBulkStatusChange('completed')}>
-                    Completed
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <Button 
-                variant="secondary" 
-                size="sm"
-                onClick={() => setDeleteConfirmDialog({ open: true, taskIds: selectedTasks })}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setSelectedTasks([])}
-              className="text-white hover:text-white hover:bg-indigo-700"
+            <div className="w-px h-4 bg-gray-700" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="text-gray-300 hover:text-white text-[13px]">Status</button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleBulkStatusChange('todo')}>To Do</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleBulkStatusChange('in_progress')}>In Progress</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleBulkStatusChange('blocked')}>Blocked</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleBulkStatusChange('review')}>Review</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleBulkStatusChange('completed')}>Completed</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <button
+              type="button"
+              onClick={() => setDeleteConfirmDialog({ open: true, taskIds: selectedTasks })}
+              className="text-gray-300 hover:text-red-400 text-[13px]"
             >
-              <X className="w-4 h-4" />
-            </Button>
+              Delete
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedTasks([])}
+              className="ml-1 p-0.5 text-gray-400 hover:text-white rounded hover:bg-gray-800"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       )}

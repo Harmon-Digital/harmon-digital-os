@@ -51,7 +51,7 @@ export default function TimeTracking() {
   const [editingEntry, setEditingEntry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentTeamMember, setCurrentTeamMember] = useState(null);
-  const [viewMode, setViewMode] = useState("list");
+  const [viewMode, setViewMode] = useState("calendar");
   const [deleteDialog, setDeleteDialog] = useState({ open: false, entryId: null });
 
   // Filters
@@ -501,12 +501,20 @@ export default function TimeTracking() {
           onToggleBillable={handleQuickBillableToggle}
         />
       ) : (
-        <div className="px-4 lg:px-6 pb-6">
+        <div className="flex-1 min-h-0">
           <WeeklyCalendarView
             timeEntries={filteredEntries}
             projects={projects}
             users={teamMembers}
             onEditEntry={handleEdit}
+            onMoveEntry={async (entryId, newDate) => {
+              try {
+                await TimeEntry.update(entryId, { date: newDate });
+                loadData();
+              } catch (err) {
+                console.error("Move failed:", err);
+              }
+            }}
           />
         </div>
       )}
