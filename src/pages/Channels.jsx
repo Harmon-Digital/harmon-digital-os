@@ -78,7 +78,7 @@ function renderBody(body, userIdToName) {
     parts.push(
       <span
         key={key++}
-        className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[13px] font-medium"
+        className="inline-flex items-center px-1 py-px rounded-sm bg-gray-100 text-gray-800 text-[13px] font-medium hover:bg-gray-200 transition-colors"
       >
         @{display}
       </span>,
@@ -108,6 +108,9 @@ export default function Channels() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [draft, setDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Tracks @Name → user_id for the current draft. Only @Name mentions whose
+  // entry exists here get serialized to @[Name](uuid) on send.
+  const [draftMentions, setDraftMentions] = useState(new Map());
   const [pendingFiles, setPendingFiles] = useState([]); // [{ file, previewUrl }]
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -561,7 +564,9 @@ export default function Channels() {
 
   const startEdit = (m) => {
     setEditingMessageId(m.id);
-    setEditDraft(m.body);
+    // Deserialize @[Name](uuid) → @Name for human-friendly editing
+    const visible = (m.body || "").replace(/@\[([^\]]+)\]\([0-9a-f-]+\)/g, "@$1");
+    setEditDraft(visible);
   };
   const cancelEdit = () => {
     setEditingMessageId(null);
@@ -569,9 +574,10 @@ export default function Channels() {
   };
   const saveEdit = async () => {
     if (!editingMessageId) return;
-    const body = editDraft.trim();
-    if (!body) return;
+    const raw = editDraft.trim();
+    if (!raw) return;
     try {
+      const body = serializeMentions(raw);
       const updated = await ChatMessage.update(editingMessageId, {
         body,
         edited_at: new Date().toISOString(),
@@ -654,15 +660,61 @@ export default function Channels() {
     const caret = textareaRef.current?.selectionStart ?? draft.length;
     const before = draft.slice(0, start);
     const after = draft.slice(caret);
-    const token = `@[${u.name}](${u.id}) `;
+    // Insert visible @Name (not the raw storage format)
+    const token = `@${u.name} `;
     const next = before + token + after;
     setDraft(next);
+    setDraftMentions((prev) => {
+      const m = new Map(prev);
+      m.set(u.name, u.id);
+      return m;
+    });
     setMentionQuery(null);
     requestAnimationFrame(() => {
       const pos = before.length + token.length;
       textareaRef.current?.focus();
       textareaRef.current?.setSelectionRange(pos, pos);
     });
+  };
+
+  // Serialize visible "@Name" back to "@[Name](uuid)" for storage so renderBody
+  // can style them. Matches the longest team-member name at each @ to handle
+  // names with spaces like "@Jalen McGarrah".
+  const serializeMentions = (text) => {
+    if (!text || !text.includes("@")) return text;
+    // Build candidate list: draft-session picks first (preferred), then all mentionable users
+    const candidates = new Map(draftMentions);
+    for (const u of mentionableUsers) {
+      if (!candidates.has(u.name)) candidates.set(u.name, u.id);
+    }
+    if (candidates.size === 0) return text;
+    // Sort names longest-first so "Jalen McGarrah" matches before "Jalen"
+    const names = Array.from(candidates.keys()).sort((a, b) => b.length - a.length);
+    let out = "";
+    let i = 0;
+    while (i < text.length) {
+      if (text[i] === "@" && (i === 0 || /\s/.test(text[i - 1]))) {
+        let matched = null;
+        for (const name of names) {
+          if (text.slice(i + 1, i + 1 + name.length) === name) {
+            // Must be followed by whitespace, punctuation, or end-of-string
+            const next = text[i + 1 + name.length];
+            if (next === undefined || /[\s.,!?;:)\]]/.test(next)) {
+              matched = name;
+              break;
+            }
+          }
+        }
+        if (matched) {
+          out += `@[${matched}](${candidates.get(matched)})`;
+          i += 1 + matched.length;
+          continue;
+        }
+      }
+      out += text[i];
+      i++;
+    }
+    return out;
   };
 
   const handleKeyDown = (e) => {
@@ -762,12 +814,13 @@ export default function Channels() {
   };
 
   const handleSend = async () => {
-    const body = draft.trim();
+    const rawBody = draft.trim();
     const hasFiles = pendingFiles.length > 0;
-    if ((!body && !hasFiles) || !selectedChannelId || !user?.id) return;
+    if ((!rawBody && !hasFiles) || !selectedChannelId || !user?.id) return;
     setSubmitting(true);
     setUploadingFiles(hasFiles);
     try {
+      const body = serializeMentions(rawBody);
       const mentioned = extractMentions(body);
       const created = await ChatMessage.create({
         channel_id: selectedChannelId,
@@ -794,6 +847,7 @@ export default function Channels() {
       // Optimistic add (realtime INSERT will dedupe via id)
       setMessages((prev) => (prev.find((m) => m.id === created.id) ? prev : [...prev, created]));
       setDraft("");
+      setDraftMentions(new Map());
       setMentionQuery(null);
 
       // Notify mentioned users (skip self)
@@ -1418,7 +1472,7 @@ export default function Channels() {
                         }}
                         onMouseEnter={() => setMentionIndex(i)}
                         className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 ${
-                          i === mentionIndex ? "bg-indigo-50 text-indigo-700" : "hover:bg-gray-50"
+                          i === mentionIndex ? "bg-gray-100 text-gray-900" : "hover:bg-gray-50"
                         }`}
                       >
                         <UserAvatar name={u.name} imageUrl={userIdToImage[u.id]} size="sm" />
