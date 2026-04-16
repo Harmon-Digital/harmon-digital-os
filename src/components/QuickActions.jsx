@@ -400,159 +400,101 @@ export default function QuickActions() {
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="end">
+          <PopoverContent className="w-72 p-0" align="end" sideOffset={8}>
             {timerRunning ? (
-              <div className="p-4 space-y-4">
-                {/* Timer Header */}
-                <div className={`-m-4 mb-4 p-4 rounded-t-lg ${timerPaused ? 'bg-yellow-50' : 'bg-green-50'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs font-medium uppercase tracking-wide ${timerPaused ? 'text-yellow-600' : 'text-green-600'}`}>
-                      {timerPaused ? 'Paused' : 'Recording'}
-                    </span>
-                    <button
-                      onClick={handleDiscardTimer}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className={`text-4xl font-mono font-bold ${timerPaused ? 'text-yellow-700' : 'text-green-700'}`}>
-                    {formatTime(elapsedTime)}
-                  </div>
+              <div className="p-3 space-y-3">
+                {/* Timer header */}
+                <div className="flex items-center justify-between">
+                  <span className={`text-[11px] font-medium uppercase tracking-wide ${timerPaused ? 'text-yellow-600' : 'text-green-600'}`}>
+                    {timerPaused ? 'Paused' : 'Recording'}
+                  </span>
+                  <button onClick={handleDiscardTimer} className="p-0.5 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className={`text-3xl font-mono font-bold tabular-nums ${timerPaused ? 'text-yellow-700' : 'text-green-700'}`}>
+                  {formatTime(elapsedTime)}
                 </div>
 
-                {/* Project Info */}
-                <div className="space-y-1">
-                  <p className="font-semibold text-gray-900">{currentProjectName}</p>
-                  {timerTask && (
-                    <p className="text-sm text-gray-500">
-                      {tasks.find(t => t.id === timerTask)?.title}
-                    </p>
-                  )}
-                  {actualStartTime && (
-                    <p className="text-xs text-gray-400">
-                      Started at {formatDateTime(actualStartTime)}
-                    </p>
-                  )}
+                {/* Project/task info */}
+                <div>
+                  <p className="text-[13px] font-medium text-gray-900">{currentProjectName}</p>
+                  {timerTask && <p className="text-[12px] text-gray-500">{tasks.find(t => t.id === timerTask)?.title}</p>}
+                  {actualStartTime && <p className="text-[11px] text-gray-400">Started {formatDateTime(actualStartTime)}</p>}
                 </div>
 
                 {/* Description */}
-                <div className="space-y-2">
-                  <Label className="text-xs text-gray-500">What are you working on?</Label>
-                  <Textarea
-                    value={timerDescription}
-                    onChange={(e) => setTimerDescription(e.target.value)}
-                    placeholder="Add a description..."
-                    rows={2}
-                    className="resize-none text-sm"
-                  />
-                </div>
+                <Textarea
+                  value={timerDescription}
+                  onChange={(e) => setTimerDescription(e.target.value)}
+                  placeholder="What are you working on?"
+                  rows={2}
+                  className="resize-none text-[13px] border-gray-200 focus-visible:ring-1 focus-visible:ring-gray-300"
+                />
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    onClick={handlePauseTimer}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    {timerPaused ? (
-                      <>
-                        <Play className="w-4 h-4 mr-2" />
-                        Resume
-                      </>
-                    ) : (
-                      <>
-                        <Pause className="w-4 h-4 mr-2" />
-                        Pause
-                      </>
-                    )}
+                <div className="flex gap-1.5">
+                  <Button onClick={handlePauseTimer} variant="outline" size="sm" className="flex-1 h-7 text-[13px]">
+                    {timerPaused ? <><Play className="w-3.5 h-3.5 mr-1" /> Resume</> : <><Pause className="w-3.5 h-3.5 mr-1" /> Pause</>}
                   </Button>
-                  <Button
-                    onClick={handleStopTimer}
-                    className="flex-1 bg-gray-900 hover:bg-gray-800 text-white"
-                    disabled={saving}
-                  >
-                    <Square className="w-4 h-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save'}
+                  <Button onClick={handleStopTimer} size="sm" className="flex-1 h-7 text-[13px] bg-gray-900 hover:bg-gray-800 text-white" disabled={saving}>
+                    <Square className="w-3.5 h-3.5 mr-1" /> {saving ? 'Saving…' : 'Save'}
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="p-4 space-y-4">
-                {/* Start Timer Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                    <Timer className="w-4 h-4" />
-                    Start Timer
-                  </div>
-
+              <div className="p-3 space-y-3">
+                {/* Timer section */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Timer</div>
                   <Select value={timerProject} onValueChange={setTimerProject}>
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Select project..." />
-                    </SelectTrigger>
+                    <SelectTrigger className="h-8 text-[13px]"><SelectValue placeholder="Project…" /></SelectTrigger>
                     <SelectContent>
                       {projects.map(project => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
+                        <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-
                   {filteredTasks.length > 0 && (
                     <Select value={timerTask} onValueChange={setTimerTask}>
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Select task (optional)" />
-                      </SelectTrigger>
+                      <SelectTrigger className="h-8 text-[13px]"><SelectValue placeholder="Task (optional)" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">No task</SelectItem>
                         {filteredTasks.map(task => (
-                          <SelectItem key={task.id} value={task.id}>
-                            {task.title}
-                          </SelectItem>
+                          <SelectItem key={task.id} value={task.id}>{task.title}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   )}
-
                   <Button
                     onClick={handleStartTimer}
-                    className="w-full bg-green-600 hover:bg-green-700 h-10"
+                    size="sm"
+                    className="w-full h-7 text-[13px] bg-green-600 hover:bg-green-700 text-white"
                     disabled={!timerProject}
                   >
-                    <Play className="w-4 h-4 mr-2" />
-                    Start Timer
+                    <Play className="w-3.5 h-3.5 mr-1" /> Start
                   </Button>
                 </div>
 
-                {/* Quick Create Section */}
-                <div className="border-t pt-4 space-y-2">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Quick Create</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-col h-auto py-3 px-2"
-                      onClick={() => setActiveDialog('task')}
-                    >
-                      <CheckCircle className="w-5 h-5 mb-1 text-gray-700" />
-                      <span className="text-xs">Task</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-col h-auto py-3 px-2"
-                      onClick={() => setActiveDialog('project')}
-                    >
-                      <Briefcase className="w-5 h-5 mb-1 text-gray-700" />
-                      <span className="text-xs">Project</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-col h-auto py-3 px-2"
-                      onClick={() => setActiveDialog('account')}
-                    >
-                      <Building2 className="w-5 h-5 mb-1 text-gray-700" />
-                      <span className="text-xs">Account</span>
-                    </Button>
+                {/* Quick create */}
+                <div className="border-t border-gray-100 pt-2.5 space-y-1.5">
+                  <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Quick create</div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      { key: 'task', icon: CheckCircle, label: 'Task' },
+                      { key: 'project', icon: Briefcase, label: 'Project' },
+                      { key: 'account', icon: Building2, label: 'Account' },
+                    ].map(item => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setActiveDialog(item.key)}
+                        className="flex flex-col items-center gap-1 py-2 px-1.5 rounded-md border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                      >
+                        <item.icon className="w-4 h-4 text-gray-500" />
+                        <span className="text-[11px] text-gray-700">{item.label}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
