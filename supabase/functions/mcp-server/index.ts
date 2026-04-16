@@ -4,8 +4,6 @@ import { authenticate, AuthError } from "./lib/auth.ts";
 import { getAllTools, type ToolDef } from "./tools/registry.ts";
 import { getAllResources, type ResourceDef } from "./resources/index.ts";
 import { getAllPrompts, type PromptDef } from "./prompts/index.ts";
-import openApiSpec from "./openapi/spec.json" with { type: "json" };
-
 const SERVER_INFO = {
   name: "harmon-digital-os",
   version: "1.0.0",
@@ -130,9 +128,10 @@ async function handleMcpRequest(req: Request): Promise<Response> {
             })
           );
         } catch (err) {
+          const msg = (err as Error).message?.split(/\bDetails:/i)[0]?.trim()?.slice(0, 200) || "Tool execution failed";
           return Response.json(
             jsonRpcResult(id, {
-              content: [{ type: "text", text: `Error: ${(err as Error).message}` }],
+              content: [{ type: "text", text: `Error: ${msg}` }],
               isError: true,
             })
           );
@@ -216,27 +215,26 @@ async function handleMcpRequest(req: Request): Promise<Response> {
 // Supabase forwards path as /mcp-server/* to the function
 const app = new Hono().basePath("/mcp-server");
 
-app.use("/*", cors());
+const ALLOWED_ORIGINS = [
+  "https://os.harmon-digital.com",
+  "https://harmon-digital-os.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
 
-// Health / info
+app.use("/*", cors({
+  origin: (origin) => ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+  allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
+  allowHeaders: ["Content-Type", "Authorization", "X-API-Key", "Mcp-Session-Id"],
+}));
+
+// Health — minimal, no internal counts
 app.get("/", (c) => {
   return c.json({
     name: SERVER_INFO.name,
     version: SERVER_INFO.version,
-    protocol: PROTOCOL_VERSION,
-    tools: allTools.length,
-    resources: allResources.length,
-    prompts: allPrompts.length,
-    endpoints: {
-      mcp: "/functions/v1/mcp-server/mcp",
-      openapi: "/functions/v1/mcp-server/openapi.json",
-    },
+    status: "ok",
   });
-});
-
-// OpenAPI spec — imported as JSON module so it's bundled with the function
-app.get("/openapi.json", (c) => {
-  return c.json(openApiSpec);
 });
 
 // MCP endpoint — handles POST (Streamable HTTP transport)
@@ -245,15 +243,22 @@ app.post("/mcp", async (c) => {
 });
 
 // MCP endpoint — GET for SSE (server-sent events for streaming)
-app.get("/mcp", (c) => {
-  // For Streamable HTTP, GET establishes an SSE stream.
-  // Return a simple SSE endpoint that sends a ping and stays open.
+app.get("/mcp", async (c) => {
+  // Auth-gate the SSE endpoint
+  try {
+    await authenticate(c.req.raw);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return c.json({ error: err.message }, err.status as 401);
+    }
+    throw err;
+  }
+
   let keepAliveInterval: ReturnType<typeof setInterval> | undefined;
   const stream = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder();
       controller.enqueue(encoder.encode(`event: endpoint\ndata: /functions/v1/mcp-server/mcp\n\n`));
-      // Keep alive
       keepAliveInterval = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`: ping\n\n`));
@@ -261,7 +266,6 @@ app.get("/mcp", (c) => {
           if (keepAliveInterval) clearInterval(keepAliveInterval);
         }
       }, 30000);
-      // Clean up interval when the stream is cancelled (client disconnects)
       c.req.raw.signal.addEventListener("abort", () => {
         if (keepAliveInterval) clearInterval(keepAliveInterval);
         try { controller.close(); } catch { /* already closed */ }

@@ -27,6 +27,13 @@ const ENTITIES: Array<[string, string]> = [
   ["branding_settings", "Branding Setting"],
   ["user_profiles", "User Profile"],
   ["kpi_entries", "KPI Entry"],
+  // Chat & collaboration
+  ["chat_channels", "Chat Channel"],
+  ["chat_messages", "Chat Message"],
+  ["chat_message_reactions", "Chat Message Reaction"],
+  ["task_attachments", "Task Attachment"],
+  ["task_comments", "Task Comment"],
+  ["notification_preferences", "Notification Preference"],
   // Additional tables
   ["brokers", "Broker"],
   ["referral_partners", "Referral Partner"],
@@ -35,6 +42,7 @@ const ENTITIES: Array<[string, string]> = [
   ["broker_activities", "Broker Activity"],
   ["lead_activities", "Lead Activity"],
   ["project_documents", "Project Document"],
+  ["mcp_api_keys", "MCP API Key"],
 ];
 
 export interface ToolDef {

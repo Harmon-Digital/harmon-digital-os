@@ -2,11 +2,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/api/supabaseClient";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +29,6 @@ import {
   ChevronDown,
   Trash2,
   RefreshCw,
-  ExternalLink,
   Terminal,
   Shield,
   Wrench,
@@ -54,7 +51,23 @@ function CopyButton({ text, label = "Copy" }) {
   };
 
   return (
-    <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 px-2 text-xs gap-1">
+    <button onClick={handleCopy} className="p-1 text-gray-400 hover:text-gray-900 transition-colors">
+      {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
+
+function CopyButtonWithLabel({ text, label = "Copy" }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 px-2 text-[13px] gap-1">
       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
       {copied ? "Copied" : label}
     </Button>
@@ -64,12 +77,12 @@ function CopyButton({ text, label = "Copy" }) {
 function CodeBlock({ children, copyText }) {
   return (
     <div className="relative group">
-      <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-sm overflow-x-auto font-mono">
+      <pre className="bg-gray-50 border border-gray-200 text-gray-800 p-3 rounded-md overflow-x-auto text-[12px] font-mono leading-relaxed">
         <code>{children}</code>
       </pre>
       {copyText && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <CopyButton text={copyText} />
+          <CopyButtonWithLabel text={copyText} />
         </div>
       )}
     </div>
@@ -92,7 +105,7 @@ function generateApiKey() {
 
 // --- Server Status Section ---
 
-function ServerStatusCard({ serverInfo, loading, onRefresh }) {
+function ServerStatusSection({ serverInfo, loading, onRefresh }) {
   const claudeConfig = JSON.stringify(
     {
       mcpServers: {
@@ -109,80 +122,62 @@ function ServerStatusCard({ serverInfo, loading, onRefresh }) {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Server className="w-5 h-5" />
-              MCP Server
-            </CardTitle>
-            <CardDescription>Model Context Protocol server status and connection details</CardDescription>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onRefresh} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
+    <div>
+      {/* Section header */}
+      <div className="flex items-center justify-between px-2 mb-2">
+        <div className="flex items-center gap-2">
+          <Server className="w-3.5 h-3.5 text-gray-400" />
+          <span className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">MCP Server</span>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {loading && !serverInfo ? (
-          <div className="flex items-center gap-2 text-gray-500">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Loading server info...
+        <button onClick={onRefresh} disabled={loading} className="p-1 text-gray-400 hover:text-gray-900 transition-colors">
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+        </button>
+      </div>
+
+      {loading && !serverInfo ? (
+        <div className="flex items-center gap-2 text-gray-500 text-[13px] px-2 py-4">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          Loading server info...
+        </div>
+      ) : serverInfo ? (
+        <div className="space-y-4">
+          {/* Inline metric strip */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-2">
+            <span className="text-[13px] text-gray-600">Name <span className="text-gray-900 font-medium">{serverInfo.name}</span></span>
+            <span className="text-[13px] text-gray-600">Version <span className="text-gray-900 font-medium">{serverInfo.version}</span></span>
+            <span className="text-[13px] text-gray-600">Tools <span className="text-gray-900 font-medium">{serverInfo.tools}</span></span>
+            <span className="text-[13px] text-gray-600">Resources <span className="text-gray-900 font-medium">{serverInfo.resources}</span></span>
+            <span className="text-[13px] text-gray-600">Prompts <span className="text-gray-900 font-medium">{serverInfo.prompts}</span></span>
+            <span className="text-[13px] text-gray-600 flex items-center gap-1.5">
+              Status
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+              <span className="text-gray-900 font-medium">Online</span></span>
+            </span>
           </div>
-        ) : serverInfo ? (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Name</p>
-                <p className="font-medium">{serverInfo.name}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Version</p>
-                <p className="font-medium">{serverInfo.version}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Tools</p>
-                <p className="font-medium">{serverInfo.tools}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Status</p>
-                <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Online</Badge>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Resources</p>
-                <p className="font-medium">{serverInfo.resources}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Prompts</p>
-                <p className="font-medium">{serverInfo.prompts}</p>
-              </div>
+          {/* Endpoint field */}
+          <div className="space-y-1.5 px-2">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">MCP Endpoint</div>
+            <div className="flex items-center gap-1.5 border-b border-gray-200 hover:border-gray-300 transition-colors">
+              <input
+                value={MCP_ENDPOINT}
+                readOnly
+                className="flex-1 bg-transparent text-[13px] font-mono text-gray-900 py-1.5 outline-none"
+              />
+              <CopyButton text={MCP_ENDPOINT} />
             </div>
+          </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-gray-500 uppercase tracking-wider">MCP Endpoint</p>
-                <CopyButton text={MCP_ENDPOINT} />
-              </div>
-              <code className="text-sm bg-gray-100 px-3 py-1.5 rounded block font-mono">{MCP_ENDPOINT}</code>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Claude Desktop Config</p>
-                <CopyButton text={claudeConfig} />
-              </div>
-              <CodeBlock copyText={claudeConfig}>{claudeConfig}</CodeBlock>
-            </div>
-          </>
-        ) : (
-          <div className="text-red-500 text-sm">Failed to load server info. The server may be down.</div>
-        )}
-      </CardContent>
-    </Card>
+          {/* Claude Desktop Config */}
+          <div className="space-y-1.5 px-2">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Claude Desktop Config</div>
+            <CodeBlock copyText={claudeConfig}>{claudeConfig}</CodeBlock>
+          </div>
+        </div>
+      ) : (
+        <div className="text-red-600 text-[13px] px-2">Failed to load server info. The server may be down.</div>
+      )}
+    </div>
   );
 }
 
@@ -193,21 +188,21 @@ function ToolCategory({ title, icon, tools }) {
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-gray-50 transition-colors text-left">
+      <CollapsibleTrigger className="flex items-center justify-between w-full px-2 py-2 hover:bg-gray-50 transition-colors text-left">
         <div className="flex items-center gap-2">
           {icon}
-          <span className="font-medium text-sm">{title}</span>
-          <Badge variant="secondary" className="text-xs">{tools.length}</Badge>
+          <span className="text-[13px] font-medium text-gray-900">{title}</span>
+          <span className="text-[11px] text-gray-400">{tools.length}</span>
         </div>
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="ml-6 border-l-2 border-gray-100 pl-4 pb-2 space-y-1">
+        <div className="ml-6 border-l border-gray-100 pl-4 pb-2 space-y-1">
           {tools.map((tool) => (
-            <div key={tool.name} className="py-1.5">
-              <code className="text-xs font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">{tool.name}</code>
+            <div key={tool.name} className="py-1">
+              <code className="text-[12px] font-mono text-gray-900 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">{tool.name}</code>
               {tool.description && (
-                <p className="text-xs text-gray-500 mt-0.5">{tool.description}</p>
+                <p className="text-[12px] text-gray-500 mt-0.5">{tool.description}</p>
               )}
             </div>
           ))}
@@ -226,12 +221,10 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
 
     const categories = {};
     for (const tool of tools) {
-      // Determine category from tool name pattern
       let category = "Other";
       const name = tool.name;
 
       if (name.startsWith("list_") || name.startsWith("get_") || name.startsWith("create_") || name.startsWith("update_") || name.startsWith("delete_") || name.startsWith("search_")) {
-        // Extract entity name
         const parts = name.split("_");
         const action = parts[0];
         const entity = parts.slice(1).join("_");
@@ -248,13 +241,11 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
       categories[category].push(tool);
     }
 
-    // Sort and group CRUD entities together
     const crudCategories = {};
     const specialCategories = {};
 
     for (const [cat, catTools] of Object.entries(categories)) {
       if (cat.startsWith("CRUD:")) {
-        // Group all CRUD operations by entity
         const entity = cat.replace("CRUD: ", "");
         if (!crudCategories[entity]) crudCategories[entity] = [];
         crudCategories[entity].push(...catTools);
@@ -263,10 +254,8 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
       }
     }
 
-    // Consolidate CRUD into single categories per entity
     const result = [];
 
-    // Group CRUD tools by entity differently - look at the last part of the name
     const entityMap = {};
     for (const tool of tools) {
       const name = tool.name;
@@ -290,7 +279,6 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
       }
     }
 
-    // Add entity CRUD groups
     const sortedEntities = Object.keys(entityMap).sort();
     for (const entity of sortedEntities) {
       result.push({
@@ -299,14 +287,12 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
       });
     }
 
-    // Add special categories
     for (const [cat, catTools] of Object.entries(specialCategories)) {
       if (catTools.length > 0 && cat !== "Other") {
         result.push({ title: cat, tools: catTools });
       }
     }
 
-    // Add "Other" last
     if (specialCategories.Other?.length) {
       result.push({ title: "Other", tools: specialCategories.Other });
     }
@@ -330,56 +316,51 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
   -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_tasks","arguments":{"limit":5}}}'`;
 
   return (
-    <Card>
+    <div className="border-t border-gray-200 pt-4">
       <Collapsible open={docsOpen} onOpenChange={setDocsOpen}>
-        <CardHeader>
-          <CollapsibleTrigger className="flex items-center justify-between w-full text-left">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5" />
-                Documentation
-              </CardTitle>
-              <CardDescription>Setup guide, available tools, and API reference</CardDescription>
-            </div>
-            <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${docsOpen ? "rotate-180" : ""}`} />
-          </CollapsibleTrigger>
-        </CardHeader>
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-2 text-left">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-3.5 h-3.5 text-gray-400" />
+            <span className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">Documentation</span>
+          </div>
+          <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${docsOpen ? "rotate-180" : ""}`} />
+        </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <CardContent className="space-y-8 pt-0">
+          <div className="space-y-6 pt-3 px-2">
             {/* Getting Started */}
-            <div>
-              <h3 className="flex items-center gap-2 font-semibold text-lg mb-3">
-                <Terminal className="w-5 h-5 text-indigo-600" />
-                Getting Started
-              </h3>
-              <ol className="space-y-3 text-sm text-gray-700">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-[13px] font-semibold text-gray-900">Getting Started</span>
+              </div>
+              <ol className="space-y-2 text-[13px] text-gray-600 ml-5">
                 <li className="flex gap-2">
-                  <span className="font-bold text-indigo-600 shrink-0">1.</span>
+                  <span className="font-medium text-gray-900 shrink-0">1.</span>
                   <span>Create an API key below using the "Create Key" button.</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="font-bold text-indigo-600 shrink-0">2.</span>
+                  <span className="font-medium text-gray-900 shrink-0">2.</span>
                   <span>
-                    Copy the Claude Desktop config JSON from the Server Status card above and replace{" "}
-                    <code className="bg-gray-100 px-1 rounded text-xs">YOUR_API_KEY_HERE</code> with your new key.
+                    Copy the Claude Desktop config JSON from above and replace{" "}
+                    <code className="bg-gray-50 border border-gray-200 px-1 rounded text-[12px] font-mono">YOUR_API_KEY_HERE</code> with your new key.
                   </span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="font-bold text-indigo-600 shrink-0">3.</span>
+                  <span className="font-medium text-gray-900 shrink-0">3.</span>
                   <span>
                     Paste the config into your Claude Desktop settings file at{" "}
-                    <code className="bg-gray-100 px-1 rounded text-xs">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+                    <code className="bg-gray-50 border border-gray-200 px-1 rounded text-[12px] font-mono">~/Library/Application Support/Claude/claude_desktop_config.json</code>
                   </span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="font-bold text-indigo-600 shrink-0">4.</span>
+                  <span className="font-medium text-gray-900 shrink-0">4.</span>
                   <span>Restart Claude Desktop. You should see the MCP tools available.</span>
                 </li>
               </ol>
 
-              <div className="mt-4 space-y-3">
-                <p className="text-sm font-medium text-gray-700">Test with curl:</p>
+              <div className="mt-3 space-y-2">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Test with curl</div>
                 <CodeBlock copyText={curlInit}>{curlInit}</CodeBlock>
                 <CodeBlock copyText={curlListTools}>{curlListTools}</CodeBlock>
                 <CodeBlock copyText={curlCallTool}>{curlCallTool}</CodeBlock>
@@ -387,72 +368,76 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
             </div>
 
             {/* Authentication */}
-            <div>
-              <h3 className="flex items-center gap-2 font-semibold text-lg mb-3">
-                <Shield className="w-5 h-5 text-indigo-600" />
-                Authentication
-              </h3>
-              <div className="space-y-3 text-sm text-gray-700">
-                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                  <p className="font-medium">API Key Mode</p>
-                  <p>
-                    Pass <code className="bg-white px-1 rounded text-xs border">X-API-Key: your_key</code> header.
-                    Uses the service role — full access, bypasses RLS. Best for Claude Desktop and automation.
-                  </p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Shield className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-[13px] font-semibold text-gray-900">Authentication</span>
+              </div>
+              <div className="border-t border-gray-200">
+                <div className="flex items-center gap-3 px-2 py-2.5 border-b border-gray-100">
+                  <div className="flex-1">
+                    <span className="text-[13px] font-medium text-gray-900">API Key Mode</span>
+                    <p className="text-[12px] text-gray-500 mt-0.5">
+                      Pass <code className="bg-gray-50 border border-gray-200 px-1 rounded text-[12px] font-mono">X-API-Key: your_key</code> header.
+                      Uses the service role — full access, bypasses RLS. Best for Claude Desktop and automation.
+                    </p>
+                  </div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                  <p className="font-medium">JWT Mode</p>
-                  <p>
-                    Pass <code className="bg-white px-1 rounded text-xs border">Authorization: Bearer jwt_token</code> header.
-                    User-scoped with RLS. Best for per-user access from the frontend.
-                  </p>
+                <div className="flex items-center gap-3 px-2 py-2.5 border-b border-gray-100">
+                  <div className="flex-1">
+                    <span className="text-[13px] font-medium text-gray-900">JWT Mode</span>
+                    <p className="text-[12px] text-gray-500 mt-0.5">
+                      Pass <code className="bg-gray-50 border border-gray-200 px-1 rounded text-[12px] font-mono">Authorization: Bearer jwt_token</code> header.
+                      User-scoped with RLS. Best for per-user access from the frontend.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Available Tools */}
-            <div>
-              <h3 className="flex items-center gap-2 font-semibold text-lg mb-3">
-                <Wrench className="w-5 h-5 text-indigo-600" />
-                Available Tools
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Wrench className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-[13px] font-semibold text-gray-900">Available Tools</span>
                 {tools.length > 0 && (
-                  <Badge variant="secondary">{tools.length} tools</Badge>
+                  <span className="text-[11px] text-gray-400">{tools.length}</span>
                 )}
-              </h3>
+              </div>
               {loadingTools ? (
-                <div className="flex items-center gap-2 text-gray-500 text-sm">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                <div className="flex items-center gap-2 text-gray-500 text-[13px]">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   Loading tools from server...
                 </div>
               ) : toolCategories.length > 0 ? (
-                <div className="space-y-1 border rounded-lg divide-y">
+                <div className="border-t border-gray-200 divide-y divide-gray-100">
                   {toolCategories.map((cat) => (
                     <ToolCategory
                       key={cat.title}
                       title={cat.title}
-                      icon={<Wrench className="w-4 h-4 text-gray-400" />}
+                      icon={<Wrench className="w-3.5 h-3.5 text-gray-400" />}
                       tools={cat.tools}
                     />
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No tools loaded. Server may be unreachable.</p>
+                <p className="text-[13px] text-gray-500">No tools loaded. Server may be unreachable.</p>
               )}
             </div>
 
             {/* Resources */}
             {resources.length > 0 && (
-              <div>
-                <h3 className="flex items-center gap-2 font-semibold text-lg mb-3">
-                  <FileText className="w-5 h-5 text-indigo-600" />
-                  Resources
-                </h3>
-                <div className="space-y-2">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="text-[13px] font-semibold text-gray-900">Resources</span>
+                </div>
+                <div className="border-t border-gray-200">
                   {resources.map((r) => (
-                    <div key={r.uri} className="bg-gray-50 rounded-lg p-3">
-                      <code className="text-xs font-mono text-indigo-600">{r.uri}</code>
-                      {r.name && <p className="text-sm font-medium mt-1">{r.name}</p>}
-                      {r.description && <p className="text-xs text-gray-500 mt-0.5">{r.description}</p>}
+                    <div key={r.uri} className="px-2 py-2 border-b border-gray-100">
+                      <code className="text-[12px] font-mono text-gray-900">{r.uri}</code>
+                      {r.name && <p className="text-[13px] font-medium text-gray-900 mt-0.5">{r.name}</p>}
+                      {r.description && <p className="text-[12px] text-gray-500 mt-0.5">{r.description}</p>}
                     </div>
                   ))}
                 </div>
@@ -461,25 +446,25 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
 
             {/* Prompts */}
             {prompts.length > 0 && (
-              <div>
-                <h3 className="flex items-center gap-2 font-semibold text-lg mb-3">
-                  <MessageSquare className="w-5 h-5 text-indigo-600" />
-                  Prompt Templates
-                </h3>
-                <div className="space-y-2">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="text-[13px] font-semibold text-gray-900">Prompt Templates</span>
+                </div>
+                <div className="border-t border-gray-200">
                   {prompts.map((p) => (
-                    <div key={p.name} className="bg-gray-50 rounded-lg p-3">
-                      <code className="text-xs font-mono text-indigo-600">{p.name}</code>
-                      {p.description && <p className="text-xs text-gray-500 mt-0.5">{p.description}</p>}
+                    <div key={p.name} className="px-2 py-2 border-b border-gray-100">
+                      <code className="text-[12px] font-mono text-gray-900">{p.name}</code>
+                      {p.description && <p className="text-[12px] text-gray-500 mt-0.5">{p.description}</p>}
                     </div>
                   ))}
                 </div>
               </div>
             )}
-          </CardContent>
+          </div>
         </CollapsibleContent>
       </Collapsible>
-    </Card>
+    </div>
   );
 }
 
@@ -487,87 +472,77 @@ function DocumentationSection({ tools, resources, prompts, loadingTools }) {
 
 function ApiKeysSection({ keys, loading, onCreateKey, onRevokeKey }) {
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <KeyRound className="w-5 h-5" />
-              API Keys
-            </CardTitle>
-            <CardDescription>Create and manage API keys for MCP server access</CardDescription>
-          </div>
-          <Button onClick={onCreateKey} size="sm" className="bg-indigo-600 hover:bg-indigo-700 gap-1">
-            <Plus className="w-4 h-4" />
-            Create Key
-          </Button>
+    <div className="border-t border-gray-200 pt-4">
+      <div className="flex items-center justify-between px-2 mb-2">
+        <div className="flex items-center gap-2">
+          <KeyRound className="w-3.5 h-3.5 text-gray-400" />
+          <span className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">API Keys</span>
         </div>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="flex items-center gap-2 text-gray-500 py-8 justify-center">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Loading keys...
-          </div>
-        ) : keys.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <KeyRound className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-            <p className="text-sm">No API keys yet. Create one to get started.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left">
-                  <th className="pb-2 font-medium text-gray-500">Name</th>
-                  <th className="pb-2 font-medium text-gray-500">Key Prefix</th>
-                  <th className="pb-2 font-medium text-gray-500">Created</th>
-                  <th className="pb-2 font-medium text-gray-500">Last Used</th>
-                  <th className="pb-2 font-medium text-gray-500">Status</th>
-                  <th className="pb-2 font-medium text-gray-500 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {keys.map((key) => (
-                  <tr key={key.id} className="group">
-                    <td className="py-3 font-medium">{key.name}</td>
-                    <td className="py-3">
-                      <code className="text-xs bg-gray-100 px-2 py-0.5 rounded font-mono">{key.key_prefix}...</code>
-                    </td>
-                    <td className="py-3 text-gray-500">
-                      {new Date(key.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 text-gray-500">
-                      {key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : "Never"}
-                    </td>
-                    <td className="py-3">
-                      {key.revoked ? (
-                        <Badge variant="destructive" className="text-xs">Revoked</Badge>
-                      ) : (
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-xs">Active</Badge>
-                      )}
-                    </td>
-                    <td className="py-3 text-right">
-                      {!key.revoked && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onRevokeKey(key)}
-                          className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Revoke
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        <Button onClick={onCreateKey} size="sm" className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px] gap-1">
+          <Plus className="w-3.5 h-3.5" />
+          Create Key
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-gray-500 py-8 justify-center text-[13px]">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          Loading keys...
+        </div>
+      ) : keys.length === 0 ? (
+        <div className="text-center py-8">
+          <KeyRound className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+          <p className="text-[13px] text-gray-500">No API keys yet. Create one to get started.</p>
+        </div>
+      ) : (
+        <div>
+          {keys.map((key) => (
+            <div key={key.id} className="group flex items-center gap-3 px-2 py-2 border-b border-gray-100 hover:bg-gray-50">
+              {/* Name */}
+              <span className="text-[13px] font-medium text-gray-900 min-w-[120px]">{key.name}</span>
+
+              {/* Key prefix - masked */}
+              <code className="text-[12px] font-mono text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">{key.key_prefix}...</code>
+
+              {/* Created */}
+              <span className="text-[13px] text-gray-500 hidden sm:inline">
+                {new Date(key.created_at).toLocaleDateString()}
+              </span>
+
+              {/* Last used */}
+              <span className="text-[13px] text-gray-400 hidden md:inline">
+                {key.last_used_at ? `Used ${new Date(key.last_used_at).toLocaleDateString()}` : "Never used"}
+              </span>
+
+              {/* Status dot */}
+              <span className="flex items-center gap-1.5 ml-auto">
+                {key.revoked ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+                    <span className="text-[12px] text-gray-500">Revoked</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                    <span className="text-[12px] text-gray-500">Active</span>
+                  </>
+                )}
+              </span>
+
+              {/* Hover-revealed revoke */}
+              {!key.revoked && (
+                <button
+                  onClick={() => onRevokeKey(key)}
+                  className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 transition-all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -636,8 +611,6 @@ export default function McpApiKeys() {
   const loadTools = useCallback(async () => {
     setToolsLoading(true);
     try {
-      // Use the health endpoint info — the tools/list requires auth
-      // Instead, fetch tools/list with the user's JWT
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
@@ -768,14 +741,14 @@ export default function McpApiKeys() {
   if (!isAdmin) return null;
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">MCP API Keys</h1>
-        <p className="text-gray-500 mt-1">Manage your MCP server connection and API keys</p>
+    <div className="p-4 lg:p-6 max-w-5xl">
+      {/* 48px toolbar header */}
+      <div className="flex items-center h-12 border-b border-gray-200 mb-4">
+        <h1 className="text-[15px] font-semibold text-gray-900">MCP API Keys</h1>
       </div>
 
       <div className="space-y-6">
-        <ServerStatusCard
+        <ServerStatusSection
           serverInfo={serverInfo}
           loading={serverLoading}
           onRefresh={loadServerInfo}
@@ -810,37 +783,38 @@ export default function McpApiKeys() {
             <DialogTitle>Create API Key</DialogTitle>
             <DialogDescription>
               {createdKey
-                ? "Your API key has been created. Copy it now — it won't be shown again."
+                ? "Your API key has been created. Copy it now -- it won't be shown again."
                 : "Give your key a descriptive name to identify its purpose."}
             </DialogDescription>
           </DialogHeader>
 
           {createdKey ? (
             <div className="space-y-4">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-sm text-amber-800 font-medium">
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                <p className="text-[13px] text-amber-800 font-medium">
                   Save this key now. You won't be able to see it again.
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Input
+              <div className="flex items-center gap-1.5 border-b border-gray-200 hover:border-gray-300 transition-colors">
+                <input
                   readOnly
                   value={createdKey}
-                  className="font-mono text-sm"
+                  className="flex-1 bg-transparent text-[13px] font-mono text-gray-900 py-1.5 outline-none"
                 />
-                <CopyButton text={createdKey} label="Copy" />
+                <CopyButton text={createdKey} />
               </div>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="keyName">Key Name</Label>
+                <Label htmlFor="keyName" className="text-[13px]">Key Name</Label>
                 <Input
                   id="keyName"
                   placeholder="e.g., Claude Desktop, CI/CD Pipeline"
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleCreateKey()}
+                  className="text-[13px]"
                 />
               </div>
             </div>
@@ -848,20 +822,20 @@ export default function McpApiKeys() {
 
           <DialogFooter>
             {createdKey ? (
-              <Button onClick={() => setCreateDialogOpen(false)}>Done</Button>
+              <Button onClick={() => setCreateDialogOpen(false)} className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]">Done</Button>
             ) : (
               <>
-                <Button variant="ghost" onClick={() => setCreateDialogOpen(false)}>
+                <Button variant="ghost" onClick={() => setCreateDialogOpen(false)} className="h-7 px-2 text-[13px]">
                   Cancel
                 </Button>
                 <Button
                   onClick={handleCreateKey}
                   disabled={!newKeyName.trim() || creating}
-                  className="bg-indigo-600 hover:bg-indigo-700"
+                  className="bg-gray-900 hover:bg-gray-800 text-white h-7 px-2.5 text-[13px]"
                 >
                   {creating ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                       Creating...
                     </>
                   ) : (
@@ -885,17 +859,18 @@ export default function McpApiKeys() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setRevokeDialogOpen(false)}>
+            <Button variant="ghost" onClick={() => setRevokeDialogOpen(false)} className="h-7 px-2 text-[13px]">
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleRevokeKey}
               disabled={revoking}
+              className="h-7 px-2.5 text-[13px]"
             >
               {revoking ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                   Revoking...
                 </>
               ) : (

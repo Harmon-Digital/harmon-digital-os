@@ -15,11 +15,20 @@ async function hashKey(key: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function timingSafeCompare(a: string, b: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const aBytes = encoder.encode(a);
+  const bBytes = encoder.encode(b);
+  if (aBytes.length !== bBytes.length) {
+    await crypto.subtle.timingSafeEqual(aBytes, aBytes);
+    return false;
+  }
+  return crypto.subtle.timingSafeEqual(aBytes, bBytes);
+}
+
 export async function authenticate(req: Request): Promise<AuthContext> {
-  // Check API key first
   const apiKey = req.headers.get("x-api-key");
   if (apiKey) {
-    // Check against DB keys first
     const keyHash = await hashKey(apiKey);
     const serviceClient = createServiceClient();
 
@@ -31,7 +40,6 @@ export async function authenticate(req: Request): Promise<AuthContext> {
       .maybeSingle();
 
     if (data) {
-      // Valid DB key — update last_used_at in background
       serviceClient
         .from("mcp_api_keys")
         .update({ last_used_at: new Date().toISOString() })
@@ -41,15 +49,13 @@ export async function authenticate(req: Request): Promise<AuthContext> {
       return { client: serviceClient, mode: "apikey" };
     }
 
-    // Fallback to env var for backward compatibility
-    if (MCP_API_KEY && apiKey === MCP_API_KEY) {
+    if (MCP_API_KEY && await timingSafeCompare(apiKey, MCP_API_KEY)) {
       return { client: serviceClient, mode: "apikey" };
     }
 
     throw new AuthError("Invalid API key", 401);
   }
 
-  // Fall back to JWT
   const authHeader = req.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     throw new AuthError(
@@ -61,7 +67,6 @@ export async function authenticate(req: Request): Promise<AuthContext> {
   const jwt = authHeader.slice(7);
   const client = createUserClient(jwt);
 
-  // Validate the JWT by checking the user session
   const { data: { user }, error: userError } = await client.auth.getUser();
   if (userError || !user) {
     throw new AuthError("Invalid or expired JWT token", 401);
