@@ -881,7 +881,6 @@ function PostRow({
         <Checkbox
           checked={post.approved || false}
           onCheckedChange={() => onApprovalToggle(post.id, post.approved)}
-          className="border-green-400 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
         />
       </div>
 

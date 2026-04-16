@@ -277,7 +277,19 @@ function SubNavItem({ label, path, isActive, onNavigate }) {
 
 function NavGroup({ group, currentPath, onNavigate, collapsed, isOpen, onToggle, projectItems = [] }) {
   const open = !!isOpen;
-  const [projectsExpanded, setProjectsExpanded] = useState(false);
+  const location = useLocation();
+  const onProjectDetail = currentPath === "/ProjectDetail";
+  const activeProjectId = onProjectDetail
+    ? new URLSearchParams(location.search).get("id")
+    : null;
+  // Start expanded whenever we're on a ProjectDetail page, so the user
+  // sees their current project highlighted in the sidebar.
+  const [projectsExpanded, setProjectsExpanded] = useState(onProjectDetail);
+
+  // Auto-expand when entering a ProjectDetail page
+  useEffect(() => {
+    if (onProjectDetail) setProjectsExpanded(true);
+  }, [onProjectDetail, activeProjectId]);
 
   if (collapsed) {
     return (
@@ -317,11 +329,14 @@ function NavGroup({ group, currentPath, onNavigate, collapsed, isOpen, onToggle,
             const itemPath = createPageUrl(item.path);
             const isActive = currentPath === itemPath;
             const isProjects = item.path === "Projects" && projectItems.length > 0;
+            // Highlight "Projects" when we're on /ProjectDetail too, so the
+            // group feels attached to the current project sub-item below.
+            const isProjectsActive = isProjects && (isActive || onProjectDetail);
             return isProjects ? (
               <NavItem
                 key={item.path}
                 item={item}
-                isActive={isActive}
+                isActive={isProjectsActive}
                 onNavigate={onNavigate}
                 collapsed={false}
                 expandable
@@ -335,7 +350,7 @@ function NavGroup({ group, currentPath, onNavigate, collapsed, isOpen, onToggle,
                         key={p.id}
                         label={p.name}
                         path={`/ProjectDetail?id=${p.id}`}
-                        isActive={currentPath === "/ProjectDetail" && typeof window !== "undefined" && window.location.search.includes(`id=${p.id}`)}
+                        isActive={activeProjectId === p.id}
                         onNavigate={(path) => onNavigate(path, { raw: true })}
                       />
                     ))}
@@ -476,6 +491,9 @@ function SidebarBody({
         if (createPageUrl(item.path) === currentPath) return g.id;
       }
     }
+    // ProjectDetail isn't a top-level nav item, but it belongs to the
+    // Workspace group via the Projects dropdown.
+    if (currentPath === "/ProjectDetail") return "workspace";
     return null;
   }, [groups, currentPath]);
 
