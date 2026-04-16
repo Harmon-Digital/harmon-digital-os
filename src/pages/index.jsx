@@ -49,6 +49,19 @@ import PartnerReferrals from "./partner/PartnerReferrals";
 import PartnerPayouts from "./partner/PartnerPayouts";
 import PartnerSettings from "./partner/PartnerSettings";
 
+// Client portal pages
+import ClientLogin from "./client/ClientLogin";
+import ClientDashboard from "./client/ClientDashboard";
+import ClientProjects from "./client/ClientProjects";
+import ClientProjectDetail from "./client/ClientProjectDetail";
+import ClientInvoices from "./client/ClientInvoices";
+import ClientApprovals from "./client/ClientApprovals";
+import ClientMessages from "./client/ClientMessages";
+import ClientDocuments from "./client/ClientDocuments";
+import ClientSettings from "./client/ClientSettings";
+import ClientLayout from "@/components/layout/ClientLayout";
+import ClientProtectedRoute from "@/components/ClientProtectedRoute";
+
 const PAGES = {
   Dashboard,
   Clients,
@@ -368,6 +381,73 @@ function PagesContent() {
             <PartnerSettings />
           </PartnerLayout>
         </PartnerProtectedRoute>
+      } />
+
+      {/* Client Portal Routes */}
+      <Route path="/client/login" element={<ClientLogin />} />
+
+      <Route path="/client" element={
+        <ClientProtectedRoute>
+          <ClientLayout>
+            <ClientDashboard />
+          </ClientLayout>
+        </ClientProtectedRoute>
+      } />
+
+      <Route path="/client/projects" element={
+        <ClientProtectedRoute>
+          <ClientLayout>
+            <ClientProjects />
+          </ClientLayout>
+        </ClientProtectedRoute>
+      } />
+
+      <Route path="/client/projects/:id" element={
+        <ClientProtectedRoute>
+          <ClientLayout>
+            <ClientProjectDetail />
+          </ClientLayout>
+        </ClientProtectedRoute>
+      } />
+
+      <Route path="/client/approvals" element={
+        <ClientProtectedRoute>
+          <ClientLayout>
+            <ClientApprovals />
+          </ClientLayout>
+        </ClientProtectedRoute>
+      } />
+
+      <Route path="/client/invoices" element={
+        <ClientProtectedRoute>
+          <ClientLayout>
+            <ClientInvoices />
+          </ClientLayout>
+        </ClientProtectedRoute>
+      } />
+
+      <Route path="/client/messages" element={
+        <ClientProtectedRoute>
+          <ClientLayout>
+            <ClientMessages />
+          </ClientLayout>
+        </ClientProtectedRoute>
+      } />
+
+      <Route path="/client/documents" element={
+        <ClientProtectedRoute>
+          <ClientLayout>
+            <ClientDocuments />
+          </ClientLayout>
+        </ClientProtectedRoute>
+      } />
+
+      <Route path="/client/settings" element={
+        <ClientProtectedRoute>
+          <ClientLayout>
+            <ClientSettings />
+          </ClientLayout>
+        </ClientProtectedRoute>
       } />
     </Routes>
   );

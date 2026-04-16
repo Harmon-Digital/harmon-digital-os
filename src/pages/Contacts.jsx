@@ -4,7 +4,9 @@ import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit, Trash2, Mail, Phone, Building2, MessageSquare, Filter } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Mail, Phone, Building2, MessageSquare, Filter, UserPlus, Check } from "lucide-react";
+import { supabase } from "@/api/supabaseClient";
+import { toast } from "@/lib/toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import FormShell from "@/components/ui/FormShell";
 import {
@@ -33,7 +35,38 @@ import ActivityForm from "../components/contacts/ActivityForm";
 
 export default function Contacts() {
   const { user: authUser, userProfile } = useAuth();
+  const isAdmin = userProfile?.role === "admin";
   const [contacts, setContacts] = useState([]);
+  const [invitingContactId, setInvitingContactId] = useState(null);
+
+  const inviteToPortal = async (contact) => {
+    if (!contact?.email) {
+      toast.error("This contact has no email address");
+      return;
+    }
+    if (contact.portal_user_id) {
+      toast.info("Already has portal access");
+      return;
+    }
+    setInvitingContactId(contact.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("invite-client-portal", {
+        body: { contactId: contact.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Invite sent to ${contact.email}`);
+      // Reflect the new portal_user_id in local state
+      setContacts((prev) =>
+        prev.map((c) => (c.id === contact.id ? { ...c, portal_user_id: data.userId, portal_invited_at: new Date().toISOString() } : c))
+      );
+    } catch (err) {
+      console.error("invite failed:", err);
+      toast.error("Invite failed", { description: err.message });
+    } finally {
+      setInvitingContactId(null);
+    }
+  };
   const [accounts, setAccounts] = useState([]);
   const [activities, setActivities] = useState([]);
   const [showDrawer, setShowDrawer] = useState(false);
@@ -354,7 +387,34 @@ export default function Contacts() {
                   {contactActivities.length}
                 </button>
 
+                {/* Portal access indicator — always visible so it's scannable */}
+                {contact.portal_user_id ? (
+                  <span
+                    title={`Portal access · invited ${contact.portal_invited_at ? new Date(contact.portal_invited_at).toLocaleDateString() : ""}`}
+                    className="inline-flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400 w-20 justify-end"
+                  >
+                    <Check className="w-3 h-3" />
+                    Portal
+                  </span>
+                ) : (
+                  <span className="w-20" />
+                )}
+
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                  {isAdmin && !contact.portal_user_id && contact.email && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        inviteToPortal(contact);
+                      }}
+                      disabled={invitingContactId === contact.id}
+                      className="p-1 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-50"
+                      title="Invite to client portal"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={(e) => {
