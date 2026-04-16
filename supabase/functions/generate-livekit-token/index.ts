@@ -6,8 +6,9 @@ const LIVEKIT_API_SECRET = Deno.env.get("LIVEKIT_API_SECRET");
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
 
 // Base64url encode (no padding)
