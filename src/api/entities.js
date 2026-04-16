@@ -11,6 +11,7 @@ export {
   ChatChannel,
   ChatMessage,
   ChatMessageReaction,
+  ChatMessageAttachment,
   TimeEntry,
   Invoice,
   Lead,

@@ -29,7 +29,24 @@ import {
   Pin,
   X,
   Check,
+  Paperclip,
+  FileText,
+  Image as ImageIcon,
+  Download,
 } from "lucide-react";
+
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
+
+function isImageType(t) {
+  return t && t.startsWith("image/");
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const QUICK_REACTIONS = ["👍", "❤️", "🎉", "😂", "🚀", "👀", "✅", "🔥"];
 
@@ -91,6 +108,11 @@ export default function Channels() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [draft, setDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState([]); // [{ file, previewUrl }]
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [attachments, setAttachments] = useState(new Map()); // messageId -> [attachment]
+  const fileInputRef = useRef(null);
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [showNewDm, setShowNewDm] = useState(false);
@@ -336,13 +358,19 @@ export default function Channels() {
           .limit(300);
         setMessages(data || []);
 
-        // Load reactions for all loaded messages
+        // Load reactions + attachments for all loaded messages
         const ids = (data || []).map((m) => m.id);
         if (ids.length > 0) {
-          const { data: rxs } = await supabase
-            .from("chat_message_reactions")
-            .select("id, message_id, user_id, emoji")
-            .in("message_id", ids);
+          const [{ data: rxs }, { data: atts }] = await Promise.all([
+            supabase
+              .from("chat_message_reactions")
+              .select("id, message_id, user_id, emoji")
+              .in("message_id", ids),
+            supabase
+              .from("chat_message_attachments")
+              .select("id, message_id, file_name, file_url, file_path, file_type, file_size, uploaded_by, created_at")
+              .in("message_id", ids),
+          ]);
           const rxMap = new Map();
           for (const r of rxs || []) {
             const arr = rxMap.get(r.message_id) || [];
@@ -350,8 +378,17 @@ export default function Channels() {
             rxMap.set(r.message_id, arr);
           }
           setReactions(rxMap);
+
+          const attMap = new Map();
+          for (const a of atts || []) {
+            const arr = attMap.get(a.message_id) || [];
+            arr.push(a);
+            attMap.set(a.message_id, arr);
+          }
+          setAttachments(attMap);
         } else {
           setReactions(new Map());
+          setAttachments(new Map());
         }
 
         const missing = Array.from(
@@ -665,18 +702,95 @@ export default function Channels() {
     return Array.from(ids);
   };
 
+  const addFiles = (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const valid = [];
+    for (const f of files) {
+      if (f.size > MAX_FILE_SIZE) {
+        alert(`${f.name} is too large (max 25 MB)`);
+        continue;
+      }
+      valid.push({ file: f, previewUrl: isImageType(f.type) ? URL.createObjectURL(f) : null });
+    }
+    setPendingFiles((prev) => [...prev, ...valid]);
+  };
+
+  const removePendingFile = (idx) => {
+    setPendingFiles((prev) => {
+      const next = [...prev];
+      const removed = next.splice(idx, 1);
+      if (removed[0]?.previewUrl) URL.revokeObjectURL(removed[0].previewUrl);
+      return next;
+    });
+  };
+
+  const uploadPendingFiles = async (messageId) => {
+    if (!pendingFiles.length || !user?.id) return [];
+    const uploaded = [];
+    for (const { file } of pendingFiles) {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `${user.id}/${messageId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("chat-attachments")
+        .upload(path, file, { contentType: file.type || undefined, upsert: false });
+      if (upErr) {
+        console.error("upload failed:", upErr);
+        continue;
+      }
+      const { data: pub } = supabase.storage.from("chat-attachments").getPublicUrl(path);
+      const { data: row, error: insErr } = await supabase
+        .from("chat_message_attachments")
+        .insert({
+          message_id: messageId,
+          file_name: file.name,
+          file_url: pub.publicUrl,
+          file_path: path,
+          file_type: file.type || null,
+          file_size: file.size,
+          uploaded_by: user.id,
+        })
+        .select()
+        .single();
+      if (insErr) {
+        console.error("attachment insert failed:", insErr);
+        continue;
+      }
+      uploaded.push(row);
+    }
+    return uploaded;
+  };
+
   const handleSend = async () => {
     const body = draft.trim();
-    if (!body || !selectedChannelId || !user?.id) return;
+    const hasFiles = pendingFiles.length > 0;
+    if ((!body && !hasFiles) || !selectedChannelId || !user?.id) return;
     setSubmitting(true);
+    setUploadingFiles(hasFiles);
     try {
       const mentioned = extractMentions(body);
       const created = await ChatMessage.create({
         channel_id: selectedChannelId,
         user_id: user.id,
-        body,
+        body: body || (hasFiles ? `📎 ${pendingFiles.length} attachment${pendingFiles.length === 1 ? "" : "s"}` : ""),
         mentioned_user_ids: mentioned,
       });
+
+      let uploaded = [];
+      if (hasFiles) {
+        uploaded = await uploadPendingFiles(created.id);
+        if (uploaded.length) {
+          setAttachments((prev) => {
+            const next = new Map(prev);
+            next.set(created.id, uploaded);
+            return next;
+          });
+        }
+        // Clear pending files + revoke blob URLs
+        for (const pf of pendingFiles) if (pf.previewUrl) URL.revokeObjectURL(pf.previewUrl);
+        setPendingFiles([]);
+      }
+
       // Optimistic add (realtime INSERT will dedupe via id)
       setMessages((prev) => (prev.find((m) => m.id === created.id) ? prev : [...prev, created]));
       setDraft("");
@@ -706,6 +820,7 @@ export default function Channels() {
       console.error("Error sending message:", err);
     } finally {
       setSubmitting(false);
+      setUploadingFiles(false);
     }
   };
 
@@ -870,7 +985,42 @@ export default function Channels() {
       </aside>
 
       {/* Conversation */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main
+        className="flex-1 flex flex-col min-w-0 relative"
+        onDragEnter={(e) => {
+          if (!selectedChannel) return;
+          if (e.dataTransfer?.types?.includes("Files")) {
+            e.preventDefault();
+            setDragActive(true);
+          }
+        }}
+        onDragOver={(e) => {
+          if (!selectedChannel) return;
+          if (e.dataTransfer?.types?.includes("Files")) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+          }
+        }}
+        onDragLeave={(e) => {
+          // Only hide overlay when leaving the main element itself
+          if (e.currentTarget === e.target) setDragActive(false);
+        }}
+        onDrop={(e) => {
+          if (!selectedChannel) return;
+          e.preventDefault();
+          setDragActive(false);
+          if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files);
+        }}
+      >
+        {dragActive && selectedChannel && (
+          <div className="absolute inset-0 z-30 bg-indigo-50/80 border-4 border-dashed border-indigo-400 rounded-md m-2 flex items-center justify-center pointer-events-none">
+            <div className="text-center">
+              <Paperclip className="w-10 h-10 mx-auto mb-2 text-indigo-500" />
+              <p className="text-lg font-semibold text-indigo-700">Drop files to attach</p>
+              <p className="text-sm text-indigo-600">Max 25 MB per file</p>
+            </div>
+          </div>
+        )}
         {!selectedChannel ? (
           <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
             Select a channel to start chatting
@@ -1052,6 +1202,52 @@ export default function Channels() {
                                           <span className="ml-1 text-[11px] text-gray-400">(edited)</span>
                                         )}
                                       </div>
+                                      {(() => {
+                                        const atts = attachments.get(m.id) || [];
+                                        if (!atts.length) return null;
+                                        const images = atts.filter((a) => isImageType(a.file_type));
+                                        const files = atts.filter((a) => !isImageType(a.file_type));
+                                        return (
+                                          <div className="mt-2 space-y-2">
+                                            {images.length > 0 && (
+                                              <div className="flex flex-wrap gap-2">
+                                                {images.map((a) => (
+                                                  <a
+                                                    key={a.id}
+                                                    href={a.file_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="block"
+                                                  >
+                                                    <img
+                                                      src={a.file_url}
+                                                      alt={a.file_name}
+                                                      className="max-w-[240px] max-h-[240px] rounded-md border border-gray-200 hover:border-gray-300 transition-colors"
+                                                    />
+                                                  </a>
+                                                ))}
+                                              </div>
+                                            )}
+                                            {files.map((a) => (
+                                              <a
+                                                key={a.id}
+                                                href={a.file_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-md pl-2 pr-3 py-1.5 hover:border-gray-300 hover:bg-gray-50 transition-colors max-w-[280px]"
+                                                download={a.file_name}
+                                              >
+                                                <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="text-[12px] text-gray-900 truncate">{a.file_name}</div>
+                                                  <div className="text-[10px] text-gray-500">{formatFileSize(a.file_size)}</div>
+                                                </div>
+                                                <Download className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                              </a>
+                                            ))}
+                                          </div>
+                                        );
+                                      })()}
                                       {rxAgg.size > 0 && (
                                         <div className="mt-1 flex flex-wrap gap-1">
                                           {Array.from(rxAgg.entries()).map(([emoji, info]) => (
@@ -1146,20 +1342,70 @@ export default function Channels() {
             </div>
 
             <div className="border-t border-gray-200 p-3">
+              {pendingFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {pendingFiles.map((pf, idx) => (
+                    <div key={idx} className="relative group flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md pl-2 pr-8 py-1.5 max-w-[240px]">
+                      {pf.previewUrl ? (
+                        <img src={pf.previewUrl} alt="" className="w-8 h-8 object-cover rounded flex-shrink-0" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[12px] text-gray-900 truncate">{pf.file.name}</div>
+                        <div className="text-[10px] text-gray-500">{formatFileSize(pf.file.size)}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removePendingFile(idx)}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-800"
+                        title="Remove"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="relative">
+                <input
+                  type="file"
+                  multiple
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.length) addFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
                 <Textarea
                   ref={textareaRef}
                   value={draft}
                   onChange={handleDraftChange}
                   onKeyDown={handleKeyDown}
+                  onPaste={(e) => {
+                    const files = Array.from(e.clipboardData?.files || []);
+                    if (files.length) {
+                      e.preventDefault();
+                      addFiles(files);
+                    }
+                  }}
                   placeholder={
                     selectedChannel.is_dm
                       ? `Message ${displayNameForChannel(selectedChannel)}`
                       : `Message #${selectedChannel.name}`
                   }
                   rows={2}
-                  className="resize-none pr-12"
+                  className="resize-none pr-20 pl-10"
                 />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute left-2 bottom-2 p-1.5 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  title="Attach file"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
                 {mentionQuery && filteredMentions.length > 0 && (
                   <div className="absolute z-10 left-0 bottom-full mb-1 w-64 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
                     {filteredMentions.map((u, i) => (
@@ -1184,15 +1430,15 @@ export default function Channels() {
                 <button
                   type="button"
                   onClick={handleSend}
-                  disabled={!draft.trim() || submitting}
-                  className="absolute right-2 bottom-2 p-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                  disabled={(!draft.trim() && pendingFiles.length === 0) || submitting}
+                  className="absolute right-2 bottom-2 p-1.5 rounded-md bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Send (Enter)"
                 >
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  {submitting || uploadingFiles ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </button>
               </div>
               <div className="text-[11px] text-gray-400 mt-1 ml-1">
-                Enter to send · Shift+Enter for new line · @ to mention
+                Enter to send · Shift+Enter for new line · @ to mention · drop or paste files
               </div>
             </div>
           </>

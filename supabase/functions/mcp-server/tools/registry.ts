@@ -31,6 +31,7 @@ const ENTITIES: Array<[string, string]> = [
   ["chat_channels", "Chat Channel"],
   ["chat_messages", "Chat Message"],
   ["chat_message_reactions", "Chat Message Reaction"],
+  ["chat_message_attachments", "Chat Message Attachment"],
   ["task_attachments", "Task Attachment"],
   ["task_comments", "Task Comment"],
   ["notification_preferences", "Notification Preference"],

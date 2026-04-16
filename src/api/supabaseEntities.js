@@ -121,6 +121,7 @@ export const TaskComment = createEntity('task_comments');
 export const ChatChannel = createEntity('chat_channels');
 export const ChatMessage = createEntity('chat_messages');
 export const ChatMessageReaction = createEntity('chat_message_reactions');
+export const ChatMessageAttachment = createEntity('chat_message_attachments');
 export const TimeEntry = createEntity('time_entries');
 export const Lead = createEntity('leads');
 export const Activity = createEntity('activities');
