@@ -10,7 +10,7 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [filter, setFilter] = useState("all"); // all | unread | <category>
+  const [filter, setFilter] = useState("unread"); // all | unread | <category>
 
   const load = useCallback(async () => {
     if (!user?.id) return;
