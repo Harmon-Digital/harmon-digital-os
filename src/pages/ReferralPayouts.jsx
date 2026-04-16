@@ -338,11 +338,14 @@ export default function ReferralPayouts() {
               return (
                 <div
                   key={payout.id}
-                  className={`flex items-center gap-3 px-3 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
+                  className={`group flex items-center gap-3 px-3 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
                     checked ? "bg-gray-50 dark:bg-gray-900" : ""
                   }`}
                 >
-                  <div className="w-6 flex justify-center shrink-0">
+                  <div
+                    className="w-6 flex justify-center shrink-0 opacity-0 group-hover:opacity-100 data-[checked=true]:opacity-100 transition-opacity"
+                    data-checked={checked}
+                  >
                     <Checkbox
                       checked={checked}
                       onCheckedChange={() => toggleSelect(payout.id)}

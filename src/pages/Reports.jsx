@@ -450,11 +450,14 @@ export default function Reports() {
                         return (
                           <div
                             key={entry.id}
-                            className={`flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
+                            className={`group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
                               selectedIds.includes(entry.id) ? "bg-gray-50 dark:bg-gray-900" : ""
                             }`}
                           >
-                            <div className="w-5 flex-shrink-0">
+                            <div
+                              className="w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 data-[checked=true]:opacity-100 transition-opacity"
+                              data-checked={selectedIds.includes(entry.id)}
+                            >
                               <Checkbox
                                 checked={selectedIds.includes(entry.id)}
                                 onCheckedChange={() => toggleSelect(entry.id)}
@@ -637,11 +640,14 @@ export default function Reports() {
                             return (
                               <div
                                 key={entry.id}
-                                className={`flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
+                                className={`group flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
                                   selectedBonusIds.includes(entry.id) ? "bg-gray-50 dark:bg-gray-900" : ""
                                 }`}
                               >
-                                <div className="w-5 flex-shrink-0">
+                                <div
+                                  className="w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 data-[checked=true]:opacity-100 transition-opacity"
+                                  data-checked={selectedBonusIds.includes(entry.id)}
+                                >
                                   {earned && (
                                     <Checkbox
                                       checked={selectedBonusIds.includes(entry.id)}
