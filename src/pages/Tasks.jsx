@@ -61,6 +61,7 @@ import {
 } from "../components/tasks/TaskIcons";
 import { api } from "@/api/legacyClient";
 import { sendNotification } from "@/api/functions";
+import { toast } from "@/lib/toast";
 
 export default function Tasks() {
   const { user: authUser, userProfile } = useAuth();
@@ -223,6 +224,7 @@ export default function Tasks() {
     setShowDrawer(false);
     setEditingTask(null);
     loadData();
+    toast.success(isNewTask ? "Task created" : "Task saved");
   };
 
   const handleOpenDrawer = (task) => {
@@ -296,14 +298,17 @@ export default function Tasks() {
   };
 
   const handleBulkDelete = async () => {
+    const count = deleteConfirmDialog.taskIds.length;
     try {
       await Promise.all(deleteConfirmDialog.taskIds.map(id => Task.delete(id)));
       setSelectedTasks([]);
       setDeleteConfirmDialog({ open: false, taskIds: [] });
-      
+
       setTasks(prevTasks => prevTasks.filter(t => !deleteConfirmDialog.taskIds.includes(t.id)));
+      toast.success(`${count} task${count === 1 ? "" : "s"} deleted`);
     } catch (error) {
       console.error("Error deleting tasks:", error);
+      toast.error("Couldn't delete", { description: error.message });
     }
   };
 

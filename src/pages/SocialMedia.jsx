@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import SocialPostForm from "../components/social/SocialPostForm";
+import { toast } from "@/lib/toast";
 
 export default function SocialMedia() {
   const { user } = useAuth();
@@ -120,7 +121,7 @@ export default function SocialMedia() {
       loadData();
     } catch (error) {
       console.error("Error saving social post:", error);
-      alert("Failed to save post: " + error.message);
+      toast.error("Couldn't save post", { description: error.message });
     }
   };
 

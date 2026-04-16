@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import TimeEntryForm from "../components/time/TimeEntryForm";
+import { toast } from "@/lib/toast";
 import WeeklyCalendarView from "../components/time/WeeklyCalendarView";
 
 export default function TimeTracking() {
@@ -143,14 +144,20 @@ export default function TimeTracking() {
   };
 
   const handleSubmit = async (entryData) => {
-    if (editingEntry) {
-      await TimeEntry.update(editingEntry.id, entryData);
-    } else {
-      await TimeEntry.create(entryData);
+    const isNew = !editingEntry;
+    try {
+      if (editingEntry) {
+        await TimeEntry.update(editingEntry.id, entryData);
+      } else {
+        await TimeEntry.create(entryData);
+      }
+      setShowDrawer(false);
+      setEditingEntry(null);
+      loadData();
+      toast.success(isNew ? `Logged ${entryData.hours}h` : "Time entry saved");
+    } catch (err) {
+      toast.error("Couldn't save time entry", { description: err.message });
     }
-    setShowDrawer(false);
-    setEditingEntry(null);
-    loadData();
   };
 
   const handleEdit = (entry) => {
@@ -181,9 +188,14 @@ export default function TimeTracking() {
 
   const handleDelete = async () => {
     if (deleteDialog.entryId) {
-      await TimeEntry.delete(deleteDialog.entryId);
-      setDeleteDialog({ open: false, entryId: null });
-      loadData();
+      try {
+        await TimeEntry.delete(deleteDialog.entryId);
+        setDeleteDialog({ open: false, entryId: null });
+        loadData();
+        toast.success("Time entry deleted");
+      } catch (err) {
+        toast.error("Couldn't delete", { description: err.message });
+      }
     }
   };
 

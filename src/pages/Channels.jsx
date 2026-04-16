@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { toast } from "@/lib/toast";
 import {
   Hash,
   Plus,
@@ -760,7 +761,7 @@ export default function Channels() {
     const valid = [];
     for (const f of files) {
       if (f.size > MAX_FILE_SIZE) {
-        alert(`${f.name} is too large (max 25 MB)`);
+        toast.error(`${f.name} is too large`, { description: "Max file size is 25 MB" });
         continue;
       }
       valid.push({ file: f, previewUrl: isImageType(f.type) ? URL.createObjectURL(f) : null });
@@ -872,6 +873,7 @@ export default function Channels() {
       }
     } catch (err) {
       console.error("Error sending message:", err);
+      toast.error("Couldn't send message", { description: err?.message });
     } finally {
       setSubmitting(false);
       setUploadingFiles(false);
