@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Project, Account } from "@/api/entities";
 import { sendNotification } from "@/api/functions";
+import InlineEdit from "@/components/ui/InlineEdit";
 import { supabase } from "@/api/supabaseClient";
 import { createPageUrl } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -188,6 +189,15 @@ export default function Projects() {
       setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, ...saved } : p)));
     } catch (err) {
       console.error("status change failed:", err);
+    }
+  };
+
+  const handleInlineRename = async (projectId, name) => {
+    try {
+      const saved = await Project.update(projectId, { name });
+      setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, ...saved } : p)));
+    } catch (err) {
+      console.error("rename failed:", err);
     }
   };
 
@@ -426,6 +436,7 @@ export default function Projects() {
         }}
         onDelete={(id) => setDeleteDialog({ open: true, projectId: id })}
         onQuickStatusChange={handleQuickStatusChange}
+        onInlineRename={handleInlineRename}
       />
 
       <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
@@ -490,6 +501,7 @@ function ProjectRow({
   onEdit,
   onDelete,
   onQuickStatusChange,
+  onInlineRename,
 }) {
   return (
     <div
@@ -507,8 +519,12 @@ function ProjectRow({
         <RiskDot risk={project.risk_level} />
       </div>
 
-      <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 font-medium">
-        {project.name}
+      <span className="flex-1 min-w-0 text-[13px] text-gray-900 font-medium">
+        <InlineEdit
+          value={project.name}
+          onSave={(next) => onInlineRename(project.id, next)}
+          placeholder="Untitled project"
+        />
       </span>
 
       {activeTab === "client" && account && (
@@ -583,6 +599,7 @@ function LinearProjectList({
   onEdit,
   onDelete,
   onQuickStatusChange,
+  onInlineRename,
 }) {
   const [collapsed, setCollapsed] = React.useState(() => new Set());
   const toggleGroup = (id) =>
@@ -646,6 +663,7 @@ function LinearProjectList({
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onQuickStatusChange={onQuickStatusChange}
+                  onInlineRename={onInlineRename}
                 />
               ))}
           </div>

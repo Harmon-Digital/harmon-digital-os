@@ -63,6 +63,7 @@ import {
 import { api } from "@/api/legacyClient";
 import { sendNotification } from "@/api/functions";
 import { toast } from "@/lib/toast";
+import InlineEdit from "@/components/ui/InlineEdit";
 
 export default function Tasks() {
   const { user: authUser, userProfile } = useAuth();
@@ -1118,11 +1119,15 @@ function TaskRow({
       </PriorityPicker>
 
       <span
-        className={`flex-1 min-w-0 truncate text-[13px] ${
+        className={`flex-1 min-w-0 text-[13px] ${
           task.status === "completed" ? "text-gray-400 line-through" : "text-gray-900"
         }`}
       >
-        {task.title}
+        <InlineEdit
+          value={task.title}
+          onSave={(next) => onQuickUpdate(task.id, "title", next)}
+          placeholder="Untitled task"
+        />
       </span>
 
       {checklist.length > 0 && (
