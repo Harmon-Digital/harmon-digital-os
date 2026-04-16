@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import LeadForm from "../components/crm/LeadForm";
+import FormShell from "@/components/ui/FormShell";
 
 const PRIORITY_OPTIONS = [
   { value: "hot", label: "Hot", icon: Flame, color: "text-red-500" },
@@ -795,21 +796,20 @@ export default function CRM() {
       </Sheet>
 
       {/* Lead Form Sheet */}
-      <Sheet open={showLeadForm} onOpenChange={setShowLeadForm}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingLead ? "Edit Lead" : "Add New Lead"}</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6">
-            <LeadForm
-              lead={editingLead}
-              teamMembers={teamMembers}
-              onSubmit={handleSubmitLead}
-              onCancel={() => { setShowLeadForm(false); setEditingLead(null); }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FormShell
+        open={showLeadForm}
+        onOpenChange={setShowLeadForm}
+        storageKey="hdo.leadForm.viewMode"
+        title={editingLead ? "Edit Lead" : "Add New Lead"}
+        description={editingLead ? "Update lead details" : "Create a new lead"}
+      >
+        <LeadForm
+          lead={editingLead}
+          teamMembers={teamMembers}
+          onSubmit={handleSubmitLead}
+          onCancel={() => { setShowLeadForm(false); setEditingLead(null); }}
+        />
+      </FormShell>
 
       {/* Delete Dialog */}
       <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>

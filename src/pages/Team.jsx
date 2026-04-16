@@ -15,13 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -29,6 +22,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import FormShell from "@/components/ui/FormShell";
 import TeamMemberForm from "../components/team/TeamMemberForm";
 
 export default function Team() {
@@ -659,27 +653,23 @@ export default function Team() {
         </div>
       )}
 
-      <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingMember ? "Edit Team Member" : "Add Team Member"}</SheetTitle>
-            <SheetDescription>
-              {editingMember ? "Update team member details" : "Add a new team member with role and bio"}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            <TeamMemberForm
-              teamMember={editingMember}
-              users={users}
-              onSubmit={handleSubmit}
-              onCancel={() => {
-                setShowDrawer(false);
-                setEditingMember(null);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FormShell
+        open={showDrawer}
+        onOpenChange={setShowDrawer}
+        storageKey="hdo.teamMemberForm.viewMode"
+        title={editingMember ? "Edit Team Member" : "Add Team Member"}
+        description={editingMember ? "Update team member details" : "Add a new team member with role and bio"}
+      >
+        <TeamMemberForm
+          teamMember={editingMember}
+          users={users}
+          onSubmit={handleSubmit}
+          onCancel={() => {
+            setShowDrawer(false);
+            setEditingMember(null);
+          }}
+        />
+      </FormShell>
 
       <Dialog open={syncDialog.open} onOpenChange={(open) => setSyncDialog({ ...syncDialog, open })}>
         <DialogContent>

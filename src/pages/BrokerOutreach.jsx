@@ -18,13 +18,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
+import FormShell from "@/components/ui/FormShell";
 import {
   Plus,
   Search,
@@ -958,76 +953,77 @@ export default function BrokerOutreach() {
       </Dialog>
 
       {/* KPI Settings Sheet */}
-      <Sheet open={showKpiSettings} onOpenChange={setShowKpiSettings}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Set KPI Goals</SheetTitle>
-          </SheetHeader>
-          <div className="mt-6 space-y-6">
-            <div className="space-y-2">
-              <Label>Team Member</Label>
-              <Select value={kpiMember?.id || ""} onValueChange={(id) => {
-                const member = teamMembers.find(m => m.id === id);
-                if (member) {
-                  setKpiMember(member);
-                  const entry = kpiEntries.find(e => e.team_member_id === id);
-                  const wg = entry ? Number(entry.target_value) || 0 : 0;
-                  setKpiDailyGoal(Math.ceil(wg / 5));
-                  setKpiWeeklyGoal(wg);
-                  setKpiBonus(entry ? Number(entry.bonus_amount) || 0 : 0);
-                }
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select team member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teamMembers.map(member => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Weekly Goal (reach outs per week)</Label>
-              <Input
-                type="number"
-                value={kpiWeeklyGoal}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value) || 0;
-                  setKpiWeeklyGoal(val);
-                  setKpiDailyGoal(Math.ceil(val / 5));
-                }}
-                placeholder="e.g., 25"
-              />
-              <p className="text-xs text-gray-500">
-                Daily target: {kpiWeeklyGoal > 0 ? Math.ceil(kpiWeeklyGoal / 5) : 0} per day (weekly / 5)
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Bonus Amount ($)</Label>
-              <Input
-                type="number"
-                value={kpiBonus}
-                onChange={(e) => setKpiBonus(parseFloat(e.target.value) || 0)}
-                placeholder="e.g., 50"
-              />
-              <p className="text-xs text-gray-500">Bonus earned when weekly goal is met</p>
-            </div>
-
-            <Button
-              className="w-full bg-gray-900 hover:bg-gray-800 text-white"
-              onClick={handleSaveKpi}
-              disabled={!kpiMember}
-            >
-              Save KPI Settings
-            </Button>
+      <FormShell
+        open={showKpiSettings}
+        onOpenChange={setShowKpiSettings}
+        storageKey="hdo.brokerForm.viewMode"
+        title="Set KPI Goals"
+        description="Configure weekly reach out goals and bonus incentives"
+      >
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Label>Team Member</Label>
+            <Select value={kpiMember?.id || ""} onValueChange={(id) => {
+              const member = teamMembers.find(m => m.id === id);
+              if (member) {
+                setKpiMember(member);
+                const entry = kpiEntries.find(e => e.team_member_id === id);
+                const wg = entry ? Number(entry.target_value) || 0 : 0;
+                setKpiDailyGoal(Math.ceil(wg / 5));
+                setKpiWeeklyGoal(wg);
+                setKpiBonus(entry ? Number(entry.bonus_amount) || 0 : 0);
+              }
+            }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select team member" />
+              </SelectTrigger>
+              <SelectContent>
+                {teamMembers.map(member => (
+                  <SelectItem key={member.id} value={member.id}>
+                    {member.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </SheetContent>
-      </Sheet>
+
+          <div className="space-y-2">
+            <Label>Weekly Goal (reach outs per week)</Label>
+            <Input
+              type="number"
+              value={kpiWeeklyGoal}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 0;
+                setKpiWeeklyGoal(val);
+                setKpiDailyGoal(Math.ceil(val / 5));
+              }}
+              placeholder="e.g., 25"
+            />
+            <p className="text-xs text-gray-500">
+              Daily target: {kpiWeeklyGoal > 0 ? Math.ceil(kpiWeeklyGoal / 5) : 0} per day (weekly / 5)
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Bonus Amount ($)</Label>
+            <Input
+              type="number"
+              value={kpiBonus}
+              onChange={(e) => setKpiBonus(parseFloat(e.target.value) || 0)}
+              placeholder="e.g., 50"
+            />
+            <p className="text-xs text-gray-500">Bonus earned when weekly goal is met</p>
+          </div>
+
+          <Button
+            className="w-full bg-gray-900 hover:bg-gray-800 text-white"
+            onClick={handleSaveKpi}
+            disabled={!kpiMember}
+          >
+            Save KPI Settings
+          </Button>
+        </div>
+      </FormShell>
 
       {/* Add Broker Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>

@@ -17,13 +17,7 @@ import {
   List as ListIcon,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import FormShell from "@/components/ui/FormShell";
 import {
   Dialog,
   DialogContent,
@@ -545,31 +539,27 @@ export default function TimeTracking() {
       )}
       </div>
 
-      <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingEntry ? "Edit Time Entry" : "Log Time"}</SheetTitle>
-            <SheetDescription>
-              {editingEntry ? "Update time entry details" : "Record hours worked on a project"}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            <TimeEntryForm
-              timeEntry={editingEntry}
-              projects={projects}
-              tasks={tasks}
-              teamMembers={teamMembers}
-              currentTeamMember={currentTeamMember}
-              onSubmit={handleSubmit}
-              onAutoSave={handleAutoSave}
-              onCancel={() => {
-                setShowDrawer(false);
-                setEditingEntry(null);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FormShell
+        open={showDrawer}
+        onOpenChange={setShowDrawer}
+        storageKey="hdo.timeEntryForm.viewMode"
+        title={editingEntry ? "Edit Time Entry" : "Log Time"}
+        description={editingEntry ? "Update time entry details" : "Record hours worked on a project"}
+      >
+        <TimeEntryForm
+          timeEntry={editingEntry}
+          projects={projects}
+          tasks={tasks}
+          teamMembers={teamMembers}
+          currentTeamMember={currentTeamMember}
+          onSubmit={handleSubmit}
+          onAutoSave={handleAutoSave}
+          onCancel={() => {
+            setShowDrawer(false);
+            setEditingEntry(null);
+          }}
+        />
+      </FormShell>
 
       <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
         <DialogContent>

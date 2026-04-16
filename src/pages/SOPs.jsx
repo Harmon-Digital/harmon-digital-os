@@ -12,13 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import FormShell from "@/components/ui/FormShell";
 import {
   Dialog,
   DialogContent,
@@ -337,25 +331,23 @@ export default function SOPs() {
       </div>
 
       {/* SOP Form Drawer */}
-      <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingSOP ? "Edit SOP" : "New SOP"}</SheetTitle>
-            <SheetDescription>
-              {editingSOP ? "Update standard operating procedure" : "Create a new standard operating procedure"}
-            </SheetDescription>
-          </SheetHeader>
-          <SOPForm
-            sop={editingSOP}
-            categories={categories}
-            onSubmit={handleSubmit}
-            onCancel={() => {
-              setShowDrawer(false);
-              setEditingSOP(null);
-            }}
-          />
-        </SheetContent>
-      </Sheet>
+      <FormShell
+        open={showDrawer}
+        onOpenChange={setShowDrawer}
+        storageKey="hdo.sopForm.viewMode"
+        title={editingSOP ? "Edit SOP" : "New SOP"}
+        description={editingSOP ? "Update standard operating procedure" : "Create a new standard operating procedure"}
+      >
+        <SOPForm
+          sop={editingSOP}
+          categories={categories}
+          onSubmit={handleSubmit}
+          onCancel={() => {
+            setShowDrawer(false);
+            setEditingSOP(null);
+          }}
+        />
+      </FormShell>
 
       {/* View SOP Dialog */}
       <Dialog open={!!viewingSOP} onOpenChange={(open) => !open && setViewingSOP(null)}>

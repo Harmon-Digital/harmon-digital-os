@@ -7,13 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Building2, Search, Edit, Trash2, Mail, Phone, Users, Filter, ExternalLink } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import FormShell from "@/components/ui/FormShell";
 import {
   Select,
   SelectContent,
@@ -355,26 +349,22 @@ export default function Accounts() {
       </div>
 
       {/* Account Form Drawer */}
-      <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingAccount ? "Edit Account" : "New Account"}</SheetTitle>
-            <SheetDescription>
-              {editingAccount ? "Update account details" : "Create a new client account"}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            <AccountForm
-              account={editingAccount}
-              onSubmit={handleSubmit}
-              onCancel={() => {
-                setShowDrawer(false);
-                setEditingAccount(null);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FormShell
+        open={showDrawer}
+        onOpenChange={setShowDrawer}
+        storageKey="hdo.accountForm.viewMode"
+        title={editingAccount ? "Edit Account" : "New Account"}
+        description={editingAccount ? "Update account details" : "Create a new client account"}
+      >
+        <AccountForm
+          account={editingAccount}
+          onSubmit={handleSubmit}
+          onCancel={() => {
+            setShowDrawer(false);
+            setEditingAccount(null);
+          }}
+        />
+      </FormShell>
 
       {/* Contacts Dialog */}
       <Dialog open={showContactsDialog} onOpenChange={setShowContactsDialog}>

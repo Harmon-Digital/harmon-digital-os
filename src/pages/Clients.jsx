@@ -12,13 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import FormShell from "@/components/ui/FormShell";
 import ClientForm from "../components/clients/ClientForm";
 
 export default function Clients() {
@@ -169,26 +163,22 @@ export default function Clients() {
         </Table>
       </div>
 
-      <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingClient ? "Edit Client" : "Add New Client"}</SheetTitle>
-            <SheetDescription>
-              {editingClient ? "Update client information" : "Add a new client to your agency"}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            <ClientForm
-              client={editingClient}
-              onSubmit={handleSubmit}
-              onCancel={() => {
-                setShowDrawer(false);
-                setEditingClient(null);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FormShell
+        open={showDrawer}
+        onOpenChange={setShowDrawer}
+        storageKey="hdo.clientForm.viewMode"
+        title={editingClient ? "Edit Client" : "Add New Client"}
+        description={editingClient ? "Update client information" : "Add a new client to your agency"}
+      >
+        <ClientForm
+          client={editingClient}
+          onSubmit={handleSubmit}
+          onCancel={() => {
+            setShowDrawer(false);
+            setEditingClient(null);
+          }}
+        />
+      </FormShell>
     </div>
   );
 }

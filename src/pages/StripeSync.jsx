@@ -32,13 +32,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -46,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import FormShell from "@/components/ui/FormShell";
 
 export default function StripeSync() {
   const [products, setProducts] = useState([]);
@@ -908,26 +902,24 @@ export default function StripeSync() {
       </Dialog>
 
       {/* Invoice Drawer */}
-      <Sheet open={showInvoiceDrawer} onOpenChange={setShowInvoiceDrawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingInvoice ? 'Edit Invoice' : 'New Invoice'}</SheetTitle>
-            <SheetDescription>
-              {editingInvoice ? 'Update invoice details' : 'Create a new invoice'}
-            </SheetDescription>
-          </SheetHeader>
-          <InvoiceForm
-            invoice={editingInvoice}
-            accounts={accounts}
-            projects={projects}
-            onSubmit={handleSaveInvoice}
-            onCancel={() => {
-              setShowInvoiceDrawer(false);
-              setEditingInvoice(null);
-            }}
-          />
-        </SheetContent>
-      </Sheet>
+      <FormShell
+        open={showInvoiceDrawer}
+        onOpenChange={setShowInvoiceDrawer}
+        storageKey="hdo.stripeSyncForm.viewMode"
+        title={editingInvoice ? 'Edit Invoice' : 'New Invoice'}
+        description={editingInvoice ? 'Update invoice details' : 'Create a new invoice'}
+      >
+        <InvoiceForm
+          invoice={editingInvoice}
+          accounts={accounts}
+          projects={projects}
+          onSubmit={handleSaveInvoice}
+          onCancel={() => {
+            setShowInvoiceDrawer(false);
+            setEditingInvoice(null);
+          }}
+        />
+      </FormShell>
 
       {/* Delete Invoice Dialog */}
       <Dialog open={deleteInvoiceDialog.open} onOpenChange={(open) => setDeleteInvoiceDialog({ ...deleteInvoiceDialog, open })}>

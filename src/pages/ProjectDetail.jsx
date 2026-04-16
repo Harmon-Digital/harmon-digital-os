@@ -53,13 +53,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import FormShell from "@/components/ui/FormShell";
 import {
   Dialog,
   DialogContent,
@@ -1655,77 +1649,65 @@ export default function ProjectDetail() {
       </Tabs>
 
       {/* Task Drawer */}
-      <Sheet open={showTaskDrawer} onOpenChange={setShowTaskDrawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingTask ? "Edit Task" : "New Task"}</SheetTitle>
-            <SheetDescription>
-              {editingTask ? "Update task details" : "Create a new task for this project"}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            <TaskForm
-              task={editingTask}
-              projects={[project]}
-              teamMembers={teamMembers}
-              onSubmit={handleTaskSubmit}
-              onCancel={() => {
-                setShowTaskDrawer(false);
-                setEditingTask(null);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FormShell
+        open={showTaskDrawer}
+        onOpenChange={setShowTaskDrawer}
+        storageKey="hdo.taskViewMode"
+        title={editingTask ? "Edit Task" : "New Task"}
+        description={editingTask ? "Update task details" : "Create a new task for this project"}
+      >
+        <TaskForm
+          task={editingTask}
+          projects={[project]}
+          teamMembers={teamMembers}
+          onSubmit={handleTaskSubmit}
+          onCancel={() => {
+            setShowTaskDrawer(false);
+            setEditingTask(null);
+          }}
+        />
+      </FormShell>
 
       {/* Time Entry Drawer */}
-      <Sheet open={showTimeDrawer} onOpenChange={setShowTimeDrawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingTimeEntry ? "Edit Time Entry" : "New Time Entry"}</SheetTitle>
-            <SheetDescription>
-              {editingTimeEntry ? "Update time entry details" : "Log time for this project"}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            <TimeEntryForm
-              timeEntry={editingTimeEntry}
-              projects={[project]}
-              tasks={tasks}
-              teamMembers={teamMembers}
-              currentTeamMember={currentTeamMember}
-              onSubmit={handleTimeSubmit}
-              onCancel={() => {
-                setShowTimeDrawer(false);
-                setEditingTimeEntry(null);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FormShell
+        open={showTimeDrawer}
+        onOpenChange={setShowTimeDrawer}
+        storageKey="hdo.timeEntryForm.viewMode"
+        title={editingTimeEntry ? "Edit Time Entry" : "New Time Entry"}
+        description={editingTimeEntry ? "Update time entry details" : "Log time for this project"}
+      >
+        <TimeEntryForm
+          timeEntry={editingTimeEntry}
+          projects={[project]}
+          tasks={tasks}
+          teamMembers={teamMembers}
+          currentTeamMember={currentTeamMember}
+          onSubmit={handleTimeSubmit}
+          onCancel={() => {
+            setShowTimeDrawer(false);
+            setEditingTimeEntry(null);
+          }}
+        />
+      </FormShell>
 
       {/* Contact Drawer */}
-      <Sheet open={showContactDrawer} onOpenChange={setShowContactDrawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingContact ? "Edit Contact" : "New Contact"}</SheetTitle>
-            <SheetDescription>
-              {editingContact ? "Update contact details" : "Add a new contact for this account"}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            <ContactForm
-              contact={editingContact}
-              accounts={[account].filter(Boolean)}
-              onSubmit={handleContactSubmit}
-              onCancel={() => {
-                setShowContactDrawer(false);
-                setEditingContact(null);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FormShell
+        open={showContactDrawer}
+        onOpenChange={setShowContactDrawer}
+        storageKey="hdo.contactForm.viewMode"
+        title={editingContact ? "Edit Contact" : "New Contact"}
+        description={editingContact ? "Update contact details" : "Add a new contact for this account"}
+      >
+        <ContactForm
+          contact={editingContact}
+          accounts={[account].filter(Boolean)}
+          onSubmit={handleContactSubmit}
+          onCancel={() => {
+            setShowContactDrawer(false);
+            setEditingContact(null);
+          }}
+        />
+      </FormShell>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmDialog.open} onOpenChange={(open) => setDeleteConfirmDialog({ ...deleteConfirmDialog, open })}>

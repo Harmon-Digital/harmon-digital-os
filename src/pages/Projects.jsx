@@ -25,13 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import FormShell from "@/components/ui/FormShell";
 import {
   Select,
   SelectContent,
@@ -439,28 +433,24 @@ export default function Projects() {
         onInlineRename={handleInlineRename}
       />
 
-      <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingProject ? "Edit Project" : "New Project"}</SheetTitle>
-            <SheetDescription>
-              {editingProject ? "Update project details" : "Create a new project"}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            <ProjectForm
-              project={editingProject}
-              accounts={accounts}
-              onSubmit={handleSubmit}
-              onAutoSave={handleAutoSave}
-              onCancel={() => {
-                setShowDrawer(false);
-                setEditingProject(null);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FormShell
+        open={showDrawer}
+        onOpenChange={setShowDrawer}
+        storageKey="hdo.projectForm.viewMode"
+        title={editingProject ? "Edit Project" : "New Project"}
+        description={editingProject ? "Update project details" : "Create a new project"}
+      >
+        <ProjectForm
+          project={editingProject}
+          accounts={accounts}
+          onSubmit={handleSubmit}
+          onAutoSave={handleAutoSave}
+          onCancel={() => {
+            setShowDrawer(false);
+            setEditingProject(null);
+          }}
+        />
+      </FormShell>
 
       <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
         <DialogContent>

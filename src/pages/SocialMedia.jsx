@@ -11,13 +11,7 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PostStatusIcon, PostStatusPicker, PlatformChip, STATUS_LIST as POST_STATUS_LIST } from "../components/social/PostIcons";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import FormShell from "@/components/ui/FormShell";
 import {
   Dialog,
   DialogContent,
@@ -517,29 +511,25 @@ export default function SocialMedia() {
       )}
       </div>
 
-      <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingPost ? "Edit Social Post" : "New Social Post"}</SheetTitle>
-            <SheetDescription>
-              {editingPost ? "Update post details" : "Create a new social media post"}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            <SocialPostForm
-              socialPost={editingPost}
-              accounts={accounts}
-              teamMembers={teamMembers}
-              onSubmit={handleSubmit}
-              onAutoSave={handleAutoSave}
-              onCancel={() => {
-                setShowDrawer(false);
-                setEditingPost(null);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <FormShell
+        open={showDrawer}
+        onOpenChange={setShowDrawer}
+        storageKey="hdo.socialPostForm.viewMode"
+        title={editingPost ? "Edit Social Post" : "New Social Post"}
+        description={editingPost ? "Update post details" : "Create a new social media post"}
+      >
+        <SocialPostForm
+          socialPost={editingPost}
+          accounts={accounts}
+          teamMembers={teamMembers}
+          onSubmit={handleSubmit}
+          onAutoSave={handleAutoSave}
+          onCancel={() => {
+            setShowDrawer(false);
+            setEditingPost(null);
+          }}
+        />
+      </FormShell>
 
       <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
         <DialogContent>

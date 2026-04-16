@@ -13,13 +13,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -27,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Edit, Search } from "lucide-react";
+import FormShell from "@/components/ui/FormShell";
 
 export default function Partners() {
   const { userProfile, invitePartner } = useAuth();
@@ -438,26 +432,27 @@ export default function Partners() {
       </Dialog>
 
       {/* Edit Sheet */}
-      <Sheet open={editSheet} onOpenChange={setEditSheet}>
-        <SheetContent className="overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Edit Partner</SheetTitle>
-            <SheetDescription>Update partner details and commission terms</SheetDescription>
-          </SheetHeader>
-          {editingPartner && (
-            <div className="space-y-4 mt-6">
-              <div className="space-y-2">
-                <Label>Contact Name</Label>
-                <Input
-                  value={editingPartner.contact_name}
-                  onChange={(e) =>
-                    setEditingPartner({
-                      ...editingPartner,
-                      contact_name: e.target.value,
-                    })
-                  }
-                />
-              </div>
+      <FormShell
+        open={editSheet}
+        onOpenChange={setEditSheet}
+        storageKey="hdo.partnerForm.viewMode"
+        title="Edit Partner"
+        description="Update partner details and commission terms"
+      >
+        {editingPartner && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Contact Name</Label>
+              <Input
+                value={editingPartner.contact_name}
+                onChange={(e) =>
+                  setEditingPartner({
+                    ...editingPartner,
+                    contact_name: e.target.value,
+                  })
+                }
+              />
+            </div>
               <div className="space-y-2">
                 <Label>Company Name</Label>
                 <Input
@@ -583,10 +578,9 @@ export default function Partners() {
                   </div>
                 </div>
               )}
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+          </div>
+        )}
+      </FormShell>
 
       {/* Add Referral Dialog */}
       <Dialog open={referralDialog} onOpenChange={setReferralDialog}>

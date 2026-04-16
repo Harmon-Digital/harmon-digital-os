@@ -6,13 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Edit, Trash2, Mail, Phone, Building2, MessageSquare, Filter } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import FormShell from "@/components/ui/FormShell";
 import {
   Select,
   SelectContent,
@@ -389,16 +383,15 @@ export default function Contacts() {
       </div>
 
       {/* Contact Drawer with Tabs */}
-      <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingContact ? `${editingContact.first_name} ${editingContact.last_name}` : "New Contact"}</SheetTitle>
-            <SheetDescription>
-              {editingContact ? "Manage contact details and activities" : "Create a new contact"}
-            </SheetDescription>
-          </SheetHeader>
-
-          <Tabs defaultValue="details" className="mt-6">
+      <FormShell
+        open={showDrawer}
+        onOpenChange={setShowDrawer}
+        storageKey="hdo.contactForm.viewMode"
+        title={editingContact ? `${editingContact.first_name} ${editingContact.last_name}` : "New Contact"}
+        description={editingContact ? "Manage contact details and activities" : "Create a new contact"}
+        sheetClassName="w-full sm:max-w-2xl overflow-y-auto"
+      >
+        <Tabs defaultValue="details">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="details">Contact Details</TabsTrigger>
               <TabsTrigger value="activities" disabled={!editingContact}>
@@ -525,8 +518,7 @@ export default function Contacts() {
               )}
             </TabsContent>
           </Tabs>
-        </SheetContent>
-      </Sheet>
+      </FormShell>
 
       {/* Activity Dialog */}
       <Dialog open={showActivityDialog} onOpenChange={setShowActivityDialog}>

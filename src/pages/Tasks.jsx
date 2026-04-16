@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3, PanelRight, Maximize2, Filter, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3, Filter, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { stripHtml } from "@/components/ui/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
@@ -19,13 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import FormShell from "@/components/ui/FormShell";
 import {
   Select,
   SelectContent,
@@ -85,16 +79,6 @@ export default function Tasks() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [taskViewMode, setTaskViewMode] = useState(() => {
-    if (typeof window === "undefined") return "sidebar";
-    return window.localStorage.getItem("hdo.taskViewMode") || "sidebar";
-  });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("hdo.taskViewMode", taskViewMode);
-    }
-  }, [taskViewMode]);
   const [loading, setLoading] = useState(true);
   
   const [searchQuery, setSearchQuery] = useState("");
@@ -922,93 +906,35 @@ export default function Tasks() {
         </div>
       )}
 
-      {taskViewMode === "sidebar" ? (
-        <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
-          <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-            <button
-              type="button"
-              onClick={() => setTaskViewMode("center")}
-              className="absolute right-12 top-4 p-1 rounded-sm opacity-70 hover:opacity-100 text-gray-500 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              title="Switch to center view"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
-            <SheetHeader>
-              <SheetTitle>{editingTask ? "Edit Task" : "New Task"}</SheetTitle>
-              <SheetDescription>
-                {editingTask ? "Update task details" : "Create a new task"}
-              </SheetDescription>
-            </SheetHeader>
-            <div className="mt-6">
-              <TaskForm
-                task={editingTask}
-                projects={projects}
-                teamMembers={teamMembers}
-                onSubmit={handleSubmit}
-                onAutoSave={handleAutoSave}
-                onCancel={() => {
-                  setShowDrawer(false);
-                  setEditingTask(null);
-                }}
-              />
-              {editingTask && (
-                <div className="mt-8 pt-6 border-t">
-                  <TaskComments
-                    taskId={editingTask.id}
-                    task={editingTask}
-                    teamMembers={teamMembers}
-                    projectsMap={projectsMap}
-                  />
-                </div>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
-      ) : (
-        <Dialog open={showDrawer} onOpenChange={setShowDrawer}>
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-            <button
-              type="button"
-              onClick={() => setTaskViewMode("sidebar")}
-              className="absolute right-12 top-4 p-1 rounded-sm opacity-70 hover:opacity-100 text-gray-500 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              title="Switch to sidebar view"
-            >
-              <PanelRight className="w-4 h-4" />
-            </button>
-            <DialogHeader>
-              <DialogTitle>{editingTask ? "Edit Task" : "New Task"}</DialogTitle>
-              <DialogDescription>
-                {editingTask ? "Update task details" : "Create a new task"}
-              </DialogDescription>
-            </DialogHeader>
-            <div className={`mt-4 grid gap-8 ${editingTask ? "lg:grid-cols-[minmax(0,1fr)_360px]" : ""}`}>
-              <div className="min-w-0">
-                <TaskForm
-                  task={editingTask}
-                  projects={projects}
-                  teamMembers={teamMembers}
-                  onSubmit={handleSubmit}
-                  onAutoSave={handleAutoSave}
-                  onCancel={() => {
-                    setShowDrawer(false);
-                    setEditingTask(null);
-                  }}
-                />
-              </div>
-              {editingTask && (
-                <div className="min-w-0 lg:border-l lg:pl-8">
-                  <TaskComments
-                    taskId={editingTask.id}
-                    task={editingTask}
-                    teamMembers={teamMembers}
-                    projectsMap={projectsMap}
-                  />
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <FormShell
+        open={showDrawer}
+        onOpenChange={setShowDrawer}
+        storageKey="hdo.taskViewMode"
+        title={editingTask ? "Edit Task" : "New Task"}
+        description={editingTask ? "Update task details" : "Create a new task"}
+      >
+        <TaskForm
+          task={editingTask}
+          projects={projects}
+          teamMembers={teamMembers}
+          onSubmit={handleSubmit}
+          onAutoSave={handleAutoSave}
+          onCancel={() => {
+            setShowDrawer(false);
+            setEditingTask(null);
+          }}
+        />
+        {editingTask && (
+          <div className="mt-8 pt-6 border-t">
+            <TaskComments
+              taskId={editingTask.id}
+              task={editingTask}
+              teamMembers={teamMembers}
+              projectsMap={projectsMap}
+            />
+          </div>
+        )}
+      </FormShell>
 
       <Dialog open={deleteConfirmDialog.open} onOpenChange={(open) => setDeleteConfirmDialog({ ...deleteConfirmDialog, open })}>
         <DialogContent>
