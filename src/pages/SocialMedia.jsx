@@ -6,10 +6,26 @@ import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Trash2, ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon, Check, Filter, List, Calendar as CalendarIcon, Kanban } from "lucide-react";
+import { Plus, Search, Trash2, ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon, Check, Filter, List, Calendar as CalendarIcon, Kanban, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { PostStatusIcon, PostStatusPicker, PlatformChip, STATUS_LIST as POST_STATUS_LIST } from "../components/social/PostIcons";
 import FormShell from "@/components/ui/FormShell";
 import {
@@ -42,9 +58,10 @@ export default function SocialMedia() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [platformFilter, setPlatformFilter] = useState("all");
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, postId: null });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, postIds: [] });
   const [viewMode, setViewMode] = useState("list"); // list or calendar
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedPostIds, setSelectedPostIds] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -126,11 +143,47 @@ export default function SocialMedia() {
   };
 
   const handleDelete = async () => {
-    if (deleteDialog.postId) {
-      const { error } = await supabase.from("social_posts").delete().eq("id", deleteDialog.postId);
-      if (error) { console.error("Error deleting post:", error); return; }
-      setDeleteDialog({ open: false, postId: null });
+    const ids = deleteDialog.postIds?.length
+      ? deleteDialog.postIds
+      : deleteDialog.postId ? [deleteDialog.postId] : [];
+    if (!ids.length) return;
+    try {
+      const { error } = await supabase.from("social_posts").delete().in("id", ids);
+      if (error) throw error;
+      setDeleteDialog({ open: false, postIds: [] });
+      setSelectedPostIds((prev) => prev.filter((id) => !ids.includes(id)));
       loadData();
+      toast.success(`${ids.length} post${ids.length === 1 ? "" : "s"} deleted`);
+    } catch (err) {
+      toast.error("Couldn't delete", { description: err.message });
+    }
+  };
+
+  const handleBulkStatusChange = async (newStatus, idsOverride) => {
+    const ids = idsOverride || selectedPostIds;
+    if (!ids.length) return;
+    try {
+      const { error } = await supabase.from("social_posts").update({ status: newStatus }).in("id", ids);
+      if (error) throw error;
+      setSocialPosts((prev) => prev.map((p) => ids.includes(p.id) ? { ...p, status: newStatus } : p));
+      if (!idsOverride) setSelectedPostIds([]);
+      toast.success(`${ids.length} post${ids.length === 1 ? "" : "s"} updated`);
+    } catch (err) {
+      toast.error("Couldn't update", { description: err.message });
+    }
+  };
+
+  const handleBulkApproval = async (approved, idsOverride) => {
+    const ids = idsOverride || selectedPostIds;
+    if (!ids.length) return;
+    try {
+      const { error } = await supabase.from("social_posts").update({ approved }).in("id", ids);
+      if (error) throw error;
+      setSocialPosts((prev) => prev.map((p) => ids.includes(p.id) ? { ...p, approved } : p));
+      if (!idsOverride) setSelectedPostIds([]);
+      toast.success(`${ids.length} post${ids.length === 1 ? "" : "s"} ${approved ? "approved" : "unapproved"}`);
+    } catch (err) {
+      toast.error("Couldn't update", { description: err.message });
     }
   };
 
@@ -427,7 +480,16 @@ export default function SocialMedia() {
           onApprovalToggle={handleApprovalToggle}
           onStatusChange={handleStatusChange}
           onEdit={handleEdit}
-          onDelete={(id) => setDeleteDialog({ open: true, postId: id })}
+          onDelete={(id) => setDeleteDialog({ open: true, postIds: [id] })}
+          selectedIds={selectedPostIds}
+          onToggleSelect={(id) =>
+            setSelectedPostIds((prev) =>
+              prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+            )
+          }
+          onBulkStatusChange={handleBulkStatusChange}
+          onBulkApproval={handleBulkApproval}
+          onBulkDelete={(ids) => setDeleteDialog({ open: true, postIds: ids })}
         />
       ) : viewMode === "board" ? (
         <BoardView
@@ -511,6 +573,56 @@ export default function SocialMedia() {
       )}
       </div>
 
+      {/* Bulk action bar (shown when posts are selected) */}
+      {selectedPostIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white rounded-md shadow-lg px-3 py-2 z-50">
+          <div className="flex items-center gap-3 text-[13px]">
+            <span className="font-medium tabular-nums">{selectedPostIds.length} selected</span>
+            <div className="w-px h-4 bg-gray-700" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="text-gray-300 hover:text-white text-[13px]">Status</button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {POST_STATUS_LIST.map((s) => (
+                  <DropdownMenuItem key={s.id} onClick={() => handleBulkStatusChange(s.id)}>
+                    {s.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <button
+              type="button"
+              onClick={() => handleBulkApproval(true)}
+              className="text-gray-300 hover:text-green-400 text-[13px]"
+            >
+              Approve
+            </button>
+            <button
+              type="button"
+              onClick={() => handleBulkApproval(false)}
+              className="text-gray-300 hover:text-white text-[13px]"
+            >
+              Unapprove
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteDialog({ open: true, postIds: selectedPostIds })}
+              className="text-gray-300 hover:text-red-400 text-[13px]"
+            >
+              Delete
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedPostIds([])}
+              className="ml-1 p-0.5 text-gray-400 hover:text-white rounded hover:bg-gray-800"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <FormShell
         open={showDrawer}
         onOpenChange={setShowDrawer}
@@ -534,15 +646,17 @@ export default function SocialMedia() {
       <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Social Post</DialogTitle>
+            <DialogTitle>
+              Delete {deleteDialog.postIds?.length > 1 ? `${deleteDialog.postIds.length} posts` : "post"}
+            </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this social media post? This action cannot be undone.
+              Are you sure you want to delete {deleteDialog.postIds?.length > 1 ? `these ${deleteDialog.postIds.length} posts` : "this post"}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setDeleteDialog({ open: false, postId: null })}
+              onClick={() => setDeleteDialog({ open: false, postIds: [] })}
             >
               Cancel
             </Button>
@@ -715,14 +829,49 @@ function formatScheduledDate(iso) {
   };
 }
 
-function PostRow({ post, accountsMap, onApprovalToggle, onStatusChange, onEdit, onDelete }) {
+function PostRow({
+  post,
+  accountsMap,
+  onApprovalToggle,
+  onStatusChange,
+  onEdit,
+  onDelete,
+  selectedIds = [],
+  onToggleSelect,
+  onBulkStatusChange,
+  onBulkApproval,
+  onBulkDelete,
+}) {
   const scheduled = formatScheduledDate(post.scheduled_date);
   const account = post.client_id ? accountsMap[post.client_id] : null;
-  return (
+  const isSelected = selectedIds.includes(post.id);
+  const multi = isSelected && selectedIds.length > 1;
+  const targetIds = multi ? selectedIds : [post.id];
+  const targetLabel = multi ? `${selectedIds.length} posts` : "post";
+
+  const rowContent = (
     <div
-      className="group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60"
+      className={`group flex items-center gap-2 pl-3 pr-2 h-10 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
+        isSelected ? "bg-indigo-50/40 dark:bg-indigo-900/20" : ""
+      }`}
       onClick={() => onEdit(post)}
     >
+      {/* Selection checkbox — hidden until row hover, visible when selected */}
+      {onToggleSelect && (
+        <div
+          className="flex items-center justify-center w-5 shrink-0 opacity-0 group-hover:opacity-100 data-[checked=true]:opacity-100 transition-opacity"
+          data-checked={isSelected}
+          onClick={(e) => e.stopPropagation()}
+          title="Select"
+        >
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelect(post.id)}
+          />
+        </div>
+      )}
+
+      {/* Approval checkbox */}
       <div
         className="flex items-center justify-center w-5 shrink-0 opacity-0 group-hover:opacity-100 data-[checked=true]:opacity-100 transition-opacity"
         data-checked={post.approved || false}
@@ -732,6 +881,7 @@ function PostRow({ post, accountsMap, onApprovalToggle, onStatusChange, onEdit, 
         <Checkbox
           checked={post.approved || false}
           onCheckedChange={() => onApprovalToggle(post.id, post.approved)}
+          className="border-green-400 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
         />
       </div>
 
@@ -793,6 +943,56 @@ function PostRow({ post, accountsMap, onApprovalToggle, onStatusChange, onEdit, 
       </button>
     </div>
   );
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{rowContent}</ContextMenuTrigger>
+      <ContextMenuContent className="w-56">
+        <ContextMenuItem onClick={() => onEdit(post)} className="text-[13px]">
+          Open
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuSub>
+          <ContextMenuSubTrigger className="text-[13px]">
+            Change status{multi ? ` · ${targetLabel}` : ""}
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            {POST_STATUS_LIST.map((s) => (
+              <ContextMenuItem
+                key={s.id}
+                onClick={() => {
+                  if (multi) onBulkStatusChange?.(s.id, targetIds);
+                  else onStatusChange(post.id, s.id);
+                }}
+                className="text-[13px]"
+              >
+                {s.label}
+              </ContextMenuItem>
+            ))}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuItem
+          onClick={() => {
+            if (multi) onBulkApproval?.(true, targetIds);
+            else onApprovalToggle(post.id, post.approved);
+          }}
+          className="text-[13px]"
+        >
+          {multi ? `Approve ${targetLabel}` : post.approved ? "Unapprove" : "Approve"}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          onClick={() => {
+            if (multi) onBulkDelete?.(targetIds);
+            else onDelete(post.id);
+          }}
+          className="text-[13px] text-red-600 focus:text-red-700 focus:bg-red-50 dark:focus:bg-red-950/40"
+        >
+          Delete {multi ? `${targetLabel}` : "post"}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  );
 }
 
 function LinearPostList({
@@ -803,6 +1003,11 @@ function LinearPostList({
   onStatusChange,
   onEdit,
   onDelete,
+  selectedIds,
+  onToggleSelect,
+  onBulkStatusChange,
+  onBulkApproval,
+  onBulkDelete,
 }) {
   const [collapsed, setCollapsed] = React.useState(() => new Set());
   const toggleGroup = (id) =>
@@ -865,6 +1070,11 @@ function LinearPostList({
                     onStatusChange={onStatusChange}
                     onEdit={onEdit}
                     onDelete={onDelete}
+                    selectedIds={selectedIds}
+                    onToggleSelect={onToggleSelect}
+                    onBulkStatusChange={onBulkStatusChange}
+                    onBulkApproval={onBulkApproval}
+                    onBulkDelete={onBulkDelete}
                   />
                 ))
               ))}
