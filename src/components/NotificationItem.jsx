@@ -1,124 +1,130 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle, Info, AlertTriangle, XCircle, Briefcase, Target, Megaphone, DollarSign } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  CheckSquare,
+  FolderKanban,
+  Target,
+  Megaphone,
+  DollarSign,
+  MessageSquare,
+  Hash,
+  Info,
+  AlertTriangle,
+  XCircle,
+  X,
+  Bell,
+} from "lucide-react";
 
-export default function NotificationItem({ notification, onMarkAsRead, onClose }) {
+const CATEGORY_ICON = {
+  tasks: CheckSquare,
+  projects: FolderKanban,
+  crm: Target,
+  social: Megaphone,
+  kpi: DollarSign,
+  referrals: Target,
+  finance: DollarSign,
+  chat: MessageSquare,
+  channels: Hash,
+  system: Bell,
+};
+
+// Small colored dot per type — consistent with the email template
+function typeDot(type) {
+  if (type === "error") return "bg-red-500";
+  if (type === "warning") return "bg-amber-500";
+  if (type === "success") return "bg-green-500";
+  return "bg-gray-400";
+}
+
+export default function NotificationItem({ notification, onMarkAsRead, onDelete, onClose }) {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    if (!notification.read) {
-      onMarkAsRead(notification.id);
-    }
+    if (!notification.read) onMarkAsRead(notification.id);
     if (notification.link) {
       navigate(notification.link);
-      onClose();
+      onClose?.();
     }
   };
 
-  const typeConfig = {
-    success: {
-      icon: <CheckCircle className="w-5 h-5 text-green-500" />,
-      bg: "bg-green-50",
-      border: "border-l-green-500"
-    },
-    info: {
-      icon: <Info className="w-5 h-5 text-blue-500" />,
-      bg: "bg-blue-50",
-      border: "border-l-blue-500"
-    },
-    warning: {
-      icon: <AlertTriangle className="w-5 h-5 text-orange-500" />,
-      bg: "bg-orange-50",
-      border: "border-l-orange-500"
-    },
-    error: {
-      icon: <XCircle className="w-5 h-5 text-red-500" />,
-      bg: "bg-red-50",
-      border: "border-l-red-500"
-    }
-  };
-
-  const categoryIcon = {
-    tasks: <Briefcase className="w-5 h-5 text-indigo-500" />,
-    projects: <Briefcase className="w-5 h-5 text-slate-600" />,
-    crm: <Target className="w-5 h-5 text-blue-500" />,
-    social: <Megaphone className="w-5 h-5 text-fuchsia-500" />,
-    kpi: <DollarSign className="w-5 h-5 text-emerald-500" />,
-    referrals: <Target className="w-5 h-5 text-violet-500" />,
-    finance: <DollarSign className="w-5 h-5 text-emerald-600" />,
-    system: <Info className="w-5 h-5 text-gray-500" />,
-  };
-
-  const config = typeConfig[notification.type] || {
-    ...typeConfig.info,
-    icon: categoryIcon[notification.category] || typeConfig.info.icon,
-  };
+  const Icon = CATEGORY_ICON[notification.category] || Bell;
   const timeAgo = getTimeAgo(new Date(notification.created_at));
+  const unread = !notification.read;
 
   return (
     <div
-      className={`p-4 border-l-4 ${config.border} ${
-        notification.read ? 'bg-white' : config.bg
-      } hover:bg-gray-50 transition-colors cursor-pointer`}
       onClick={handleClick}
+      className={`group relative flex items-start gap-2.5 px-3 py-2.5 border-b border-gray-100 dark:border-gray-800 cursor-pointer transition-colors ${
+        unread
+          ? "bg-indigo-50/40 hover:bg-indigo-50/60 dark:bg-indigo-900/10 dark:hover:bg-indigo-900/20"
+          : "hover:bg-gray-50 dark:hover:bg-gray-800/60"
+      }`}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 mt-0.5">
-          {config.icon}
+      {/* Unread dot — only visible when unread */}
+      <span
+        className={`mt-[6px] w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+          unread ? typeDot(notification.type) : "bg-transparent"
+        }`}
+      />
+
+      {/* Category icon */}
+      <div className="mt-[2px] flex-shrink-0 w-5 h-5 flex items-center justify-center text-gray-500 dark:text-gray-400">
+        <Icon className="w-3.5 h-3.5" />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2">
+          <span
+            className={`text-[13px] truncate ${
+              unread
+                ? "font-medium text-gray-900 dark:text-gray-100"
+                : "text-gray-700 dark:text-gray-300"
+            }`}
+          >
+            {notification.title}
+          </span>
+          <span className="ml-auto text-[11px] text-gray-400 dark:text-gray-500 tabular-nums flex-shrink-0">
+            {timeAgo}
+          </span>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <h4 className="font-semibold text-sm text-gray-900">
-              {notification.title}
-            </h4>
-            {!notification.read && (
-              <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
-            )}
-          </div>
-          <p className="text-sm text-gray-600 mb-2">
+        {notification.message && (
+          <p className="text-[12px] text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">
             {notification.message}
           </p>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">{timeAgo}</span>
-            {!notification.read && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMarkAsRead(notification.id);
-                }}
-              >
-                Mark as read
-              </Button>
-            )}
-          </div>
-        </div>
+        )}
       </div>
+
+      {/* Hover-revealed delete */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete?.(notification.id);
+        }}
+        className="opacity-0 group-hover:opacity-100 absolute right-2 top-2 p-0.5 rounded text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+        title="Dismiss"
+      >
+        <X className="w-3 h-3" />
+      </button>
     </div>
   );
 }
 
 function getTimeAgo(date) {
-  const seconds = Math.floor((new Date() - date) / 1000);
-  
-  const intervals = {
-    year: 31536000,
-    month: 2592000,
-    week: 604800,
-    day: 86400,
-    hour: 3600,
-    minute: 60
-  };
-
-  for (const [unit, secondsInUnit] of Object.entries(intervals)) {
-    const interval = Math.floor(seconds / secondsInUnit);
-    if (interval >= 1) {
-      return `${interval} ${unit}${interval !== 1 ? 's' : ''} ago`;
-    }
-  }
-
-  return 'Just now';
+  const seconds = Math.max(0, Math.floor((new Date() - date) / 1000));
+  if (seconds < 30) return "now";
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks}w`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo`;
+  const years = Math.floor(days / 365);
+  return `${years}y`;
 }

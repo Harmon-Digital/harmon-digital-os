@@ -81,9 +81,26 @@ export function HuddleProvider({ children }) {
         setRoom(rm);
         refreshParticipants(rm);
 
-        // Find or create the huddle row
+        // Find or create the huddle row. The partial unique index enforces
+        // only one ACTIVE huddle per channel, so check for existing first.
         let huddleId;
-        if (asStarter) {
+        const { data: existing } = await supabase
+          .from("huddles")
+          .select("id, participant_count")
+          .eq("channel_id", channelId)
+          .is("ended_at", null)
+          .maybeSingle();
+
+        if (existing) {
+          // Active huddle already exists — just join it by bumping count
+          huddleId = existing.id;
+          await supabase
+            .from("huddles")
+            .update({ participant_count: (existing.participant_count || 0) + 1 })
+            .eq("id", existing.id);
+          toast.success(asStarter ? "Joined existing huddle" : "Joined huddle");
+        } else {
+          // No active huddle — create one
           const { data: created, error: insErr } = await supabase
             .from("huddles")
             .insert({
@@ -97,21 +114,6 @@ export function HuddleProvider({ children }) {
           if (insErr) throw insErr;
           huddleId = created.id;
           toast.success("Huddle started");
-        } else {
-          const { data: existing } = await supabase
-            .from("huddles")
-            .select("id, participant_count")
-            .eq("room_name", roomName)
-            .is("ended_at", null)
-            .maybeSingle();
-          if (existing) {
-            huddleId = existing.id;
-            await supabase
-              .from("huddles")
-              .update({ participant_count: (existing.participant_count || 0) + 1 })
-              .eq("id", existing.id);
-          }
-          toast.success("Joined huddle");
         }
 
         setActiveHuddle({ id: huddleId, channelId, channelName, roomName });
