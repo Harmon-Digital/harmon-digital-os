@@ -20,7 +20,8 @@ async function timingSafeCompare(a: string, b: string): Promise<boolean> {
   const aBytes = encoder.encode(a);
   const bBytes = encoder.encode(b);
   if (aBytes.length !== bBytes.length) {
-    await crypto.subtle.timingSafeEqual(aBytes, aBytes);
+    const pad = new Uint8Array(aBytes.length);
+    await crypto.subtle.timingSafeEqual(aBytes, pad);
     return false;
   }
   return crypto.subtle.timingSafeEqual(aBytes, bBytes);

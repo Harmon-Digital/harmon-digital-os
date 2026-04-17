@@ -30,8 +30,8 @@ export function HuddleProvider({ children }) {
         name: p.name || p.identity,
         isLocal: p.isLocal,
         isSpeaking: p.isSpeaking,
-        audioOn: !p.isMicrophoneEnabled === false,
-        videoOn: !p.isCameraEnabled === false,
+        audioOn: !!p.isMicrophoneEnabled,
+        videoOn: !!p.isCameraEnabled,
       })),
     );
   }, []);

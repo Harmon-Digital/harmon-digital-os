@@ -228,11 +228,14 @@ export function createCrudTools(tableName: string, label: string): CrudToolDefs[
         if (!q) throw new Error("Search query cannot be empty");
         const limit = Math.min(Math.max((args.limit as number) || 20, 1), 100);
 
-        // Use ilike on common text columns — PostgREST will ignore non-existent columns gracefully
+        // Sanitize query: strip characters that could break PostgREST filter syntax
+        const safeQ = q.replace(/[%_.*(),\\]/g, "");
+        if (!safeQ) throw new Error("Search query contains only special characters");
+
         const { data, error } = await client
           .from(tableName)
           .select("*")
-          .or(`name.ilike.%${q}%,title.ilike.%${q}%,description.ilike.%${q}%,full_name.ilike.%${q}%,company_name.ilike.%${q}%,email.ilike.%${q}%`)
+          .or(`name.ilike.%${safeQ}%,title.ilike.%${safeQ}%,description.ilike.%${safeQ}%,full_name.ilike.%${safeQ}%,company_name.ilike.%${safeQ}%,email.ilike.%${safeQ}%`)
           .limit(limit);
 
         if (error) throw new Error(sanitizeError(error));

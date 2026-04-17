@@ -92,10 +92,11 @@ Deno.serve(async (req) => {
     }
     try {
       await admin.auth.admin.deleteUser(contact.portal_user_id);
-      await admin
+      const { error: revokeUpdateErr } = await admin
         .from("contacts")
         .update({ portal_user_id: null, portal_invited_at: null, portal_last_login_at: null })
         .eq("id", contactId);
+      if (revokeUpdateErr) throw revokeUpdateErr;
       return new Response(
         JSON.stringify({ success: true, revoked: true }),
         { headers: { ...CORS, "Content-Type": "application/json" } }
@@ -124,15 +125,17 @@ Deno.serve(async (req) => {
         options: { redirectTo: `${APP_ORIGIN}/client/login` },
       });
       if (resendErr) throw resendErr;
-      await admin
+      const { error: resendUpdateErr } = await admin
         .from("contacts")
         .update({ portal_invited_at: new Date().toISOString() })
         .eq("id", contactId);
-      await admin.from("client_invitations").insert({
+      if (resendUpdateErr) throw resendUpdateErr;
+      const { error: resendInsertErr } = await admin.from("client_invitations").insert({
         contact_id: contactId,
         invited_by: user.id,
         email: contact.email,
       });
+      if (resendInsertErr) throw resendInsertErr;
       return new Response(
         JSON.stringify({ success: true, resent: true }),
         { headers: { ...CORS, "Content-Type": "application/json" } }
@@ -174,26 +177,43 @@ Deno.serve(async (req) => {
 
   const newUserId = invited.user.id;
 
-  await admin
+  const { error: profileErr } = await admin
     .from("user_profiles")
     .upsert(
       { id: newUserId, email: contact.email, full_name: fullName, role: "client" },
       { onConflict: "id" }
     );
+  if (profileErr) {
+    console.error("user_profiles upsert failed:", profileErr);
+    return new Response(JSON.stringify({ error: profileErr.message }), {
+      status: 500,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
+  }
 
-  await admin
+  const { error: contactUpdateErr } = await admin
     .from("contacts")
     .update({
       portal_user_id: newUserId,
       portal_invited_at: new Date().toISOString(),
     })
     .eq("id", contactId);
+  if (contactUpdateErr) {
+    console.error("contacts update failed:", contactUpdateErr);
+    return new Response(JSON.stringify({ error: contactUpdateErr.message }), {
+      status: 500,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
+  }
 
-  await admin.from("client_invitations").insert({
+  const { error: invInsertErr } = await admin.from("client_invitations").insert({
     contact_id: contactId,
     invited_by: user.id,
     email: contact.email,
   });
+  if (invInsertErr) {
+    console.error("client_invitations insert failed:", invInsertErr);
+  }
 
   return new Response(
     JSON.stringify({ success: true, userId: newUserId, email: contact.email }),
