@@ -113,7 +113,7 @@ export default function PartnerLogin() {
             .from("brokers")
             .select("id")
             .eq("email", email)
-            .single();
+            .maybeSingle();
 
           if (existingBroker) {
             // Update existing broker to signed_up status (keep existing status if further along)

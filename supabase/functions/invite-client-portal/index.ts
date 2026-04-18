@@ -91,12 +91,13 @@ Deno.serve(async (req) => {
       });
     }
     try {
-      await admin.auth.admin.deleteUser(contact.portal_user_id);
+      const deletedUserId = contact.portal_user_id;
       const { error: revokeUpdateErr } = await admin
         .from("contacts")
         .update({ portal_user_id: null, portal_invited_at: null, portal_last_login_at: null })
         .eq("id", contactId);
       if (revokeUpdateErr) throw revokeUpdateErr;
+      await admin.auth.admin.deleteUser(deletedUserId);
       return new Response(
         JSON.stringify({ success: true, revoked: true }),
         { headers: { ...CORS, "Content-Type": "application/json" } }
