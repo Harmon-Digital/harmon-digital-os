@@ -38,11 +38,17 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  const { data: callerProfile } = await admin
+  const { data: callerProfile, error: profileError } = await admin
     .from("user_profiles")
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
+  if (profileError) {
+    return new Response(JSON.stringify({ error: "Failed to verify caller role" }), {
+      status: 500,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
+  }
   if (callerProfile?.role !== "admin") {
     return new Response(JSON.stringify({ error: "Admin only" }), {
       status: 403,

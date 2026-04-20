@@ -134,7 +134,9 @@ export function HuddleProvider({ children }) {
     const huddle = activeHuddle;
     try {
       if (rm) await rm.disconnect();
-    } catch {}
+    } catch (err) {
+      console.warn("Huddle disconnect error:", err);
+    }
     if (huddle?.id) {
       // Decrement participant count; if zero, mark ended
       const { data: h } = await supabase

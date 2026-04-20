@@ -191,6 +191,7 @@ export function getPerMemberKpis() {
 export function formatKpiValue(value, unit) {
   if (value === null || value === undefined) return "--";
   const num = Number(value);
+  if (Number.isNaN(num)) return "--";
   switch (unit) {
     case "currency":
       return `$${num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;

@@ -88,7 +88,8 @@ export function AuthProvider({ children }) {
         .eq('id', data.user.id)
         .then(({ error: updateErr }) => {
           if (updateErr) console.error('Failed to update last_sign_in_at:', updateErr);
-        });
+        })
+        .catch((err) => console.error('Failed to update last_sign_in_at:', err));
     }
 
     return data;

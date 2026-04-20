@@ -155,7 +155,8 @@ function buildEmailTemplate(params: {
 // stored in Supabase Vault under the name 'notify_internal_secret' so the
 // pg_net trigger can read it without it leaking to end users. To rotate:
 // update both this constant and the vault entry in one change.
-const INTERNAL_SHARED_SECRET = "hdo-notify-3f9a1c7e4b2d8f6e9a1c3b5d7e9f1a3c";
+const INTERNAL_SHARED_SECRET =
+  Deno.env.get("NOTIFY_INTERNAL_SECRET") ?? "hdo-notify-3f9a1c7e4b2d8f6e9a1c3b5d7e9f1a3c";
 
 Deno.serve(async (req) => {
   // Auth: accept either the Supabase service role key (env) or the
@@ -191,7 +192,7 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
 
-      const [{ data: teamMember }, { data: branding }] = await Promise.all([
+      const [tmResult, brandingResult] = await Promise.all([
         supabase
           .from("team_members")
           .select("email, full_name")
@@ -203,6 +204,12 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle(),
       ]);
+
+      if (tmResult.error) throw new Error(`team_members query failed: ${tmResult.error.message}`);
+      if (brandingResult.error) throw new Error(`branding_settings query failed: ${brandingResult.error.message}`);
+
+      const teamMember = tmResult.data;
+      const branding = brandingResult.data;
 
       if (!teamMember?.email) {
         return new Response(
