@@ -266,9 +266,12 @@ export default function Tasks() {
   };
 
   const handleQuickUpdate = async (taskId, field, value) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    // Optimistic update so the UI feels instant
+    const prevValue = task[field];
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, [field]: value } : t));
     try {
-      const task = tasks.find(t => t.id === taskId);
-      if (!task) return;
       await Task.update(taskId, { ...task, [field]: value });
 
       // Send notification on reassignment
@@ -289,11 +292,13 @@ export default function Tasks() {
         }
       }
 
-      setTasks(prevTasks => 
-        prevTasks.map(t => t.id === taskId ? { ...t, [field]: value } : t)
-      );
     } catch (error) {
       console.error("Error updating task:", error);
+      // Revert optimistic update
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, [field]: prevValue } : t));
+      toast.error(`Couldn't update ${field.replace("_", " ")}`, {
+        description: error?.message || "Check the console for details",
+      });
     }
   };
 
