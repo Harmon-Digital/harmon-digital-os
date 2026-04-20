@@ -151,9 +151,10 @@ Deno.serve(async (req) => {
       { headers: { ...CORS, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    console.error("[livekit-token] sign failed:", (err as Error).message);
+    const msg = err instanceof Error ? err.message : "Token generation failed";
+    console.error("[livekit-token] sign failed:", msg);
     return new Response(
-      JSON.stringify({ error: (err as Error).message || "Token generation failed" }),
+      JSON.stringify({ error: msg }),
       { status: 500, headers: { ...CORS, "Content-Type": "application/json" } },
     );
   }

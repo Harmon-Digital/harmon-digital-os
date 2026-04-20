@@ -52,7 +52,7 @@ export default function Login() {
       setInviteProcessing(false);
     };
 
-    handleInviteFlow();
+    handleInviteFlow().catch(() => setInviteProcessing(false));
   }, []);
 
   const handleSubmit = async (e) => {

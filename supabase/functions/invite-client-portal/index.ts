@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
       );
     } catch (err) {
       console.error("revoke failed:", err);
-      return new Response(JSON.stringify({ error: (err as Error).message }), {
+      return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }), {
         status: 500,
         headers: { ...CORS, "Content-Type": "application/json" },
       });
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
       );
     } catch (err) {
       console.error("resend failed:", err);
-      return new Response(JSON.stringify({ error: (err as Error).message }), {
+      return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }), {
         status: 500,
         headers: { ...CORS, "Content-Type": "application/json" },
       });

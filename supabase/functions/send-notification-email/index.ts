@@ -155,8 +155,10 @@ function buildEmailTemplate(params: {
 // stored in Supabase Vault under the name 'notify_internal_secret' so the
 // pg_net trigger can read it without it leaking to end users. To rotate:
 // update both this constant and the vault entry in one change.
-const INTERNAL_SHARED_SECRET =
-  Deno.env.get("NOTIFY_INTERNAL_SECRET") ?? "hdo-notify-3f9a1c7e4b2d8f6e9a1c3b5d7e9f1a3c";
+const INTERNAL_SHARED_SECRET = Deno.env.get("NOTIFY_INTERNAL_SECRET");
+if (!INTERNAL_SHARED_SECRET) {
+  console.error("FATAL: NOTIFY_INTERNAL_SECRET env var is not set");
+}
 
 Deno.serve(async (req) => {
   // Auth: accept either the Supabase service role key (env) or the
@@ -299,7 +301,7 @@ Deno.serve(async (req) => {
 
     if (!res.ok) {
       console.error("Resend error:", data);
-      return new Response(JSON.stringify({ error: data }), {
+      return new Response(JSON.stringify({ error: "Email delivery failed" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
@@ -310,7 +312,8 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
+    const msg = error instanceof Error ? error.message : "Internal server error";
+    return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

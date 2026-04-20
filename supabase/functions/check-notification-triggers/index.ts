@@ -28,7 +28,12 @@ Deno.serve(async (req) => {
 
     if (notificationsError || recurringError) {
       console.error("trigger checks error:", { notificationsError, recurringError });
-      return new Response(JSON.stringify({ success: false, notificationsError, recurringError }), {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "One or more trigger checks failed",
+        notificationsError: notificationsError?.message,
+        recurringError: recurringError?.message,
+      }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
@@ -39,7 +44,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("check-notification-triggers error:", error);
-    return new Response(JSON.stringify({ success: false, error: (error as Error).message }), {
+    return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Internal error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
