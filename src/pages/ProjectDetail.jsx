@@ -38,6 +38,7 @@ import {
   Loader2,
   Filter,
   Search,
+  Briefcase,
 } from "lucide-react";
 import {
   Table,
@@ -100,6 +101,7 @@ export default function ProjectDetail() {
   const [allAccounts, setAllAccounts] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
+  const [phases, setPhases] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -176,6 +178,14 @@ export default function ProjectDetail() {
         .eq('project_id', projectId)
         .order('created_at', { ascending: false });
       setDocuments(docsData || []);
+
+      // Load phases
+      const { data: phasesData } = await supabase
+        .from('project_phases')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('order_index', { ascending: true });
+      setPhases(phasesData || []);
     } catch (error) {
       console.error("Error loading project:", error);
     } finally {
@@ -456,7 +466,7 @@ export default function ProjectDetail() {
   } else if (project.billing_type === "hourly") {
     expectedRevenue = billableHours * (project.hourly_rate || account?.hourly_rate || 0);
   } else if (project.billing_type === "fixed") {
-    expectedRevenue = project.budget || 0;
+    expectedRevenue = project.total_budget || project.budget || 0;
   }
 
   // Calculate time-based revenue (all billable hours)
@@ -777,6 +787,98 @@ export default function ProjectDetail() {
               )}
             </div>
           )}
+
+          {!isInternalProject && project.billing_type === 'fixed' && (() => {
+            const totalBudget = Number(project.total_budget || project.budget || 0);
+            const phasesTotal = phases.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+            const completedTotal = phases
+              .filter((p) => ['completed', 'invoiced', 'paid'].includes(p.status))
+              .reduce((s, p) => s + (Number(p.amount) || 0), 0);
+            const paidTotal = phases
+              .filter((p) => p.status === 'paid')
+              .reduce((s, p) => s + (Number(p.amount) || 0), 0);
+            const pct = phasesTotal > 0 ? (completedTotal / phasesTotal) * 100 : 0;
+            const PHASE_DOT = {
+              planned: 'bg-gray-400',
+              in_progress: 'bg-blue-500',
+              completed: 'bg-green-500',
+              invoiced: 'bg-amber-500',
+              paid: 'bg-emerald-600',
+              cancelled: 'bg-red-500',
+            };
+            return (
+              <div className="p-3 bg-white dark:bg-gray-950 rounded-lg border space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                    <Briefcase className="w-4 h-4" /> Fixed project
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Budget <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">${totalBudget.toLocaleString()}</span>
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Phases total <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">${phasesTotal.toLocaleString()}</span>
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Delivered <span className="font-semibold text-green-600 tabular-nums">${completedTotal.toLocaleString()}</span>
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Paid <span className="font-semibold text-emerald-600 tabular-nums">${paidTotal.toLocaleString()}</span>
+                  </span>
+                  <span className="ml-auto text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">
+                    {phases.length} {phases.length === 1 ? 'phase' : 'phases'} · {pct.toFixed(0)}% complete
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                {phasesTotal > 0 && (
+                  <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500 transition-all"
+                      style={{ width: `${Math.min(pct, 100)}%` }}
+                    />
+                  </div>
+                )}
+
+                {/* Phases list */}
+                {phases.length > 0 ? (
+                  <div className="border-t border-gray-100 dark:border-gray-800 -mx-3 -mb-3">
+                    {phases.map((ph, i) => (
+                      <div
+                        key={ph.id}
+                        className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-b-0"
+                      >
+                        <span className="text-[11px] text-gray-400 tabular-nums w-4 text-right flex-shrink-0">
+                          {i + 1}
+                        </span>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${PHASE_DOT[ph.status] || 'bg-gray-400'}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] text-gray-900 dark:text-gray-100 truncate">{ph.name}</div>
+                          {ph.description && (
+                            <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{ph.description}</div>
+                          )}
+                        </div>
+                        {ph.end_date && (
+                          <span className="hidden md:inline text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">
+                            due {new Date(ph.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                        <span className="text-[11px] capitalize text-gray-500 dark:text-gray-400 w-20 text-right">
+                          {ph.status?.replace('_', ' ')}
+                        </span>
+                        <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium tabular-nums w-20 text-right">
+                          ${Number(ph.amount || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[12px] text-gray-400 dark:text-gray-500 italic">
+                    No phases yet. Open the project edit form to break this into milestones.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <Card>
             <CardHeader>
