@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Task, Project, Account, TeamMember, TaskAttachment } from "@/api/entities";
+import { Task, Project, Account, TeamMember, TaskAttachment, Lead } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
 import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3, Filter, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Search, X, Trash2, ExternalLink, Kanban, List, Grid3X3, Filter, ChevronRight, Calendar as CalendarIcon, Target } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { stripHtml } from "@/components/ui/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +75,7 @@ export default function Tasks() {
   const [projects, setProjects] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
+  const [leads, setLeads] = useState([]);
   const [currentTeamMember, setCurrentTeamMember] = useState(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -124,20 +125,29 @@ export default function Tasks() {
     }, {});
   }, [teamMembers]);
 
+  const leadsMap = useMemo(() => {
+    return leads.reduce((acc, l) => {
+      acc[l.id] = l;
+      return acc;
+    }, {});
+  }, [leads]);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const [tasksData, projectsData, accountsData, teamMembersData] = await Promise.all([
+      const [tasksData, projectsData, accountsData, teamMembersData, leadsData] = await Promise.all([
         Task.list("-created_at", 500),
         Project.list("-created_at", 200),
         Account.list("-created_at", 100),
-        TeamMember.list()
+        TeamMember.list(),
+        Lead.list("-created_at", 200),
       ]);
 
       setTasks(tasksData);
       setProjects(projectsData);
       setAccounts(accountsData);
       setTeamMembers(teamMembersData);
+      setLeads(leadsData || []);
 
       const myTeamMember = teamMembersData.find(tm => tm.user_id === authUser?.id);
       setCurrentTeamMember(myTeamMember);
@@ -272,7 +282,7 @@ export default function Tasks() {
     const prevValue = task[field];
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, [field]: value } : t));
     try {
-      await Task.update(taskId, { ...task, [field]: value });
+      await Task.update(taskId, { [field]: value });
 
       // Send notification on reassignment
       if (field === 'assigned_to' && value && value !== task.assigned_to) {
@@ -296,7 +306,7 @@ export default function Tasks() {
       console.error("Error updating task:", error);
       // Revert optimistic update
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, [field]: prevValue } : t));
-      toast.error(`Couldn't update ${field.replace("_", " ")}`, {
+      toast.error(`Couldn't update ${field.replace(/_/g, " ")}`, {
         description: error?.message || "Check the console for details",
       });
     }
@@ -313,7 +323,7 @@ export default function Tasks() {
 
     const task = tasks.find(t => t.id === draggableId);
     if (task && source.droppableId !== destination.droppableId) {
-      await Task.update(task.id, { ...task, status: destination.droppableId });
+      await Task.update(task.id, { status: destination.droppableId });
       
       setTasks(prevTasks => 
         prevTasks.map(t => t.id === draggableId ? { ...t, status: destination.droppableId } : t)
@@ -341,11 +351,7 @@ export default function Tasks() {
     if (!ids.length) return;
     try {
       await Promise.all(
-        ids.map(taskId => {
-          const task = tasks.find(t => t.id === taskId);
-          if (!task) return Promise.resolve();
-          return Task.update(taskId, { ...task, status: newStatus });
-        })
+        ids.map(taskId => Task.update(taskId, { status: newStatus }))
       );
       if (!idsOverride) setSelectedTasks([]);
 
@@ -363,11 +369,7 @@ export default function Tasks() {
     if (!ids.length) return;
     try {
       await Promise.all(
-        ids.map(taskId => {
-          const task = tasks.find(t => t.id === taskId);
-          if (!task) return Promise.resolve();
-          return Task.update(taskId, { ...task, priority: newPriority });
-        })
+        ids.map(taskId => Task.update(taskId, { priority: newPriority }))
       );
       if (!idsOverride) setSelectedTasks([]);
       setTasks(prevTasks =>
@@ -390,6 +392,12 @@ export default function Tasks() {
   const getProjectName = (projectId) => {
     if (!projectId) return "No Project";
     return projectsMap[projectId]?.name || "Unknown";
+  };
+
+  const getLeadName = (leadId) => {
+    if (!leadId) return "";
+    const l = leadsMap[leadId];
+    return l?.company_name || l?.contact_name || "";
   };
 
   const getAccountName = (projectId) => {
@@ -420,7 +428,7 @@ export default function Tasks() {
       const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
       const matchesProject = projectFilter === "all" || task.project_id === projectFilter;
       const matchesAssignee = assigneeFilter === "all" || task.assigned_to === assigneeFilter;
-      const matchesView = viewFilter === "all" || task.assigned_to === currentTeamMember?.id;
+      const matchesView = viewFilter === "all" || (viewFilter === "my" && task.assigned_to === currentTeamMember?.id);
       
       let matchesDueDate = true;
       if (dueDateFilter !== "all") {
@@ -776,7 +784,16 @@ export default function Tasks() {
                                         <span className={`text-[10px] capitalize ${pColor} shrink-0`}>{task.priority}</span>
                                       </div>
                                       <div className="flex items-center gap-2 mt-1.5 text-[11px] text-gray-500">
-                                        <span className="truncate">{getProjectName(task.project_id)}</span>
+                                        {task.project_id ? (
+                                          <span className="truncate">{getProjectName(task.project_id)}</span>
+                                        ) : task.lead_id ? (
+                                          <span className="inline-flex items-center gap-1 truncate text-indigo-600 dark:text-indigo-400">
+                                            <Target className="w-3 h-3 shrink-0" />
+                                            <span className="truncate">{getLeadName(task.lead_id)}</span>
+                                          </span>
+                                        ) : (
+                                          <span className="truncate">No Project</span>
+                                        )}
                                         {task.assigned_to && (
                                           <span className="truncate ml-auto">{getTeamMemberName(task.assigned_to)}</span>
                                         )}
@@ -834,7 +851,18 @@ export default function Tasks() {
                       <span className={`w-2 h-2 rounded-full ${sDot} flex-shrink-0`} />
                       {task.ticket_number && <span className="text-[11px] text-gray-400 dark:text-gray-500">#{task.ticket_number}</span>}
                       <span className="flex-1 text-[13px] text-gray-900 dark:text-gray-100 truncate">{task.title}</span>
-                      <span className="hidden md:inline text-[12px] text-gray-500 truncate max-w-[140px]">{getProjectName(task.project_id)}</span>
+                      <span className="hidden md:inline-flex items-center gap-1 text-[12px] truncate max-w-[140px]">
+                        {task.project_id ? (
+                          <span className="text-gray-500 truncate">{getProjectName(task.project_id)}</span>
+                        ) : task.lead_id ? (
+                          <span className="inline-flex items-center gap-1 truncate text-indigo-600 dark:text-indigo-400">
+                            <Target className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{getLeadName(task.lead_id)}</span>
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </span>
                       <span className="hidden lg:inline text-[12px] text-gray-500 truncate max-w-[120px]">{getTeamMemberName(task.assigned_to)}</span>
                       <span className={`text-[11px] capitalize ${pColor} w-14 text-right`}>{task.priority}</span>
                       <span className="text-[12px] text-gray-500 w-20 text-right">
@@ -857,6 +885,7 @@ export default function Tasks() {
             teamMembers={teamMembers}
             projectsMap={projectsMap}
             accountsMap={accountsMap}
+            leadsMap={leadsMap}
             teamMembersMap={teamMembersMap}
             selectedTasks={selectedTasks}
             onToggleSelect={toggleTaskSelection}
@@ -922,6 +951,7 @@ export default function Tasks() {
           task={editingTask}
           projects={projects}
           teamMembers={teamMembers}
+          leads={leads}
           onSubmit={handleSubmit}
           onAutoSave={handleAutoSave}
           onCancel={() => {
@@ -1050,9 +1080,12 @@ function TaskRow({
   onBulkDelete,
   onBulkAssign,
   onBulkPriority,
+  leadsMap = {},
 }) {
   const assignee = task.assigned_to ? teamMembersMap[task.assigned_to] : null;
   const project = task.project_id ? projectsMap[task.project_id] : null;
+  const lead = task.lead_id ? leadsMap[task.lead_id] : null;
+  const leadLabel = lead?.company_name || lead?.contact_name || null;
   const due = formatDueDate(task.due_date);
   const checklist = Array.isArray(task.checklist) ? task.checklist : [];
   const doneCount = checklist.filter((i) => i.done).length;
@@ -1119,6 +1152,16 @@ function TaskRow({
       {project && (
         <span className="hidden lg:inline-flex items-center max-w-[140px] text-[11px] text-gray-500 truncate shrink-0">
           {project.name}
+        </span>
+      )}
+
+      {leadLabel && (
+        <span
+          className="hidden lg:inline-flex items-center gap-1 max-w-[140px] text-[11px] text-indigo-600 dark:text-indigo-400 truncate shrink-0"
+          title={`Deal: ${leadLabel}`}
+        >
+          <Target className="w-3 h-3 shrink-0" />
+          <span className="truncate">{leadLabel}</span>
         </span>
       )}
 
@@ -1280,6 +1323,7 @@ function LinearTaskList({
   teamMembers,
   projectsMap,
   accountsMap,
+  leadsMap,
   teamMembersMap,
   selectedTasks,
   onToggleSelect,
@@ -1370,6 +1414,7 @@ function LinearTaskList({
                     teamMembers={teamMembers}
                     teamMembersMap={teamMembersMap}
                     projectsMap={projectsMap}
+                    leadsMap={leadsMap}
                     selected={selectedTasks.includes(task.id)}
                     selectedIds={selectedTasks}
                     onToggleSelect={onToggleSelect}

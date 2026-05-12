@@ -16,8 +16,6 @@ export default function LeadForm({ lead, teamMembers = [], onSubmit, onCancel })
     status: "new",
     estimated_value: 0,
     notes: "",
-    next_action: "",
-    next_action_date: "",
     assigned_to: ""
   });
 
@@ -26,13 +24,11 @@ export default function LeadForm({ lead, teamMembers = [], onSubmit, onCancel })
     // Convert empty strings to null for optional fields
     const cleanedData = {
       ...formData,
-      next_action_date: formData.next_action_date || null,
       assigned_to: formData.assigned_to || null,
       email: formData.email || null,
       phone: formData.phone || null,
       website: formData.website || null,
       notes: formData.notes || null,
-      next_action: formData.next_action || null,
     };
     onSubmit(cleanedData);
   };
@@ -152,26 +148,6 @@ export default function LeadForm({ lead, teamMembers = [], onSubmit, onCancel })
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="next_action">Next Action</Label>
-          <Input
-            id="next_action"
-            value={formData.next_action}
-            onChange={(e) => setFormData({...formData, next_action: e.target.value})}
-            placeholder="e.g., Schedule follow-up call"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="next_action_date">Next Action Date</Label>
-          <Input
-            id="next_action_date"
-            type="date"
-            value={formData.next_action_date}
-            onChange={(e) => setFormData({...formData, next_action_date: e.target.value})}
-          />
         </div>
 
         <div className="space-y-2">

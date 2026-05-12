@@ -128,10 +128,11 @@ export default function Projects() {
     try {
       const wasRiskRaised = editingProject && (editingProject.risk_level !== "high" && projectData.risk_level === "high");
 
+      let saved;
       if (editingProject) {
-        await Project.update(editingProject.id, projectData);
+        saved = await Project.update(editingProject.id, projectData);
       } else {
-        await Project.create(projectData);
+        saved = await Project.create(projectData);
         await notifyAdmins({
           title: "New project created",
           message: `Project created: ${projectData.name || "Untitled Project"}`,
@@ -159,8 +160,10 @@ export default function Projects() {
       setShowDrawer(false);
       setEditingProject(null);
       loadData();
+      return saved;
     } catch (error) {
       console.error("Error saving project:", error);
+      throw error;
     }
   };
 
@@ -556,7 +559,7 @@ function ProjectRow({
           e.stopPropagation();
           onEdit(project);
         }}
-        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
         title="Edit"
       >
         <Edit className="w-3.5 h-3.5" />

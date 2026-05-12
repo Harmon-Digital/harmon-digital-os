@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
-import { Lead, TeamMember } from "@/api/entities";
+import { Lead, TeamMember, Task, Project } from "@/api/entities";
+import { parseLocalDate } from "@/utils";
 import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ import {
   MessageSquare,
   Trash2,
   Calendar,
+  CheckSquare,
 } from "lucide-react";
 import {
   Sheet,
@@ -59,6 +61,8 @@ import {
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import LeadForm from "../components/crm/LeadForm";
 import FormShell from "@/components/ui/FormShell";
+import TaskForm from "../components/tasks/TaskForm";
+import { StatusIcon, StatusPicker } from "@/components/tasks/TaskIcons";
 
 const PRIORITY_OPTIONS = [
   { value: "hot", label: "Hot", icon: Flame, color: "text-red-500" },
@@ -100,49 +104,246 @@ export default function CRM() {
   // Delete dialog
   const [deleteDialog, setDeleteDialog] = useState({ open: false, leadId: null });
 
+  // Tasks on selected lead
+  const [leadTasks, setLeadTasks] = useState([]);
+  const [loadingLeadTasks, setLoadingLeadTasks] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [showTaskDrawer, setShowTaskDrawer] = useState(false);
+
+  // Full projects / leads lists for the TaskForm drawer
+  const [projects, setProjects] = useState([]);
+
+  // Count of open tasks per lead — shown on kanban card
+  const [openTaskCountByLead, setOpenTaskCountByLead] = useState({});
+
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
     try {
-      const [leadsData, teamMembersData] = await Promise.all([
+      const [leadsData, teamMembersData, projectsData, openTasksData] = await Promise.all([
         Lead.list("-created_at"),
-        TeamMember.list()
+        TeamMember.list(),
+        Project.list("-created_at", 200).catch(() => []),
+        // Only tasks linked to a lead and not done — keeps the payload small
+        supabase
+          .from("tasks")
+          .select("id, lead_id, status")
+          .not("lead_id", "is", null)
+          .neq("status", "completed")
+          .then((r) => r.data || [])
+          .catch(() => []),
       ]);
       setLeads(leadsData);
       setTeamMembers(teamMembersData);
+      setProjects(projectsData || []);
+
+      const counts = {};
+      for (const t of openTasksData) {
+        if (!t.lead_id) continue;
+        counts[t.lead_id] = (counts[t.lead_id] || 0) + 1;
+      }
+      setOpenTaskCountByLead(counts);
     } catch (error) {
       console.error("Error loading CRM data:", error);
     }
   };
 
+  const loadLeadTasks = async (leadId) => {
+    setLoadingLeadTasks(true);
+    try {
+      const { data } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("lead_id", leadId)
+        .order("status", { ascending: true })
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false });
+      setLeadTasks(data || []);
+    } catch (err) {
+      console.error("load lead tasks failed:", err);
+      setLeadTasks([]);
+    } finally {
+      setLoadingLeadTasks(false);
+    }
+  };
+
+  const handleCreateLeadTask = async () => {
+    if (!selectedLead || !newTaskTitle.trim()) return;
+    setCreatingTask(true);
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .insert({
+          title: newTaskTitle.trim(),
+          lead_id: selectedLead.id,
+          status: "todo",
+          priority: "medium",
+          created_by: user?.id || null,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      setLeadTasks((prev) => [data, ...prev]);
+      setNewTaskTitle("");
+      setOpenTaskCountByLead((prev) => ({
+        ...prev,
+        [selectedLead.id]: (prev[selectedLead.id] || 0) + 1,
+      }));
+    } catch (err) {
+      console.error("create lead task failed:", err);
+    } finally {
+      setCreatingTask(false);
+    }
+  };
+
+  const handleToggleLeadTaskStatus = async (task) => {
+    const wasOpen = task.status !== "completed";
+    const nextStatus = wasOpen ? "completed" : "todo";
+    // optimistic
+    setLeadTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: nextStatus } : t)));
+    setOpenTaskCountByLead((prev) => {
+      const cur = prev[task.lead_id] || 0;
+      return {
+        ...prev,
+        [task.lead_id]: Math.max(0, cur + (wasOpen ? -1 : 1)),
+      };
+    });
+    try {
+      await Task.update(task.id, { status: nextStatus });
+    } catch (err) {
+      // revert both task list and badge count
+      setLeadTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: task.status } : t)));
+      setOpenTaskCountByLead((prev) => {
+        const cur = prev[task.lead_id] || 0;
+        return { ...prev, [task.lead_id]: Math.max(0, cur + (wasOpen ? 1 : -1)) };
+      });
+      console.error("toggle task failed:", err);
+    }
+  };
+
+  const handleUpdateLeadTaskStatus = async (task, nextStatus) => {
+    const wasOpen = task.status !== "completed";
+    const nowOpen = nextStatus !== "completed";
+    setLeadTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: nextStatus } : t)));
+    if (wasOpen !== nowOpen) {
+      setOpenTaskCountByLead((prev) => {
+        const cur = prev[task.lead_id] || 0;
+        return { ...prev, [task.lead_id]: Math.max(0, cur + (nowOpen ? 1 : -1)) };
+      });
+    }
+    try {
+      await Task.update(task.id, { status: nextStatus });
+    } catch (err) {
+      setLeadTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: task.status } : t)));
+      if (wasOpen !== nowOpen) {
+        setOpenTaskCountByLead((prev) => {
+          const cur = prev[task.lead_id] || 0;
+          return { ...prev, [task.lead_id]: Math.max(0, cur + (nowOpen ? -1 : 1)) };
+        });
+      }
+      console.error("status update failed:", err);
+    }
+  };
+
+  const handleSaveTaskFromDrawer = async (taskData) => {
+    try {
+      if (editingTask?.id) {
+        const saved = await Task.update(editingTask.id, taskData);
+        setLeadTasks((prev) => prev.map((t) => (t.id === saved.id ? { ...t, ...saved } : t)));
+      } else {
+        const created = await Task.create({ ...taskData, lead_id: selectedLead?.id });
+        if (created?.lead_id === selectedLead?.id) {
+          setLeadTasks((prev) => [created, ...prev]);
+          if (created.status !== "completed") {
+            setOpenTaskCountByLead((prev) => ({
+              ...prev,
+              [created.lead_id]: (prev[created.lead_id] || 0) + 1,
+            }));
+          }
+        }
+      }
+      setShowTaskDrawer(false);
+      setEditingTask(null);
+    } catch (err) {
+      console.error("save task failed:", err);
+    }
+  };
+
+  const handleAutoSaveTaskFromDrawer = async (taskData) => {
+    if (!editingTask?.id) return;
+    try {
+      const saved = await Task.update(editingTask.id, taskData);
+      setEditingTask((prev) => (prev ? { ...prev, ...saved } : prev));
+      setLeadTasks((prev) => prev.map((t) => (t.id === saved.id ? { ...t, ...saved } : t)));
+    } catch (err) {
+      console.error("task auto-save failed:", err);
+      throw err;
+    }
+  };
+
+  const handleDeleteLeadTask = async (task) => {
+    const prev = leadTasks;
+    setLeadTasks((cur) => cur.filter((t) => t.id !== task.id));
+    if (task.status !== "completed") {
+      setOpenTaskCountByLead((p) => ({
+        ...p,
+        [task.lead_id]: Math.max(0, (p[task.lead_id] || 0) - 1),
+      }));
+    }
+    try {
+      await Task.delete(task.id);
+    } catch (err) {
+      setLeadTasks(prev);
+      if (task.status !== "completed") {
+        setOpenTaskCountByLead((p) => ({
+          ...p,
+          [task.lead_id]: (p[task.lead_id] || 0) + 1,
+        }));
+      }
+      console.error("delete task failed:", err);
+    }
+  };
+
   const loadActivities = async (leadId) => {
     setLoadingActivities(true);
-    const { data } = await supabase
-      .from("lead_activities")
-      .select("*, user_profiles(full_name)")
-      .eq("lead_id", leadId)
-      .order("created_at", { ascending: false });
-    setActivities(data || []);
-    setLoadingActivities(false);
+    try {
+      const { data } = await supabase
+        .from("lead_activities")
+        .select("*, user_profiles(full_name)")
+        .eq("lead_id", leadId)
+        .order("created_at", { ascending: false });
+      setActivities(data || []);
+    } catch (err) {
+      console.error("load activities failed:", err);
+      setActivities([]);
+    } finally {
+      setLoadingActivities(false);
+    }
   };
 
   const handleOpenLeadDetail = async (lead) => {
     setSelectedLead(lead);
     setShowLeadDetail(true);
-    await loadActivities(lead.id);
+    await Promise.all([loadActivities(lead.id), loadLeadTasks(lead.id)]);
   };
 
   const handleSubmitLead = async (leadData) => {
-    if (editingLead) {
-      await Lead.update(editingLead.id, leadData);
-    } else {
-      await Lead.create(leadData);
+    try {
+      if (editingLead) {
+        await Lead.update(editingLead.id, leadData);
+      } else {
+        await Lead.create(leadData);
+      }
+      setShowLeadForm(false);
+      setEditingLead(null);
+      loadData();
+    } catch (error) {
+      console.error("Error saving lead:", error);
     }
-    setShowLeadForm(false);
-    setEditingLead(null);
-    loadData();
   };
 
   const handleDragEnd = async (result) => {
@@ -152,25 +353,34 @@ export default function CRM() {
 
     const lead = leads.find(l => l.id === draggableId);
     if (lead && source.droppableId !== destination.droppableId) {
-      await Lead.update(lead.id, { status: destination.droppableId });
+      try {
+        await Lead.update(lead.id, { status: destination.droppableId });
 
-      // Auto-approve referral when lead is marked as won
-      if (destination.droppableId === "won" && lead.referral_id) {
-        const { error: refError } = await supabase.from("referrals").update({ status: "active" }).eq("id", lead.referral_id);
-        if (refError) console.error("Error approving referral:", refError);
+        // Auto-approve referral when lead is marked as won
+        if (destination.droppableId === "won" && lead.referral_id) {
+          const { error: refError } = await supabase.from("referrals").update({ status: "active" }).eq("id", lead.referral_id);
+          if (refError) console.error("Error approving referral:", refError);
+        }
+
+        loadData();
+      } catch (error) {
+        console.error("Error updating lead status:", error);
+        loadData();
       }
-
-      loadData();
     }
   };
 
   const handleDelete = async () => {
     if (deleteDialog.leadId) {
-      await Lead.delete(deleteDialog.leadId);
-      setDeleteDialog({ open: false, leadId: null });
-      setShowLeadDetail(false);
-      setSelectedLead(null);
-      loadData();
+      try {
+        await Lead.delete(deleteDialog.leadId);
+        setDeleteDialog({ open: false, leadId: null });
+        setShowLeadDetail(false);
+        setSelectedLead(null);
+        loadData();
+      } catch (error) {
+        console.error("Error deleting lead:", error);
+      }
     }
   };
 
@@ -191,7 +401,6 @@ export default function CRM() {
       // Update lead's last contact if it's a call or email
       if (activityType === "call" || activityType === "email") {
         await Lead.update(selectedLead.id, {
-          ...selectedLead,
           last_contact: new Date().toISOString().split("T")[0],
         });
       }
@@ -234,11 +443,15 @@ export default function CRM() {
   };
 
   const handleUpdatePriority = async (lead, priority) => {
-    await Lead.update(lead.id, { priority });
-    if (selectedLead?.id === lead.id) {
-      setSelectedLead({ ...lead, priority });
+    try {
+      await Lead.update(lead.id, { priority });
+      if (selectedLead?.id === lead.id) {
+        setSelectedLead({ ...lead, priority });
+      }
+      loadData();
+    } catch (error) {
+      console.error("Error updating lead priority:", error);
     }
-    loadData();
   };
 
   const columns = [
@@ -333,7 +546,7 @@ export default function CRM() {
           <User className="w-3 h-3" />
           <span className="truncate">{lead.contact_name}</span>
         </div>
-        {(partnerReferral || stale || lead.next_action_date) && (
+        {(partnerReferral || stale || openTaskCountByLead[lead.id]) && (
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             {partnerReferral && (
               <span className="inline-flex items-center gap-0.5 text-[10px] text-purple-600">
@@ -347,10 +560,13 @@ export default function CRM() {
                 {getStageAge(lead)}d
               </span>
             )}
-            {lead.next_action_date && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-400 dark:text-gray-500">
-                <Calendar className="w-2.5 h-2.5" />
-                {new Date(lead.next_action_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+            {openTaskCountByLead[lead.id] > 0 && (
+              <span
+                className="inline-flex items-center gap-0.5 text-[10px] text-indigo-600 dark:text-indigo-400"
+                title={`${openTaskCountByLead[lead.id]} open task${openTaskCountByLead[lead.id] === 1 ? "" : "s"}`}
+              >
+                <CheckSquare className="w-2.5 h-2.5" />
+                {openTaskCountByLead[lead.id]}
               </span>
             )}
           </div>
@@ -405,8 +621,8 @@ export default function CRM() {
           {lead.estimated_value ? `$${lead.estimated_value.toLocaleString()}` : "—"}
         </span>
 
-        <span className="hidden md:inline text-[12px] text-gray-500 w-24 text-right">
-          {lead.next_action_date ? new Date(lead.next_action_date).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—"}
+        <span className="hidden md:inline text-[12px] text-indigo-600 dark:text-indigo-400 w-24 text-right tabular-nums">
+          {openTaskCountByLead[lead.id] > 0 ? `${openTaskCountByLead[lead.id]} open` : "—"}
         </span>
 
         {stale && (
@@ -596,7 +812,7 @@ export default function CRM() {
                             <button
                               type="button"
                               onClick={() => toggleColumn(column.id)}
-                              className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300"
+                              className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                             >
                               <ChevronDown className="w-3.5 h-3.5" />
                             </button>
@@ -698,16 +914,6 @@ export default function CRM() {
                 <span>Phone <span className="text-gray-900 dark:text-gray-100 font-medium">{selectedLead.phone || "—"}</span></span>
               </div>
 
-              {selectedLead.next_action && (
-                <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-3">
-                  <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">Next action</div>
-                  <p className="text-[13px] text-gray-900 dark:text-gray-100">{selectedLead.next_action}</p>
-                  {selectedLead.next_action_date && (
-                    <p className="text-[11px] text-gray-500 mt-0.5">Due: {new Date(selectedLead.next_action_date).toLocaleDateString()}</p>
-                  )}
-                </div>
-              )}
-
               {isPartnerReferral(selectedLead) && (
                 <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-3">
                   <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center gap-1">
@@ -716,6 +922,116 @@ export default function CRM() {
                   <p className="text-[13px] text-gray-900 dark:text-gray-100">{selectedLead.source}</p>
                 </div>
               )}
+
+              {/* Tasks */}
+              <div className="mt-5 border-t border-gray-200 dark:border-gray-800 pt-4">
+                <div className="flex items-center justify-between">
+                  <div className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center gap-1.5">
+                    <CheckSquare className="w-3 h-3" />
+                    Tasks
+                    {leadTasks.length > 0 && (
+                      <span className="text-gray-400 normal-case tracking-normal">
+                        · {leadTasks.filter((t) => t.status !== "completed").length}/{leadTasks.length}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick add */}
+                <div className="flex items-center gap-2 mt-1">
+                  <Input
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleCreateLeadTask();
+                      }
+                    }}
+                    placeholder="Add a task (Enter to save)"
+                    className="text-[13px] h-8"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleCreateLeadTask}
+                    disabled={!newTaskTitle.trim() || creatingTask}
+                    className="h-8 px-2.5 text-[13px] bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+
+                {/* Task list */}
+                {loadingLeadTasks ? (
+                  <div className="text-center py-4">
+                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mx-auto" />
+                  </div>
+                ) : leadTasks.length === 0 ? (
+                  <p className="text-[12px] text-gray-400 dark:text-gray-500 text-center py-3">No tasks yet</p>
+                ) : (
+                  <div className="mt-2 border-t border-gray-100 dark:border-gray-800">
+                    {leadTasks.map((task) => {
+                      const done = task.status === "completed";
+                      const dueDate = task.due_date ? parseLocalDate(task.due_date) : null;
+                      const dueSoon = dueDate && !done && dueDate < new Date(Date.now() + 24 * 60 * 60 * 1000);
+                      const overdue = dueDate && !done && dueDate < new Date(new Date().toDateString());
+                      return (
+                        <div
+                          key={task.id}
+                          className="group flex items-center gap-2 px-1.5 py-1.5 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                        >
+                          <StatusPicker
+                            value={task.status}
+                            onChange={(v) => handleUpdateLeadTaskStatus(task, v)}
+                          >
+                            <button
+                              type="button"
+                              className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Change status"
+                            >
+                              <StatusIcon status={task.status} size={14} />
+                            </button>
+                          </StatusPicker>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingTask(task);
+                              setShowTaskDrawer(true);
+                            }}
+                            className={`flex-1 min-w-0 text-left text-[13px] truncate ${
+                              done ? "text-gray-400 line-through" : "text-gray-900 dark:text-gray-100"
+                            }`}
+                          >
+                            {task.title || "Untitled"}
+                          </button>
+                          {dueDate && (
+                            <span
+                              className={`text-[11px] tabular-nums flex-shrink-0 ${
+                                overdue
+                                  ? "text-red-600 dark:text-red-400"
+                                  : dueSoon
+                                    ? "text-amber-600 dark:text-amber-400"
+                                    : "text-gray-400 dark:text-gray-500"
+                              }`}
+                            >
+                              {dueDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLeadTask(task)}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 rounded"
+                            title="Delete task"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               {/* Log Activity */}
               <div className="mt-5 border-t border-gray-200 dark:border-gray-800 pt-4">
@@ -794,6 +1110,31 @@ export default function CRM() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Task Form Drawer (from deal detail) */}
+      <FormShell
+        open={showTaskDrawer}
+        onOpenChange={(open) => {
+          setShowTaskDrawer(open);
+          if (!open) setEditingTask(null);
+        }}
+        storageKey="hdo.taskViewMode"
+        title={editingTask ? "Edit Task" : "New Task"}
+        description={selectedLead ? `On deal: ${selectedLead.company_name || ""}` : ""}
+      >
+        <TaskForm
+          task={editingTask}
+          projects={projects}
+          teamMembers={teamMembers}
+          leads={leads}
+          onSubmit={handleSaveTaskFromDrawer}
+          onAutoSave={handleAutoSaveTaskFromDrawer}
+          onCancel={() => {
+            setShowTaskDrawer(false);
+            setEditingTask(null);
+          }}
+        />
+      </FormShell>
 
       {/* Lead Form Sheet */}
       <FormShell

@@ -28,6 +28,7 @@ import {
   Clock,
   Repeat,
   ChevronDown,
+  Target,
 } from "lucide-react";
 
 function initialsOf(name) {
@@ -109,6 +110,50 @@ function ProjectPicker({ value, projects, onChange }) {
   );
 }
 
+function LeadPicker({ value, leads, onChange }) {
+  const selected = leads.find((l) => l.id === value);
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[13px] text-gray-700 hover:bg-gray-100 max-w-full"
+        >
+          <Target className="w-3.5 h-3.5 text-gray-400" />
+          <span className="truncate">{selected ? (selected.company_name || selected.contact_name || "Deal") : "No deal"}</span>
+          <ChevronDown className="w-3 h-3 text-gray-400" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 p-1 max-h-80 overflow-y-auto">
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${
+            !value ? "bg-gray-100 font-medium" : ""
+          }`}
+        >
+          No deal
+        </button>
+        {leads.map((l) => (
+          <button
+            key={l.id}
+            type="button"
+            onClick={() => onChange(l.id)}
+            className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 truncate ${
+              value === l.id ? "bg-gray-100 font-medium" : ""
+            }`}
+          >
+            <div className="truncate">{l.company_name || "Untitled"}</div>
+            {l.contact_name && (
+              <div className="text-[11px] text-gray-500 truncate">{l.contact_name}</div>
+            )}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function AssigneePicker({ value, teamMembers, onChange }) {
   const selected = teamMembers.find((tm) => tm.id === value);
   return (
@@ -174,6 +219,7 @@ export default function TaskForm({
   task,
   projects = [],
   teamMembers = [],
+  leads = [],
   onSubmit,
   onAutoSave,
   onCancel,
@@ -185,6 +231,7 @@ export default function TaskForm({
       title: "",
       description: "",
       project_id: "",
+      lead_id: "",
       assigned_to: "",
       status: "todo",
       priority: "medium",
@@ -234,6 +281,7 @@ export default function TaskForm({
   const buildCleanedData = (d = formData) => ({
     ...d,
     project_id: d.project_id || null,
+    lead_id: d.lead_id || null,
     assigned_to: d.assigned_to || null,
     due_date: d.due_date || null,
     recurrence_enabled: !!d.recurrence_enabled,
@@ -357,6 +405,16 @@ export default function TaskForm({
             onChange={(v) => setFormData({ ...formData, project_id: v })}
           />
         </PropertyRow>
+
+        {leads.length > 0 && (
+          <PropertyRow icon={Target} label="Deal">
+            <LeadPicker
+              value={formData.lead_id}
+              leads={leads}
+              onChange={(v) => setFormData({ ...formData, lead_id: v })}
+            />
+          </PropertyRow>
+        )}
 
         <PropertyRow icon={CalendarIcon} label="Due date">
           <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-gray-100">

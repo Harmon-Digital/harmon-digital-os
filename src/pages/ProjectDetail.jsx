@@ -247,7 +247,7 @@ export default function ProjectDetail() {
   const generateApiKey = async () => {
     if (!project.api_key) {
       const newApiKey = 'pk_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      await Project.update(projectId, { ...project, api_key: newApiKey });
+      await Project.update(projectId, { api_key: newApiKey });
       setProject({ ...project, api_key: newApiKey });
       setEditedProject({ ...editedProject, api_key: newApiKey });
     }
@@ -256,8 +256,8 @@ export default function ProjectDetail() {
   const copyToClipboard = async (text, type) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopySuccess({ ...copySuccess, [type]: true });
-      setTimeout(() => setCopySuccess({ ...copySuccess, [type]: false }), 2000);
+      setCopySuccess(prev => ({ ...prev, [type]: true }));
+      setTimeout(() => setCopySuccess(prev => ({ ...prev, [type]: false })), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
     }
@@ -581,7 +581,7 @@ export default function ProjectDetail() {
       <div className="flex items-center gap-3 mb-4 text-[13px]">
         <Link
           to={createPageUrl("Projects")}
-          className="inline-flex items-center text-gray-500 hover:text-gray-900 dark:text-gray-100 shrink-0"
+          className="inline-flex items-center text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 shrink-0"
         >
           <ArrowLeft className="w-3.5 h-3.5 mr-1" />
           Projects
@@ -601,7 +601,7 @@ export default function ProjectDetail() {
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 truncate">{project.name}</h1>
         <div className="flex items-center gap-2 shrink-0">
           <Badge className={`${statusColors[project.status]} capitalize text-[11px]`}>
-            {project.status.replace('_', ' ')}
+            {project.status.replace(/_/g, ' ')}
           </Badge>
           <Badge className={`${riskColors[project.risk_level || 'low']} text-[11px]`}>
             {(project.risk_level || 'low').toUpperCase()} risk
@@ -690,7 +690,7 @@ export default function ProjectDetail() {
           />
           {isRetainer && monthlyHistory.length > 0 && (
             <details className="mt-3">
-              <summary className="text-[12px] text-gray-500 hover:text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+              <summary className="text-[12px] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer select-none">
                 Last 6 months
               </summary>
               <div className="mt-2 space-y-1.5 pl-3 border-l border-gray-100 dark:border-gray-800">
@@ -756,7 +756,7 @@ export default function ProjectDetail() {
               <span className="text-sm text-gray-600 dark:text-gray-400">Baseline: <span className="font-semibold">${(project.baseline_valuation || 0).toLocaleString()}</span></span>
               <span className="text-sm text-gray-600 dark:text-gray-400">Fee: <span className="font-semibold text-green-600">{project.valuation_percentage || 8}%</span></span>
               <span className="text-sm text-gray-600 dark:text-gray-400">Retainer: <span className="font-semibold">${(project.monthly_retainer || 0).toLocaleString()}/mo</span></span>
-              <span className="text-sm text-gray-600 dark:text-gray-400">Target: <span className="font-semibold">{project.exit_target_date ? new Date(project.exit_target_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Not set'}</span></span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Target: <span className="font-semibold">{project.exit_target_date ? parseLocalDate(project.exit_target_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Not set'}</span></span>
             </div>
           )}
 
@@ -859,11 +859,11 @@ export default function ProjectDetail() {
                         </div>
                         {ph.end_date && (
                           <span className="hidden md:inline text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">
-                            due {new Date(ph.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                            due {parseLocalDate(ph.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                           </span>
                         )}
                         <span className="text-[11px] capitalize text-gray-500 dark:text-gray-400 w-20 text-right">
-                          {ph.status?.replace('_', ' ')}
+                          {ph.status?.replace(/_/g, ' ')}
                         </span>
                         <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium tabular-nums w-20 text-right">
                           ${Number(ph.amount || 0).toLocaleString()}
@@ -1237,7 +1237,7 @@ export default function ProjectDetail() {
                     <div className="flex items-center justify-between">
                       <span className="text-[13px] font-semibold">Filters</span>
                       {fc > 0 && (
-                        <button type="button" className="text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100" onClick={() => { setTaskPriorityFilter("all"); setTaskAssigneeFilter("all"); }}>
+                        <button type="button" className="text-[12px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100" onClick={() => { setTaskPriorityFilter("all"); setTaskAssigneeFilter("all"); }}>
                           Clear
                         </button>
                       )}
@@ -1621,7 +1621,7 @@ export default function ProjectDetail() {
                       href={doc.file_path}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
+                      className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
                     >
                       <Download className="w-3.5 h-3.5" />
                     </a>
@@ -1668,7 +1668,7 @@ export default function ProjectDetail() {
                   />
                   <button
                     onClick={() => copyToClipboard(`${window.location.origin}/functions/createTicket`, 'url')}
-                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
                   >
                     {copySuccess.url ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
@@ -1690,7 +1690,7 @@ export default function ProjectDetail() {
                   />
                   <button
                     onClick={() => copyToClipboard(project.api_key, 'key')}
-                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
                   >
                     {copySuccess.key ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>

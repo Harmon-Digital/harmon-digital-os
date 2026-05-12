@@ -73,18 +73,33 @@ export default function PartnerSubmitReferral() {
       if (error) throw error;
 
       // Also create a lead in the CRM
-      const { error: leadError } = await supabase.from("leads").insert({
-        company_name: formData.client_company || formData.client_name,
-        contact_name: formData.client_name,
-        email: formData.client_email,
-        phone: formData.client_phone || null,
-        source: `Partner Referral - ${partner.contact_name}`,
-        status: "new",
-        notes: formData.notes || null,
-        next_action: "Follow up on partner referral",
-        referral_id: referralData.id,
-      });
+      const { data: createdLead, error: leadError } = await supabase
+        .from("leads")
+        .insert({
+          company_name: formData.client_company || formData.client_name,
+          contact_name: formData.client_name,
+          email: formData.client_email,
+          phone: formData.client_phone || null,
+          source: `Partner Referral - ${partner.contact_name}`,
+          status: "new",
+          notes: formData.notes || null,
+          referral_id: referralData.id,
+        })
+        .select()
+        .single();
       if (leadError) throw leadError;
+
+      // Seed a follow-up task on the new lead (non-blocking)
+      if (createdLead?.id) {
+        supabase.from("tasks").insert({
+          title: "Follow up on partner referral",
+          lead_id: createdLead.id,
+          status: "todo",
+          priority: "medium",
+        }).then(({ error: taskErr }) => {
+          if (taskErr) console.error("Seed task insert failed:", taskErr);
+        }).catch((err) => console.error("Seed task insert failed:", err));
+      }
 
       // Notify all admins about the new referral
       const { data: admins } = await supabase
@@ -103,7 +118,7 @@ export default function PartnerSubmitReferral() {
               source: "partners.referral_submitted",
               title: "New Referral Submitted",
               message: `${partner.contact_name} submitted a referral for ${formData.client_name}`,
-              link: "/Partners",
+              link: "/partner/referrals",
             })
           )
         );

@@ -101,7 +101,13 @@ export default function ProjectForm({ project, accounts: initialAccounts, onSubm
   /* ---- Phases state ---- */
   const [phases, setPhases] = useState([]);
   const [phasesLoading, setPhasesLoading] = useState(false);
-  const [phasesDirty, setPhasesDirty] = useState(false);
+  const [phaseSaveState, setPhaseSaveState] = useState("idle"); // idle | saving | saved | error
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [expandedPhase, setExpandedPhase] = useState(null); // index whose details are shown
+  const phasesAutoSaveTimer = useRef(null);
+  const phasesLastSerialized = useRef(null);
+  const phasesFirstRun = useRef(true);
 
   // Load phases for existing projects
   useEffect(() => {
@@ -162,7 +168,27 @@ export default function ProjectForm({ project, accounts: initialAccounts, onSubm
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    onSubmit(cleanData());
+    const result = await onSubmit(cleanData());
+    // If we were creating a project and have staged phases, persist them now
+    if (!isEdit && result?.id && phases.length > 0) {
+      try {
+        const rows = phases.map((p, i) => ({
+          project_id: result.id,
+          name: p.name || `Phase ${i + 1}`,
+          description: p.description || null,
+          amount: Number(p.amount) || 0,
+          status: p.status || "planned",
+          order_index: i,
+          start_date: p.start_date || null,
+          end_date: p.end_date || null,
+        }));
+        const { error: insertErr } = await supabase.from("project_phases").insert(rows);
+        if (insertErr) throw insertErr;
+      } catch (err) {
+        console.error("Staged phases insert failed:", err);
+        toast.error("Project created, but phases couldn't be saved", { description: err.message });
+      }
+    }
   };
 
   /* ---- Auto-save (edit mode only) ---- */
@@ -205,12 +231,13 @@ export default function ProjectForm({ project, accounts: initialAccounts, onSubm
   }, [saveState]);
 
   /* ---- Phases handlers ---- */
-  const addPhase = () => {
-    const nextOrder = phases.length > 0 ? Math.max(...phases.map((p) => p.order_index || 0)) + 1 : 0;
+  const addPhase = (focus = true) => {
+    const nextOrder = phases.length;
+    const localId = `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     setPhases((prev) => [
       ...prev,
       {
-        _localId: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        _localId: localId,
         name: "",
         amount: 0,
         status: "planned",
@@ -218,19 +245,27 @@ export default function ProjectForm({ project, accounts: initialAccounts, onSubm
         order_index: nextOrder,
       },
     ]);
-    setPhasesDirty(true);
+    if (focus) {
+      // focus the new row's name input on next tick
+      setTimeout(() => {
+        const el = document.querySelector(`[data-phase-local="${localId}"] input[data-phase-name]`);
+        if (el) el.focus();
+      }, 0);
+    }
   };
 
   const updatePhase = (idx, field, value) => {
     setPhases((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)));
-    setPhasesDirty(true);
   };
 
   const removePhase = async (idx) => {
     const phase = phases[idx];
-    setPhases((prev) => prev.filter((_, i) => i !== idx));
-    setPhasesDirty(true);
-    // If it's a saved phase, delete from DB immediately
+    setPhases((prev) => prev.filter((_, i) => i !== idx).map((p, i) => ({ ...p, order_index: i })));
+    setExpandedPhase((cur) => {
+      if (cur === null) return null;
+      if (cur === idx) return null;
+      return cur > idx ? cur - 1 : cur;
+    });
     if (phase?.id && project?.id) {
       try {
         await supabase.from("project_phases").delete().eq("id", phase.id);
@@ -240,54 +275,98 @@ export default function ProjectForm({ project, accounts: initialAccounts, onSubm
     }
   };
 
-  const movePhase = (idx, dir) => {
-    const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= phases.length) return;
+  const reorderPhase = (fromIdx, toIdx) => {
+    if (fromIdx === toIdx || fromIdx == null || toIdx == null) return;
     setPhases((prev) => {
       const next = [...prev];
-      [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
       return next.map((p, i) => ({ ...p, order_index: i }));
     });
-    setPhasesDirty(true);
   };
 
-  const savePhases = async () => {
-    if (!project?.id) {
-      toast.error("Save the project first before adding phases");
+  const splitEvenly = () => {
+    if (phases.length === 0) return;
+    const budget = Number(formData.total_budget) || phases.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    if (budget <= 0) {
+      toast.error("Set a total budget first");
       return;
     }
-    try {
-      for (const [i, phase] of phases.entries()) {
-        const payload = {
-          project_id: project.id,
-          name: phase.name || `Phase ${i + 1}`,
-          description: phase.description || null,
-          amount: Number(phase.amount) || 0,
-          status: phase.status || "planned",
-          order_index: i,
-          start_date: phase.start_date || null,
-          end_date: phase.end_date || null,
-        };
-        if (phase.id) {
-          await supabase.from("project_phases").update(payload).eq("id", phase.id);
-        } else {
-          const { data } = await supabase
-            .from("project_phases")
-            .insert(payload)
-            .select()
-            .single();
-          if (data) {
-            setPhases((prev) => prev.map((p) => (p._localId === phase._localId ? data : p)));
+    const each = Math.floor((budget / phases.length) * 100) / 100;
+    const remainder = +(budget - each * phases.length).toFixed(2);
+    setPhases((prev) => prev.map((p, i) => ({
+      ...p,
+      amount: i === prev.length - 1 ? +(each + remainder).toFixed(2) : each,
+    })));
+  };
+
+  // Auto-save phases (edit mode only) — debounced
+  useEffect(() => {
+    if (!isEdit || !project?.id) return;
+    const serialized = JSON.stringify(phases.map((p) => ({
+      id: p.id || null,
+      _localId: p._localId || null,
+      name: p.name || "",
+      description: p.description || "",
+      amount: Number(p.amount) || 0,
+      status: p.status || "planned",
+      start_date: p.start_date || null,
+      end_date: p.end_date || null,
+      order_index: p.order_index ?? 0,
+    })));
+    if (phasesFirstRun.current) {
+      phasesFirstRun.current = false;
+      phasesLastSerialized.current = serialized;
+      return;
+    }
+    if (serialized === phasesLastSerialized.current) return;
+    phasesLastSerialized.current = serialized;
+
+    setPhaseSaveState("saving");
+    if (phasesAutoSaveTimer.current) clearTimeout(phasesAutoSaveTimer.current);
+    phasesAutoSaveTimer.current = setTimeout(async () => {
+      try {
+        for (const [i, phase] of phases.entries()) {
+          const payload = {
+            project_id: project.id,
+            name: phase.name || `Phase ${i + 1}`,
+            description: phase.description || null,
+            amount: Number(phase.amount) || 0,
+            status: phase.status || "planned",
+            order_index: i,
+            start_date: phase.start_date || null,
+            end_date: phase.end_date || null,
+          };
+          if (phase.id) {
+            await supabase.from("project_phases").update(payload).eq("id", phase.id);
+          } else {
+            const { data } = await supabase
+              .from("project_phases")
+              .insert(payload)
+              .select()
+              .single();
+            if (data) {
+              setPhases((prev) => prev.map((p) => (p._localId === phase._localId ? { ...data } : p)));
+            }
           }
         }
+        setPhaseSaveState("saved");
+      } catch (err) {
+        console.error("Phase auto-save failed:", err);
+        setPhaseSaveState("error");
+        toast.error("Couldn't save phases", { description: err.message });
       }
-      setPhasesDirty(false);
-      toast.success(`${phases.length} phase${phases.length === 1 ? "" : "s"} saved`);
-    } catch (err) {
-      console.error("Phases save failed:", err);
-      toast.error("Couldn't save phases", { description: err.message });
-    }
-  };
+    }, 600);
+    return () => {
+      if (phasesAutoSaveTimer.current) clearTimeout(phasesAutoSaveTimer.current);
+    };
+  }, [phases, isEdit, project?.id]);
+
+  useEffect(() => {
+    if (phaseSaveState !== "saved") return;
+    const t = setTimeout(() => setPhaseSaveState("idle"), 1500);
+    return () => clearTimeout(t);
+  }, [phaseSaveState]);
 
   const phasesTotal = phases.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const budgetNum = Number(formData.total_budget) || 0;
@@ -638,47 +717,91 @@ export default function ProjectForm({ project, accounts: initialAccounts, onSubm
           </div>
         )}
 
-        {/* Phases manager — only for fixed billing type (or exit if desired) */}
+        {/* Phases manager — only for fixed billing type */}
         {formData.account_id && formData.billing_type === "fixed" && (
           <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
             <div className="flex items-center gap-2 mb-2">
               <Layers className="w-3.5 h-3.5 text-gray-500" />
               <span className="text-[12px] font-medium text-gray-700 dark:text-gray-300">Phases</span>
-              <span className="text-[11px] text-gray-400 tabular-nums">{phases.length}</span>
-              {!isEdit && (
-                <span className="ml-auto text-[11px] text-gray-400">Save project first to add phases</span>
+              {phases.length > 0 && (
+                <span className="text-[11px] text-gray-400 tabular-nums">{phases.length}</span>
               )}
-              {isEdit && (
+              <span className="ml-auto flex items-center gap-1">
+                {isEdit && phaseSaveState !== "idle" && (
+                  <span className={`text-[11px] tabular-nums ${phaseSaveState === "error" ? "text-red-600" : "text-gray-400"}`}>
+                    {phaseSaveState === "saving" && "Saving…"}
+                    {phaseSaveState === "saved" && "✓ Saved"}
+                    {phaseSaveState === "error" && "Save failed"}
+                  </span>
+                )}
+                {phases.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={splitEvenly}
+                    className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 px-2 h-6 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                    title={`Divide ${formData.total_budget ? `$${Number(formData.total_budget).toLocaleString()}` : "total"} evenly across phases`}
+                  >
+                    Split evenly
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={addPhase}
-                  className="ml-auto inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 px-2 h-6 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  onClick={() => addPhase(true)}
+                  className="inline-flex items-center gap-1 text-[12px] text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 px-2 h-6 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <Plus className="w-3 h-3" />
                   Add phase
                 </button>
-              )}
+              </span>
             </div>
 
             {phasesLoading ? (
               <div className="py-6 text-center text-[12px] text-gray-400">Loading phases…</div>
             ) : phases.length === 0 ? (
-              <div className="py-4 text-center text-[12px] text-gray-400 dark:text-gray-500 border border-dashed border-gray-200 dark:border-gray-800 rounded-md">
-                No phases yet. Break this project into milestones like
-                <br />
-                <span className="text-gray-500 dark:text-gray-400">"Discovery · $20k → Build · $58k → Launch · $20k"</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => addPhase(true)}
+                className="w-full py-4 text-center text-[12px] text-gray-400 dark:text-gray-500 border border-dashed border-gray-200 dark:border-gray-800 rounded-md hover:border-gray-300 dark:hover:border-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+                Add first phase
+                <div className="mt-1 text-[11px] text-gray-400">
+                  e.g. Discovery · $20k → Build · $58k → Launch · $20k
+                </div>
+              </button>
             ) : (
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {phases.map((phase, idx) => (
                   <PhaseRow
                     key={phase.id || phase._localId}
                     phase={phase}
                     index={idx}
                     total={phases.length}
+                    expanded={expandedPhase === idx}
+                    isDragOver={dragOverIdx === idx && dragIdx !== idx}
                     onUpdate={(field, value) => updatePhase(idx, field, value)}
                     onRemove={() => removePhase(idx)}
-                    onMove={(dir) => movePhase(idx, dir)}
+                    onToggleExpand={() => setExpandedPhase((cur) => (cur === idx ? null : idx))}
+                    onEnterAddNext={() => {
+                      if (idx === phases.length - 1) addPhase(true);
+                      else {
+                        // focus next row's name
+                        const nextLocal = phases[idx + 1]?._localId || phases[idx + 1]?.id;
+                        const el = document.querySelector(`[data-phase-local="${nextLocal}"] input[data-phase-name]`);
+                        if (el) el.focus();
+                      }
+                    }}
+                    onDragStart={() => setDragIdx(idx)}
+                    onDragOver={() => setDragOverIdx(idx)}
+                    onDrop={() => {
+                      reorderPhase(dragIdx, idx);
+                      setDragIdx(null);
+                      setDragOverIdx(null);
+                    }}
+                    onDragEnd={() => {
+                      setDragIdx(null);
+                      setDragOverIdx(null);
+                    }}
                   />
                 ))}
               </div>
@@ -686,7 +809,7 @@ export default function ProjectForm({ project, accounts: initialAccounts, onSubm
 
             {/* Reconciliation strip */}
             {phases.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 px-2 py-2 rounded-md bg-gray-50 dark:bg-gray-900/60 text-[12px]">
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-2 py-1.5 rounded-md bg-gray-50 dark:bg-gray-900/60 text-[12px]">
                 <span className="text-gray-500 dark:text-gray-400">
                   Phases total <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">${phasesTotal.toLocaleString()}</span>
                 </span>
@@ -709,16 +832,6 @@ export default function ProjectForm({ project, accounts: initialAccounts, onSubm
                           : `$${Math.abs(budgetDelta).toLocaleString()} over budget`}
                     </span>
                   </>
-                )}
-                {phasesDirty && isEdit && (
-                  <button
-                    type="button"
-                    onClick={savePhases}
-                    className="ml-auto inline-flex items-center gap-1 px-2 h-6 rounded-md bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900 text-[12px]"
-                  >
-                    <Check className="w-3 h-3" />
-                    Save phases
-                  </button>
                 )}
               </div>
             )}
@@ -783,98 +896,176 @@ const PHASE_STATUS = [
   { id: "cancelled", label: "Cancelled", color: "bg-red-500" },
 ];
 
-function PhaseRow({ phase, index, total, onUpdate, onRemove, onMove }) {
+function PhaseRow({
+  phase,
+  index,
+  expanded,
+  isDragOver,
+  onUpdate,
+  onRemove,
+  onToggleExpand,
+  onEnterAddNext,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+}) {
   const statusMeta = PHASE_STATUS.find((s) => s.id === phase.status) || PHASE_STATUS[0];
+  const hasDetails = phase.description || phase.start_date || phase.end_date;
 
   return (
-    <div className="phase-row group flex items-start gap-2 p-2 border border-gray-200 dark:border-gray-800 rounded-md bg-white dark:bg-gray-900/50 hover:border-gray-300 dark:hover:border-gray-700">
-      {/* Reorder handle + index */}
-      <div className="flex flex-col items-center gap-0.5 pt-1 flex-shrink-0">
+    <div
+      data-phase-local={phase._localId || phase.id}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart();
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        onDragOver();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop();
+      }}
+      onDragEnd={onDragEnd}
+      className={`phase-row group border rounded-md bg-white dark:bg-gray-900/50 transition-colors ${
+        isDragOver
+          ? "border-indigo-400 dark:border-indigo-500 ring-2 ring-indigo-100 dark:ring-indigo-900/40"
+          : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+      }`}
+    >
+      {/* Compact top row — always visible */}
+      <div className="flex items-center gap-1.5 p-1.5">
+        {/* Drag handle + numbered badge (combined) */}
+        <div
+          className="flex items-center gap-1 flex-shrink-0 cursor-grab active:cursor-grabbing select-none"
+          title="Drag to reorder"
+        >
+          <GripVertical className="w-3 h-3 text-gray-300 dark:text-gray-600 group-hover:text-gray-500 dark:group-hover:text-gray-400" />
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 text-[10px] font-semibold tabular-nums text-gray-600 dark:text-gray-300">
+            {index + 1}
+          </span>
+        </div>
+
+        {/* Status dot-picker */}
+        <Select value={phase.status} onValueChange={(v) => onUpdate("status", v)}>
+          <SelectTrigger
+            className="h-7 w-7 p-0 justify-center border-transparent bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 [&>svg]:hidden"
+            title={statusMeta.label}
+          >
+            <span className={`w-2 h-2 rounded-full ${statusMeta.color}`} />
+          </SelectTrigger>
+          <SelectContent>
+            {PHASE_STATUS.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                <div className="flex items-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${s.color}`} />
+                  {s.label}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Name */}
+        <Input
+          data-phase-name
+          value={phase.name}
+          onChange={(e) => onUpdate("name", e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              onEnterAddNext();
+            }
+          }}
+          placeholder={`Phase ${index + 1} name`}
+          className="h-7 text-[13px] flex-1 font-medium min-w-0"
+        />
+
+        {/* Amount */}
+        <div className="relative w-28 flex-shrink-0">
+          <DollarSign className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+          <Input
+            type="number"
+            step="0.01"
+            value={phase.amount || ""}
+            onChange={(e) => onUpdate("amount", parseFloat(e.target.value) || 0)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onEnterAddNext();
+              }
+            }}
+            placeholder="0"
+            className="h-7 text-[13px] pl-5 text-right tabular-nums"
+          />
+        </div>
+
+        {/* Expand (for details) */}
         <button
           type="button"
-          onClick={() => onMove(-1)}
-          disabled={index === 0}
-          className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-20 disabled:cursor-not-allowed"
-          title="Move up"
+          onClick={onToggleExpand}
+          className={`p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 ${
+            hasDetails ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}
+          title={expanded ? "Hide details" : "Details (dates, description)"}
         >
-          <GripVertical className="w-3 h-3 rotate-90" />
+          <svg
+            className={`w-3 h-3 transition-transform ${expanded ? "rotate-90" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
         </button>
-        <span className="text-[10px] tabular-nums text-gray-400 dark:text-gray-500">{index + 1}</span>
+
+        {/* Remove */}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 rounded flex-shrink-0"
+          title="Remove phase"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
 
-      <div className="flex-1 min-w-0 space-y-1">
-        {/* Top row: name + amount */}
-        <div className="flex items-center gap-1.5">
-          <Input
-            value={phase.name}
-            onChange={(e) => onUpdate("name", e.target.value)}
-            placeholder={`Phase ${index + 1} name`}
-            className="h-7 text-[13px] flex-1 font-medium"
-          />
-          <div className="relative w-28 flex-shrink-0">
-            <DollarSign className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+      {/* Expandable details */}
+      {expanded && (
+        <div className="px-1.5 pb-2 pt-0 space-y-1.5 border-t border-gray-100 dark:border-gray-800 mt-0.5">
+          <div className="flex items-center gap-1.5 pt-1.5">
+            <span className="text-[11px] text-gray-400 w-16 flex-shrink-0">Dates</span>
             <Input
-              type="number"
-              step="0.01"
-              value={phase.amount || ""}
-              onChange={(e) => onUpdate("amount", parseFloat(e.target.value) || 0)}
-              placeholder="0"
-              className="h-7 text-[13px] pl-5 text-right tabular-nums"
+              type="date"
+              value={phase.start_date || ""}
+              onChange={(e) => onUpdate("start_date", e.target.value)}
+              className="h-6 text-[11px] flex-1"
+            />
+            <span className="text-gray-400 text-[11px]">→</span>
+            <Input
+              type="date"
+              value={phase.end_date || ""}
+              onChange={(e) => onUpdate("end_date", e.target.value)}
+              className="h-6 text-[11px] flex-1"
+            />
+          </div>
+          <div className="flex items-start gap-1.5">
+            <span className="text-[11px] text-gray-400 w-16 flex-shrink-0 pt-1">Notes</span>
+            <Textarea
+              value={phase.description || ""}
+              onChange={(e) => onUpdate("description", e.target.value)}
+              placeholder="Scope or deliverables for this phase…"
+              rows={2}
+              className="text-[12px] resize-none flex-1"
             />
           </div>
         </div>
-
-        {/* Bottom row: status + dates */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <Select value={phase.status} onValueChange={(v) => onUpdate("status", v)}>
-            <SelectTrigger className="h-6 w-32 text-[11px] gap-1">
-              <div className="flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${statusMeta.color}`} />
-                <SelectValue />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {PHASE_STATUS.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  <div className="flex items-center gap-2">
-                    <span className={`w-1.5 h-1.5 rounded-full ${s.color}`} />
-                    {s.label}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            type="date"
-            value={phase.start_date || ""}
-            onChange={(e) => onUpdate("start_date", e.target.value)}
-            className="h-6 text-[11px] w-32"
-            placeholder="Start"
-          />
-          <Input
-            type="date"
-            value={phase.end_date || ""}
-            onChange={(e) => onUpdate("end_date", e.target.value)}
-            className="h-6 text-[11px] w-32"
-            placeholder="End"
-          />
-          <Input
-            value={phase.description || ""}
-            onChange={(e) => onUpdate("description", e.target.value)}
-            placeholder="Short description (optional)"
-            className="h-6 text-[11px] flex-1 min-w-[140px] text-gray-500 dark:text-gray-400"
-          />
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={onRemove}
-        className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 rounded flex-shrink-0"
-        title="Remove phase"
-      >
-        <X className="w-3.5 h-3.5" />
-      </button>
+      )}
     </div>
   );
 }
