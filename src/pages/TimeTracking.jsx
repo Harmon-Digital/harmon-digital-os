@@ -343,6 +343,32 @@ export default function TimeTracking() {
     }
   };
 
+  // Are we currently looking at the week that contains today?
+  const isOnCurrentWeek = useMemo(() => {
+    if (!startDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const day = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - day + (day === 0 ? -6 : 1));
+    const mondayStr = `${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,"0")}-${String(monday.getDate()).padStart(2,"0")}`;
+    return startDate === mondayStr;
+  }, [startDate]);
+
+  // Keyboard shortcut: press "T" anywhere on the page (outside inputs) to jump to today.
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== "t" && e.key !== "T") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = (e.target?.tagName || "").toLowerCase();
+      if (tag === "input" || tag === "textarea" || e.target?.isContentEditable) return;
+      e.preventDefault();
+      handleTodayClick();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [viewMode]);
+
   const filterCount =
     (projectFilter !== "all" ? 1 : 0) +
     (isAdmin && teamMemberFilter !== "me" ? 1 : 0);
@@ -378,6 +404,7 @@ export default function TimeTracking() {
               type="button"
               onClick={() => navigateWeek(-1)}
               className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+              title="Previous week"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
@@ -388,9 +415,20 @@ export default function TimeTracking() {
               type="button"
               onClick={() => navigateWeek(1)}
               className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+              title="Next week"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
+            {!isOnCurrentWeek && (
+              <button
+                type="button"
+                onClick={handleTodayClick}
+                className="h-full px-2 ml-0.5 border-l border-gray-200 dark:border-gray-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 font-medium tabular-nums"
+                title="Jump to today (T)"
+              >
+                Today
+              </button>
+            )}
           </div>
 
           <div className="relative flex-1 max-w-xs min-w-0">
