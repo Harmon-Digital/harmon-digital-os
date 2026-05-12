@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { TimeEntry, Project, Task, TeamMember } from "@/api/entities";
 import { parseLocalDate } from "@/utils";
@@ -312,14 +312,35 @@ export default function TimeTracking() {
 
   const formatDateRange = () => {
     if (!startDate || !endDate) return "";
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    // Parse YYYY-MM-DD as local (not UTC) to avoid off-by-one
+    const [sy, sm, sd] = startDate.split("-").map(Number);
+    const [ey, em, ed] = endDate.split("-").map(Number);
+    const start = new Date(sy, sm - 1, sd);
+    const end = new Date(ey, em - 1, ed);
     const opts = { month: 'short', day: 'numeric' };
 
-    if (start.getMonth() === end.getMonth()) {
+    if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
       return `${start.toLocaleDateString('en-US', opts)} - ${end.getDate()}`;
     }
     return `${start.toLocaleDateString('en-US', opts)} - ${end.toLocaleDateString('en-US', opts)}`;
+  };
+
+  // Date object the calendar uses for the week it's showing (always Monday).
+  const weekStartDate = useMemo(() => {
+    if (!startDate) return null;
+    const [y, m, d] = startDate.split("-").map(Number);
+    const out = new Date(y, m - 1, d);
+    out.setHours(0, 0, 0, 0);
+    return out;
+  }, [startDate]);
+
+  // "Today" button while in calendar view should snap to *this* week, not just today.
+  const handleTodayClick = () => {
+    if (viewMode === "calendar") {
+      setDateRangePreset("week");
+    } else {
+      setDateRangePreset("today");
+    }
   };
 
   const filterCount =
@@ -340,7 +361,7 @@ export default function TimeTracking() {
               <button
                 key={key}
                 type="button"
-                onClick={() => setDateRangePreset(key)}
+                onClick={() => (key === "today" ? handleTodayClick() : setDateRangePreset(key))}
                 className={`px-2.5 py-1 rounded ${
                   dateRange === key
                     ? "bg-gray-900 text-white"
@@ -356,7 +377,7 @@ export default function TimeTracking() {
             <button
               type="button"
               onClick={() => navigateWeek(-1)}
-              className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-200"
+              className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
@@ -366,7 +387,7 @@ export default function TimeTracking() {
             <button
               type="button"
               onClick={() => navigateWeek(1)}
-              className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-200"
+              className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -478,50 +499,53 @@ export default function TimeTracking() {
         </div>
       </div>
 
-      {/* Scrollable content */}
-      <div className="overflow-y-auto flex-1 min-h-0">
-        {/* Inline metric strip */}
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 lg:px-6 py-3 text-[13px] text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
+      {/* Inline metric strip — fixed, not scrolling */}
+      <div className="shrink-0 flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 lg:px-6 py-3 text-[13px] text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+          Total <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{totalHours.toFixed(1)}h</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+          Retainer <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{retainerHours.toFixed(1)}h</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+          Billable <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{hourlyBillableHours.toFixed(1)}h</span>
+        </span>
+        {unbilledHours > 0 && (
           <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-            Total <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{totalHours.toFixed(1)}h</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            Unbilled <span className="text-amber-600 font-medium tabular-nums">{unbilledHours.toFixed(1)}h</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-            Retainer <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{retainerHours.toFixed(1)}h</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Billable <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{hourlyBillableHours.toFixed(1)}h</span>
-          </span>
-          {unbilledHours > 0 && (
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              Unbilled <span className="text-amber-600 font-medium tabular-nums">{unbilledHours.toFixed(1)}h</span>
-            </span>
-          )}
-          <span className="flex items-center gap-1.5">
-            Entries <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{filteredEntries.length}</span>
-          </span>
-        </div>
+        )}
+        <span className="flex items-center gap-1.5">
+          Entries <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{filteredEntries.length}</span>
+        </span>
+      </div>
 
+      {/* Content area — bounded so the calendar's internal scroll engages */}
+      <div className="flex-1 min-h-0 flex flex-col">
       {viewMode === "list" ? (
-        <DayGroupedEntryList
-          entries={filteredEntries}
-          loading={loading}
-          isAdmin={isAdmin}
-          getProjectName={getProjectName}
-          getTaskTitle={getTaskTitle}
-          getTeamMemberName={getTeamMemberName}
-          getBillingDisplay={getBillingDisplay}
-          getStatusDisplay={getStatusDisplay}
-          onEdit={handleEdit}
-          onDelete={(id) => setDeleteDialog({ open: true, entryId: id })}
-          onToggleBillable={handleQuickBillableToggle}
-        />
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <DayGroupedEntryList
+            entries={filteredEntries}
+            loading={loading}
+            isAdmin={isAdmin}
+            getProjectName={getProjectName}
+            getTaskTitle={getTaskTitle}
+            getTeamMemberName={getTeamMemberName}
+            getBillingDisplay={getBillingDisplay}
+            getStatusDisplay={getStatusDisplay}
+            onEdit={handleEdit}
+            onDelete={(id) => setDeleteDialog({ open: true, entryId: id })}
+            onToggleBillable={handleQuickBillableToggle}
+          />
+        </div>
       ) : (
         <div className="flex-1 min-h-0">
           <WeeklyCalendarView
+            weekStart={weekStartDate}
             timeEntries={filteredEntries}
             projects={projects}
             users={teamMembers}

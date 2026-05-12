@@ -35,9 +35,11 @@ function formatHour(h) {
   return h > 12 ? `${h - 12} PM` : `${h} AM`;
 }
 
-export default function WeeklyCalendarView({ timeEntries, projects, users, teamMembers, onEditEntry, onMoveEntry }) {
+export default function WeeklyCalendarView({ timeEntries, projects, users, teamMembers, onEditEntry, onMoveEntry, weekStart: weekStartProp }) {
   const scrollRef = useRef(null);
-  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+
+  // Controlled (parent passes weekStart) vs uncontrolled (legacy fallback)
+  const [internalWeekStart, setInternalWeekStart] = useState(() => {
     const today = new Date();
     const day = today.getDay();
     const diff = day === 0 ? -6 : 1 - day;
@@ -46,6 +48,14 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, teamM
     monday.setHours(0, 0, 0, 0);
     return monday;
   });
+  const currentWeekStart = useMemo(() => {
+    if (weekStartProp instanceof Date && !isNaN(weekStartProp.getTime())) {
+      const d = new Date(weekStartProp);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    return internalWeekStart;
+  }, [weekStartProp, internalWeekStart]);
 
   // Scroll to 8 AM on mount
   const scrollInit = useCallback((node) => {
@@ -64,24 +74,6 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, teamM
     }
     return days;
   }, [currentWeekStart]);
-
-  const navigate = useCallback((dir) => {
-    setCurrentWeekStart((prev) => {
-      const d = new Date(prev);
-      d.setDate(d.getDate() + dir * 7);
-      return d;
-    });
-  }, []);
-
-  const goToday = useCallback(() => {
-    const today = new Date();
-    const day = today.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + diff);
-    monday.setHours(0, 0, 0, 0);
-    setCurrentWeekStart(monday);
-  }, []);
 
   const projectColorMap = useMemo(() => {
     const map = {};
@@ -120,7 +112,10 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, teamM
 
     if (start === null) {
       const idx = dayEntries.findIndex((e) => e.id === entry.id);
-      start = 8 + idx * (entry.hours || 1);
+      const precedingHours = dayEntries
+        .slice(0, idx)
+        .reduce((sum, e) => sum + (e.hours || 1), 0);
+      start = 8 + precedingHours;
       end = start + (entry.hours || 1);
     }
     if (end === null) end = start + (entry.hours || 1);
@@ -133,15 +128,10 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, teamM
   const hours = Array.from({ length: TOTAL_HOURS }, (_, i) => START_HOUR + i);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Week nav */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 dark:border-gray-800 text-[13px] shrink-0">
-        <div className="flex items-center gap-0.5 border border-gray-200 dark:border-gray-800 rounded-md p-0.5">
-          <button type="button" onClick={() => navigate(-1)} className="px-1.5 py-0.5 text-gray-500 hover:text-gray-900 dark:text-gray-100 rounded">‹</button>
-          <button type="button" onClick={goToday} className="px-2 py-0.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-[12px]">Today</button>
-          <button type="button" onClick={() => navigate(1)} className="px-1.5 py-0.5 text-gray-500 hover:text-gray-900 dark:text-gray-100 rounded">›</button>
-        </div>
-        <span className="text-gray-900 dark:text-gray-100 font-medium">{rangeLabel}</span>
+    <div className="flex flex-col h-full min-h-0">
+      {/* Compact range + week-total strip (outer toolbar handles nav) */}
+      <div className="flex items-center gap-3 px-4 py-1.5 border-b border-gray-100 dark:border-gray-800 text-[12px] shrink-0">
+        <span className="text-gray-700 dark:text-gray-300 font-medium">{rangeLabel}</span>
         <span className="ml-auto text-gray-500">
           Week <span className="text-gray-900 dark:text-gray-100 font-medium tabular-nums">{weekTotal.toFixed(1)}h</span>
         </span>
