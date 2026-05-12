@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
+import { parseLocalDate } from "@/utils";
 import { ChevronDown, ChevronRight, Users } from "lucide-react";
 
 export default function PartnerReferrals() {
@@ -154,13 +155,13 @@ export default function PartnerReferrals() {
                         {referral.status === "pending" ? (
                           <span className="text-amber-400">Awaiting approval</span>
                         ) : (
-                          new Date(referral.referral_date).toLocaleDateString()
+                          referral.referral_date ? parseLocalDate(referral.referral_date).toLocaleDateString() : "—"
                         )}
                       </p>
                     </div>
                   </div>
                   <div className="text-neutral-300 capitalize text-sm">
-                    {referral.projects?.billing_type?.replace("_", " ") || "—"}
+                    {referral.projects?.billing_type?.replace(/_/g, " ") || "—"}
                   </div>
                   <div className="text-white font-medium">
                     ${calculateMonthlyCommission(referral).toLocaleString()}
@@ -245,14 +246,14 @@ export default function PartnerReferrals() {
                               <div className="text-sm">
                                 {payout.period_start && payout.period_end ? (
                                   <span className="text-neutral-300">
-                                    {new Date(payout.period_start).toLocaleDateString("en-US", {
+                                    {parseLocalDate(payout.period_start).toLocaleDateString("en-US", {
                                       month: "short",
                                       year: "numeric",
                                     })}
                                   </span>
                                 ) : (
                                   <span className="text-neutral-300 capitalize">
-                                    {payout.payout_type?.replace("_", " ")}
+                                    {payout.payout_type?.replace(/_/g, " ")}
                                   </span>
                                 )}
                               </div>

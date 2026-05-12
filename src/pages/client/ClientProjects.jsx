@@ -72,7 +72,7 @@ export default function ClientProjects() {
                 )}
               </div>
               <span className="text-[11px] capitalize text-gray-500 dark:text-gray-400 shrink-0">
-                {p.status?.replace("_", " ")}
+                {p.status?.replace(/_/g, " ")}
               </span>
               <ArrowRight className="w-3.5 h-3.5 text-gray-400" />
             </Link>

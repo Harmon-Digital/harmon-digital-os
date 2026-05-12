@@ -360,7 +360,7 @@ export default function Team() {
               className={`relative h-9 text-[13px] font-medium ${
                 statusTab === "active"
                   ? "text-gray-900 dark:text-gray-100 after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-gray-900"
-                  : "text-gray-500 hover:text-gray-700 dark:text-gray-300"
+                  : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
             >
               Active <span className="text-gray-400 dark:text-gray-500 tabular-nums ml-1">{activeMembers.length}</span>
@@ -371,7 +371,7 @@ export default function Team() {
               className={`relative h-9 text-[13px] font-medium ${
                 statusTab === "inactive"
                   ? "text-gray-900 dark:text-gray-100 after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-[2px] after:bg-gray-900"
-                  : "text-gray-500 hover:text-gray-700 dark:text-gray-300"
+                  : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
             >
               Inactive <span className="text-gray-400 dark:text-gray-500 tabular-nums ml-1">{inactiveMembers.length}</span>
@@ -520,7 +520,7 @@ export default function Team() {
                         <button
                           type="button"
                           onClick={() => handleInviteExisting(member)}
-                          className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-700 dark:text-gray-300"
+                          className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                         >
                           <Send className="w-3 h-3" />
                           Invite
@@ -535,7 +535,7 @@ export default function Team() {
                         <button
                           type="button"
                           onClick={() => handleEdit(member)}
-                          className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                           title="Edit"
                         >
                           <Edit className="w-3.5 h-3.5" />

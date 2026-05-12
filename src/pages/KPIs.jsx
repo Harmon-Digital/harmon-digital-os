@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +59,7 @@ export default function KPIs() {
   const [inlineBonus, setInlineBonus] = useState("");
   const [inlineSaving, setInlineSaving] = useState(false);
   const [teamMembers, setTeamMembers] = useState([]);
+  const teamMembersLoaded = useRef(false);
   const [selectedTeamMember, setSelectedTeamMember] = useState(null);
 
   const currentEntries = allEntries.filter((e) => e.month === selectedWeek);
@@ -94,11 +95,12 @@ export default function KPIs() {
 
       const [entries, members] = await Promise.all([
         fetchEntriesForRange(startWeek, endWeek, selectedTeamMember),
-        teamMembers.length === 0 ? TeamMember.list() : Promise.resolve(teamMembers),
+        !teamMembersLoaded.current ? TeamMember.list() : Promise.resolve(null),
       ]);
 
       setAllEntries(entries);
-      if (teamMembers.length === 0) {
+      if (!teamMembersLoaded.current && members) {
+        teamMembersLoaded.current = true;
         setTeamMembers(members.filter((m) => m.status === "active"));
       }
     } catch (err) {
@@ -106,7 +108,7 @@ export default function KPIs() {
     } finally {
       setLoading(false);
     }
-  }, [selectedWeek, selectedTeamMember, teamMembers]);
+  }, [selectedWeek, selectedTeamMember]);
 
   useEffect(() => {
     loadData();
@@ -299,7 +301,7 @@ export default function KPIs() {
               <button
                 type="button"
                 onClick={() => navigateWeek(-1)}
-                className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-200"
+                className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
@@ -310,7 +312,7 @@ export default function KPIs() {
                 type="button"
                 onClick={() => navigateWeek(1)}
                 disabled={!canGoForward}
-                className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-200 disabled:opacity-40"
+                className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-40"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>

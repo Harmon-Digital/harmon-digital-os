@@ -164,7 +164,7 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-b border-gray-200 dark:border-gray-800 py-2.5">
         <button
           onClick={() => navigate(createPageUrl('Tasks'))}
-          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100"
+          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
           <span>My tasks</span>
@@ -172,7 +172,7 @@ export default function Dashboard() {
         </button>
         <button
           onClick={() => navigate(createPageUrl('Tasks'))}
-          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100"
+          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
           <span>Overdue</span>
@@ -182,7 +182,7 @@ export default function Dashboard() {
         </button>
         <button
           onClick={() => navigate(createPageUrl('Tasks'))}
-          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100"
+          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
           <span>Due this week</span>
@@ -190,7 +190,7 @@ export default function Dashboard() {
         </button>
         <button
           onClick={() => navigate(createPageUrl('TimeTracking'))}
-          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100"
+          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
           <span>Hours this week</span>
@@ -198,7 +198,7 @@ export default function Dashboard() {
         </button>
         <button
           onClick={() => navigate(createPageUrl('Projects'))}
-          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100"
+          className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
           <span>My projects</span>
@@ -258,7 +258,7 @@ export default function Dashboard() {
                     )}
                     <div className="flex items-center gap-1.5 min-w-[80px]">
                       <span className={`w-1.5 h-1.5 rounded-full ${statusDot[task.status] || 'bg-gray-400'}`} />
-                      <span className="text-[12px] text-gray-600 dark:text-gray-400 capitalize">{task.status.replace('_', ' ')}</span>
+                      <span className="text-[12px] text-gray-600 dark:text-gray-400 capitalize">{task.status.replace(/_/g, ' ')}</span>
                     </div>
                   </div>
                 </div>

@@ -321,7 +321,7 @@ export default function AdminDashboard() {
                   </div>
                   <button
                     onClick={() => navigate(createPageUrl('Accounting'))}
-                    className="text-[12px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100 flex items-center gap-1"
+                    className="text-[12px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 flex items-center gap-1"
                   >
                     View all <ChevronRight className="w-3 h-3" />
                   </button>
@@ -358,7 +358,7 @@ export default function AdminDashboard() {
                 </div>
                 <button
                   onClick={() => navigate(createPageUrl('Accounting'))}
-                  className="text-[12px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100 flex items-center gap-1"
+                  className="text-[12px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 flex items-center gap-1"
                 >
                   View all <ChevronRight className="w-3 h-3" />
                 </button>

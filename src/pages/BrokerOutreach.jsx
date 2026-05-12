@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
+import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -356,7 +357,7 @@ export default function BrokerOutreach() {
           b.status !== "dead" &&
           b.status !== "partnered" &&
           b.status !== "new" &&
-          (!b.last_contact || new Date(b.last_contact) < cutoffDate)
+          (!b.last_contact || parseLocalDate(b.last_contact) < cutoffDate)
         );
         break;
       case "active":
@@ -429,7 +430,7 @@ export default function BrokerOutreach() {
         b.status !== "dead" &&
         b.status !== "partnered" &&
         b.status !== "new" &&
-        (!b.last_contact || new Date(b.last_contact) < cutoffDate)
+        (!b.last_contact || parseLocalDate(b.last_contact) < cutoffDate)
       ).length,
       active: brokers.filter(b =>
         ["responded", "call_booked", "call_complete"].includes(b.status)
@@ -464,7 +465,7 @@ export default function BrokerOutreach() {
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" className="h-7 w-7 p-0 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100">
+              <Button variant="ghost" className="h-7 w-7 p-0 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100">
                 <HelpCircle className="w-3.5 h-3.5" />
               </Button>
             </PopoverTrigger>
@@ -578,7 +579,7 @@ export default function BrokerOutreach() {
                   openKpiSettings(membersWithoutKpi[0]);
                 }
               }}
-              className="text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 flex items-center gap-1 shrink-0"
+              className="text-[12px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 flex items-center gap-1 shrink-0"
             >
               <Plus className="w-3 h-3" />
               Set KPI
@@ -727,7 +728,7 @@ export default function BrokerOutreach() {
 
                   <span className="hidden xl:inline text-[12px] text-gray-500 tabular-nums w-24 text-right">
                     {broker.last_contact
-                      ? new Date(broker.last_contact).toLocaleDateString()
+                      ? parseLocalDate(broker.last_contact).toLocaleDateString()
                       : <span className="text-gray-400 dark:text-gray-500">Never</span>}
                   </span>
 
@@ -770,14 +771,14 @@ export default function BrokerOutreach() {
                       href={broker.linkedin_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100 shrink-0"
+                      className="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 shrink-0"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                   ) : (
                     <button
                       type="button"
-                      className="text-gray-300 dark:text-gray-600 hover:text-gray-600 dark:text-gray-400 text-[12px] shrink-0"
+                      className="text-gray-300 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400 text-[12px] shrink-0"
                       onClick={() => startEditing(broker.id, "linkedin_url", "")}
                     >
                       —
@@ -787,7 +788,7 @@ export default function BrokerOutreach() {
                   <button
                     type="button"
                     onClick={() => openReachOutDialog(broker)}
-                    className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 h-6 rounded border border-gray-200 dark:border-gray-800 text-[12px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100 hover:bg-white dark:bg-gray-950"
+                    className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 h-6 rounded border border-gray-200 dark:border-gray-800 text-[12px] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white dark:hover:bg-gray-950"
                   >
                     <TrendingUp className="w-3 h-3" />
                     Log
@@ -854,14 +855,14 @@ export default function BrokerOutreach() {
                   type="button"
                   onClick={handleInlineCreate}
                   disabled={!inlineCreate.name || !inlineCreate.firm}
-                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100 disabled:opacity-40"
+                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
                 >
                   <Check className={`w-3.5 h-3.5 ${inlineCreate.name && inlineCreate.firm ? 'text-green-600' : ''}`} />
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowInlineCreate(false)}
-                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
+                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -870,7 +871,7 @@ export default function BrokerOutreach() {
               <button
                 type="button"
                 onClick={() => setShowInlineCreate(true)}
-                className="w-full flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-800 text-[13px] text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                className="w-full flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-800 text-[13px] text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800/60"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add broker

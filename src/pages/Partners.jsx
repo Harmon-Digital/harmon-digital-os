@@ -344,7 +344,7 @@ export default function Partners() {
                         setSelectedPartner(partner);
                         setReferralDialog(true);
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
                       title="Link project"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -357,7 +357,7 @@ export default function Partners() {
                       setEditingPartner({ ...partner });
                       setEditSheet(true);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
                     title="Edit"
                   >
                     <Edit className="w-3.5 h-3.5" />

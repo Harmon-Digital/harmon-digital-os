@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/api/supabaseClient";
+import { parseLocalDate } from "@/utils";
 import { Check } from "lucide-react";
 import { toast } from "@/lib/toast";
 
@@ -80,7 +81,7 @@ export default function ClientApprovals() {
                   <h3 className="text-[14px] font-medium text-gray-900 dark:text-gray-100">{post.title}</h3>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400 mt-1">
                     {post.scheduled_date && (
-                      <span>Scheduled {new Date(post.scheduled_date).toLocaleDateString()}</span>
+                      <span>Scheduled {parseLocalDate(post.scheduled_date).toLocaleDateString()}</span>
                     )}
                     {post.platforms?.length > 0 && (
                       <span>{post.platforms.join(", ")}</span>

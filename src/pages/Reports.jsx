@@ -519,7 +519,7 @@ export default function Reports() {
                 <button
                   type="button"
                   onClick={() => shiftBonusWeek(-1)}
-                  className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-200"
+                  className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
@@ -530,7 +530,7 @@ export default function Reports() {
                   type="button"
                   onClick={() => shiftBonusWeek(1)}
                   disabled={bonusWeek >= toWeekStart(new Date())}
-                  className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-200 disabled:opacity-40"
+                  className="h-full px-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-40"
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>

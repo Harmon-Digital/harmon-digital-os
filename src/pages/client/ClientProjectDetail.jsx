@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/api/supabaseClient";
+import { parseLocalDate } from "@/utils";
 import { ArrowLeft, CheckSquare, FileText } from "lucide-react";
 
 export default function ClientProjectDetail() {
@@ -14,13 +15,22 @@ export default function ClientProjectDetail() {
 
   useEffect(() => {
     if (!id || !user?.id) return;
+    setLoading(true);
     (async () => {
       try {
+        const { data: contact } = await supabase
+          .from("contacts")
+          .select("account_id")
+          .eq("portal_user_id", user.id)
+          .maybeSingle();
+        if (!contact?.account_id) { setLoading(false); return; }
+
         const [{ data: proj }, { data: ts = [] }, { data: docs = [] }] = await Promise.all([
           supabase
             .from("projects")
             .select("id, name, description, status, start_date, end_date, client_visible")
             .eq("id", id)
+            .eq("account_id", contact.account_id)
             .maybeSingle(),
           supabase
             .from("tasks")
@@ -72,9 +82,9 @@ export default function ClientProjectDetail() {
           <p className="text-[14px] text-gray-600 dark:text-gray-400 mt-2">{project.description}</p>
         )}
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-gray-600 dark:text-gray-400 mt-3">
-          <span>Status <span className="text-gray-900 dark:text-gray-100 font-medium capitalize">{project.status?.replace("_", " ")}</span></span>
-          {project.start_date && <span>Started <span className="text-gray-900 dark:text-gray-100 font-medium">{new Date(project.start_date).toLocaleDateString()}</span></span>}
-          {project.end_date && <span>Target <span className="text-gray-900 dark:text-gray-100 font-medium">{new Date(project.end_date).toLocaleDateString()}</span></span>}
+          <span>Status <span className="text-gray-900 dark:text-gray-100 font-medium capitalize">{project.status?.replace(/_/g, " ")}</span></span>
+          {project.start_date && <span>Started <span className="text-gray-900 dark:text-gray-100 font-medium">{parseLocalDate(project.start_date).toLocaleDateString()}</span></span>}
+          {project.end_date && <span>Target <span className="text-gray-900 dark:text-gray-100 font-medium">{parseLocalDate(project.end_date).toLocaleDateString()}</span></span>}
         </div>
       </div>
 
@@ -97,10 +107,10 @@ export default function ClientProjectDetail() {
                   t.status === "blocked" ? "bg-red-500" : "bg-gray-400"
                 }`} />
                 <span className="flex-1 text-[13px] text-gray-900 dark:text-gray-100 truncate">{t.title}</span>
-                <span className="text-[11px] capitalize text-gray-500 dark:text-gray-400">{t.status?.replace("_", " ")}</span>
+                <span className="text-[11px] capitalize text-gray-500 dark:text-gray-400">{t.status?.replace(/_/g, " ")}</span>
                 {t.due_date && (
                   <span className="text-[11px] text-gray-500 dark:text-gray-400 w-20 text-right">
-                    {new Date(t.due_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                    {parseLocalDate(t.due_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                   </span>
                 )}
               </div>

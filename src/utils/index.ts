@@ -5,6 +5,49 @@ export function createPageUrl(pageName: string) {
     return '/' + pageName.replace(/ /g, '-');
 }
 
+const ALLOWED_TAGS = new Set([
+    "a", "b", "blockquote", "br", "code", "div", "em", "h1", "h2", "h3",
+    "h4", "h5", "h6", "hr", "i", "img", "li", "ol", "p", "pre", "s",
+    "span", "strong", "sub", "sup", "table", "tbody", "td", "th", "thead",
+    "tr", "u", "ul",
+]);
+const ALLOWED_ATTRS = new Set([
+    "href", "src", "alt", "title", "class", "style", "target", "rel",
+    "width", "height", "colspan", "rowspan",
+]);
+
+export function sanitizeHtml(dirty: string): string {
+    const doc = new DOMParser().parseFromString(dirty, "text/html");
+    const walk = (node: Node) => {
+        for (const child of Array.from(node.childNodes)) {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+                const el = child as Element;
+                if (!ALLOWED_TAGS.has(el.tagName.toLowerCase())) {
+                    walk(el);
+                    el.replaceWith(...Array.from(el.childNodes));
+                    continue;
+                }
+                for (const attr of Array.from(el.attributes)) {
+                    if (!ALLOWED_ATTRS.has(attr.name.toLowerCase())) {
+                        el.removeAttribute(attr.name);
+                    } else if (attr.name === "href" || attr.name === "src") {
+                        const val = attr.value.trim().toLowerCase();
+                        if (val.startsWith("javascript:") || val.startsWith("data:")) {
+                            el.removeAttribute(attr.name);
+                        }
+                    }
+                }
+                if (el.tagName === "A") {
+                    el.setAttribute("rel", "noopener noreferrer");
+                }
+                walk(el);
+            }
+        }
+    };
+    walk(doc.body);
+    return doc.body.innerHTML;
+}
+
 /**
  * Parse a date-only string (YYYY-MM-DD) as local midnight instead of UTC.
  * new Date("2026-04-03") treats it as UTC midnight, which shifts back a day

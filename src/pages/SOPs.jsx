@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { api } from "@/api/legacyClient";
+import { sanitizeHtml, parseLocalDate } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Edit, Trash2, FileText, Filter } from "lucide-react";
@@ -278,7 +279,7 @@ export default function SOPs() {
                           setEditingSOP(sop);
                           setShowDrawer(true);
                         }}
-                        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="shrink-0 opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                         title="Edit"
                       >
                         <Edit className="w-3.5 h-3.5" />
@@ -384,12 +385,12 @@ export default function SOPs() {
           </DialogHeader>
           <div className="mt-4">
             <div className="bg-white dark:bg-gray-950 rounded-lg p-6 border prose prose-sm max-w-none">
-              <div dangerouslySetInnerHTML={{ __html: viewingSOP?.content || '' }} />
+              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(viewingSOP?.content || '') }} />
             </div>
             <div className="mt-4 pt-4 border-t text-xs text-gray-500 flex justify-between">
               <span>Created: {viewingSOP && new Date(viewingSOP.created_at).toLocaleDateString()}</span>
               {viewingSOP?.last_reviewed_date && (
-                <span>Last reviewed: {new Date(viewingSOP.last_reviewed_date).toLocaleDateString()}</span>
+                <span>Last reviewed: {parseLocalDate(viewingSOP.last_reviewed_date).toLocaleDateString()}</span>
               )}
             </div>
           </div>

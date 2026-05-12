@@ -143,9 +143,7 @@ export default function SocialMedia() {
   };
 
   const handleDelete = async () => {
-    const ids = deleteDialog.postIds?.length
-      ? deleteDialog.postIds
-      : deleteDialog.postId ? [deleteDialog.postId] : [];
+    const ids = deleteDialog.postIds?.length ? deleteDialog.postIds : [];
     if (!ids.length) return;
     try {
       const { error } = await supabase.from("social_posts").delete().in("id", ids);
@@ -506,7 +504,7 @@ export default function SocialMedia() {
             <button
               type="button"
               onClick={() => navigateMonth(-1)}
-              className="p-1 text-gray-500 hover:text-gray-900 dark:text-gray-100 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -514,7 +512,7 @@ export default function SocialMedia() {
             <button
               type="button"
               onClick={() => navigateMonth(1)}
-              className="p-1 text-gray-500 hover:text-gray-900 dark:text-gray-100 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

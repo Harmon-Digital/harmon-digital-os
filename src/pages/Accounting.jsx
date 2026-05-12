@@ -333,7 +333,7 @@ export default function Accounting() {
                         <TableCell className="max-w-xs truncate">{transaction.description}</TableCell>
                         <TableCell className="capitalize">
                           <Badge variant="outline">
-                            {(transaction.type || '').replace('_', ' ')}
+                            {(transaction.type || '').replace(/_/g, ' ')}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-semibold">
@@ -395,14 +395,14 @@ export default function Accounting() {
                         <TableCell>{expense.vendor || '—'}</TableCell>
                         <TableCell>
                           <Badge className={categoryColors[expense.category] || ''}>
-                            {expense.category?.replace('_', ' ') || '—'}
+                            {expense.category?.replace(/_/g, ' ') || '—'}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-semibold text-red-600">
                           ${(expense.amount ?? 0).toFixed(2)}
                         </TableCell>
                         <TableCell className="capitalize">
-                          {expense.payment_method?.replace('_', ' ') || '—'}
+                          {expense.payment_method?.replace(/_/g, ' ') || '—'}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -440,7 +440,7 @@ export default function Accounting() {
                         <TableCell>{parseLocalDate(payment.payment_date).toLocaleDateString()}</TableCell>
                         <TableCell className="text-sm">
                           {payment.period_start && payment.period_end ? (
-                            `${new Date(payment.period_start).toLocaleDateString()} - ${new Date(payment.period_end).toLocaleDateString()}`
+                            `${parseLocalDate(payment.period_start).toLocaleDateString()} - ${parseLocalDate(payment.period_end).toLocaleDateString()}`
                           ) : '—'}
                         </TableCell>
                         <TableCell>{payment.hours_worked || '—'}</TableCell>

@@ -88,7 +88,7 @@ export default function InlineEdit({
             if (stopPropagation) e.stopPropagation();
             setEditing(true);
           }}
-          className="opacity-0 group-hover/edit:opacity-100 p-0.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-300 transition-opacity flex-shrink-0"
+          className="opacity-0 group-hover/edit:opacity-100 p-0.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-opacity flex-shrink-0"
           title="Edit (or double-click)"
         >
           <Pencil className="w-3 h-3" />

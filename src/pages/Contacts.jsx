@@ -363,7 +363,7 @@ export default function Contacts() {
                 <a
                   href={`mailto:${contact.email}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="hidden md:inline text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-52 truncate text-right"
+                  className="hidden md:inline text-[12px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 w-52 truncate text-right"
                 >
                   {contact.email}
                 </a>
@@ -372,7 +372,7 @@ export default function Contacts() {
                   <a
                     href={`tel:${contact.phone}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="hidden lg:inline text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-28 text-right"
+                    className="hidden lg:inline text-[12px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 w-28 text-right"
                   >
                     {contact.phone}
                   </a>
@@ -381,7 +381,7 @@ export default function Contacts() {
                 )}
 
                 <span className={`text-[11px] capitalize w-20 text-right ${roleTextColors[contact.role] || "text-gray-500"}`}>
-                  {(contact.role || "").replace("_", " ") || "—"}
+                  {(contact.role || "").replace(/_/g, " ") || "—"}
                 </span>
 
                 <button
@@ -392,7 +392,7 @@ export default function Contacts() {
                     setEditingContact(contact);
                     setShowDrawer(true);
                   }}
-                  className="inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-10 justify-end"
+                  className="inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 w-10 justify-end"
                   title="Activities"
                 >
                   <MessageSquare className="w-3 h-3" />
@@ -433,7 +433,7 @@ export default function Contacts() {
                       e.stopPropagation();
                       handleViewContact(contact);
                     }}
-                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
                   >
                     <Edit className="w-3.5 h-3.5" />
                   </button>
@@ -556,7 +556,7 @@ export default function Contacts() {
                         )}
                         {activity.outcome && (
                           <span className="inline-block mt-1 text-[11px] text-gray-500 capitalize">
-                            {activity.outcome.replace("_", " ")}
+                            {activity.outcome.replace(/_/g, " ")}
                           </span>
                         )}
                         {activity.next_action && (
@@ -564,7 +564,7 @@ export default function Contacts() {
                             Next: {activity.next_action}
                             {activity.next_action_date && (
                               <span className="text-yellow-600 ml-1.5">
-                                · Due {new Date(activity.next_action_date).toLocaleDateString()}
+                                · Due {parseLocalDate(activity.next_action_date).toLocaleDateString()}
                               </span>
                             )}
                           </div>
@@ -577,7 +577,7 @@ export default function Contacts() {
                             setEditingActivity(activity);
                             setShowActivityDialog(true);
                           }}
-                          className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
+                          className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>

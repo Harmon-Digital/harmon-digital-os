@@ -53,7 +53,7 @@ export default function Branding() {
       const fileUrl = response.file_url;
 
       handleChange(field, fileUrl);
-      setSuccessMessage(`${field.replace('_', ' ')} uploaded successfully.`);
+      setSuccessMessage(`${field.replace(/_/g, ' ')} uploaded successfully.`);
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error('Error uploading file:', error);

@@ -1277,7 +1277,7 @@ export default function Channels() {
                         <div className="flex-1 min-w-0">
                           <span className="font-medium text-gray-900 dark:text-gray-100">{author}:</span>{" "}
                           <span className="text-gray-700 dark:text-gray-300">
-                            {m.body.replace(/@\[([^\]]+)\]\([0-9a-f-]+\)/g, "@$1")}
+                            {(m.body || "").replace(/@\[([^\]]+)\]\([0-9a-f-]+\)/g, "@$1")}
                           </span>
                         </div>
                         <button
@@ -1468,7 +1468,7 @@ export default function Channels() {
                                           reactionPickerFor === m.id ? null : m.id,
                                         )
                                       }
-                                      className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 rounded-l-md"
+                                      className="p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60 rounded-l-md"
                                       title="Add reaction"
                                     >
                                       <Smile className="w-3.5 h-3.5" />
@@ -1477,7 +1477,7 @@ export default function Channels() {
                                       type="button"
                                       onClick={() => togglePin(m)}
                                       className={`p-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
-                                        m.is_pinned ? "text-amber-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-300"
+                                        m.is_pinned ? "text-amber-600" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                                       }`}
                                       title={m.is_pinned ? "Unpin" : "Pin"}
                                     >
@@ -1487,7 +1487,7 @@ export default function Channels() {
                                       <button
                                         type="button"
                                         onClick={() => startEdit(m)}
-                                        className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                                        className="p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60"
                                         title="Edit"
                                       >
                                         <Pencil className="w-3.5 h-3.5" />
@@ -1547,7 +1547,7 @@ export default function Channels() {
                       <button
                         type="button"
                         onClick={() => removePendingFile(idx)}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-800 dark:text-gray-200"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                         title="Remove"
                       >
                         <X className="w-3 h-3" />
@@ -1590,7 +1590,7 @@ export default function Channels() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute left-2 bottom-2 p-1.5 rounded-md text-gray-500 hover:text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="absolute left-2 bottom-2 p-1.5 rounded-md text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                   title="Attach file"
                 >
                   <Paperclip className="w-4 h-4" />

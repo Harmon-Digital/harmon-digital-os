@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/api/supabaseClient";
+import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,8 +98,8 @@ export default function ReferralPayouts() {
           (p) =>
             p.referral_id === referral.id &&
             p.payout_type === "retainer" &&
-            new Date(p.period_start).getMonth() === periodStart.getMonth() &&
-            new Date(p.period_start).getFullYear() === periodStart.getFullYear()
+            parseLocalDate(p.period_start).getMonth() === periodStart.getMonth() &&
+            parseLocalDate(p.period_start).getFullYear() === periodStart.getFullYear()
         );
 
         if (existingPayout) continue;
@@ -369,7 +370,7 @@ export default function ReferralPayouts() {
 
                   <span className="hidden lg:inline text-[12px] text-gray-500 tabular-nums w-24 text-right">
                     {payout.period_start
-                      ? new Date(payout.period_start).toLocaleDateString("en-US", {
+                      ? parseLocalDate(payout.period_start).toLocaleDateString("en-US", {
                           month: "short",
                           year: "numeric",
                         })
@@ -377,7 +378,7 @@ export default function ReferralPayouts() {
                   </span>
 
                   <span className="hidden lg:inline text-[12px] text-gray-500 capitalize w-20 text-right">
-                    {payout.payout_type?.replace("_", " ") || "—"}
+                    {payout.payout_type?.replace(/_/g, " ") || "—"}
                   </span>
 
                   <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium tabular-nums w-24 text-right">

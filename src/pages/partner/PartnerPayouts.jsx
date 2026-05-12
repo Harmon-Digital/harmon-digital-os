@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
+import { parseLocalDate } from "@/utils";
 import { DollarSign } from "lucide-react";
 
 export default function PartnerPayouts() {
@@ -140,14 +141,14 @@ export default function PartnerPayouts() {
               >
                 <div className="text-neutral-300 text-sm">
                   {payout.paid_date
-                    ? new Date(payout.paid_date).toLocaleDateString()
+                    ? parseLocalDate(payout.paid_date).toLocaleDateString()
                     : new Date(payout.created_at).toLocaleDateString()}
                 </div>
                 <div className="text-white font-medium text-sm">
                   {payout.referrals?.projects?.name || "—"}
                 </div>
                 <div className="text-neutral-400 text-sm capitalize">
-                  {payout.payout_type?.replace("_", " ")}
+                  {payout.payout_type?.replace(/_/g, " ")}
                 </div>
                 <div className="text-neutral-500 text-sm">
                   {payout.period_start

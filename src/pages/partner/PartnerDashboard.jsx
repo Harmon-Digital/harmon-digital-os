@@ -159,7 +159,7 @@ export default function PartnerDashboard() {
           <div>
             <p className="text-neutral-500 text-sm mb-1">Payment Method</p>
             <p className="text-white text-xl font-medium capitalize">
-              {partner?.payment_method?.replace("_", " ") || "Bank Transfer"}
+              {partner?.payment_method?.replace(/_/g, " ") || "Bank Transfer"}
             </p>
           </div>
         </div>

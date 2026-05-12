@@ -291,7 +291,7 @@ export default function Accounts() {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="text-gray-400 dark:text-gray-500 font-normal ml-1.5 hover:text-gray-700 dark:text-gray-300"
+                        className="text-gray-400 dark:text-gray-500 font-normal ml-1.5 hover:text-gray-700 dark:hover:text-gray-300"
                       >
                         · {account.website.replace(/^https?:\/\//, "")}
                       </a>
@@ -309,7 +309,7 @@ export default function Accounts() {
                     e.stopPropagation();
                     handleViewContacts(account);
                   }}
-                  className="hidden md:inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-24 justify-end"
+                  className="hidden md:inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 w-24 justify-end"
                 >
                   <Users className="w-3 h-3" />
                   {accountContacts.length}
@@ -327,7 +327,7 @@ export default function Accounts() {
                       setEditingAccount(account);
                       setShowDrawer(true);
                     }}
-                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
                   >
                     <Edit className="w-3.5 h-3.5" />
                   </button>
@@ -407,14 +407,14 @@ export default function Accounts() {
                     </div>
                     <a
                       href={`mailto:${contact.email}`}
-                      className="text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-52 truncate text-right"
+                      className="text-[12px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 w-52 truncate text-right"
                     >
                       {contact.email}
                     </a>
                     {contact.phone ? (
                       <a
                         href={`tel:${contact.phone}`}
-                        className="text-[12px] text-gray-500 hover:text-gray-900 dark:text-gray-100 w-28 text-right"
+                        className="text-[12px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 w-28 text-right"
                       >
                         {contact.phone}
                       </a>

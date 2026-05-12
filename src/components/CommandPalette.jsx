@@ -281,7 +281,7 @@ export default function CommandPalette() {
                   <span className="truncate">{t.title}</span>
                   {t.status && (
                     <span className="ml-auto text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                      {t.status.replace("_", " ")}
+                      {t.status.replace(/_/g, " ")}
                     </span>
                   )}
                 </CommandItem>

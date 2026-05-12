@@ -35,6 +35,7 @@ export async function calculateKpiValue(kpiDef, periodStart, teamMemberId = null
 
   const { data, error } = await query;
   if (error) throw error;
+  if (!Array.isArray(data)) return 0;
 
   if (aggregate === "count") {
     return data.length;

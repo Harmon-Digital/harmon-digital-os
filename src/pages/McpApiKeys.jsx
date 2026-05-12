@@ -51,7 +51,7 @@ function CopyButton({ text, label = "Copy" }) {
   };
 
   return (
-    <button onClick={handleCopy} className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100 transition-colors">
+    <button onClick={handleCopy} className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
       {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
     </button>
   );
@@ -129,7 +129,7 @@ function ServerStatusSection({ serverInfo, loading, onRefresh }) {
           <Server className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
           <span className="h-7 text-[11px] font-medium uppercase tracking-wide text-gray-500 flex items-center">MCP Server</span>
         </div>
-        <button onClick={onRefresh} disabled={loading} className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:text-gray-100 transition-colors">
+        <button onClick={onRefresh} disabled={loading} className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
@@ -612,7 +612,7 @@ export default function McpApiKeys() {
     setToolsLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) { setToolsLoading(false); return; }
 
       const res = await fetch(MCP_ENDPOINT, {
         method: "POST",
