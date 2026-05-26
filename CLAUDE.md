@@ -25,7 +25,7 @@
 ## Payroll routine — known patterns
 - Tyler and Jalen log hours in the OS under `time_entries` with `contractor_paid` flag. Query `contractor_paid = false` for unpaid hours in the period.
 - Cross-check: OS unpaid hours × hourly_rate should roughly match the Gusto contractor payment for the same period.
-- Jalen's hours for a cycle sometimes go missing from the OS (entered directly in Gusto) — flag when OS shows 0h for Jalen but Gusto shows a payment.
+- All hours must be logged in the OS before being paid in Gusto. If OS shows 0h for a contractor but Gusto shows a payment, that is a real data gap — the contractor likely hasn't logged their hours yet (or entries weren't saved). Flag it and ask them to log before approving future payments.
 - Referral payouts flow through `referral_payouts` table; check `status IN ('pending','due','approved')` for anything due this cycle.
 
 ## Slack
