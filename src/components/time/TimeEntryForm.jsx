@@ -218,9 +218,11 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
       if (!confirmed) return;
     }
 
-    // Convert empty strings to null for optional fields
+    // Strip server-managed fields and convert empty strings to null
+    // eslint-disable-next-line no-unused-vars
+    const { id, created_at, updated_at, ...rest } = submissionData;
     const cleanedData = {
-      ...submissionData,
+      ...rest,
       task_id: formData.task_id || null,
       description: formData.description || null,
       start_time: formData.start_time || null,
@@ -231,7 +233,13 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
 
   /* ---- Auto-save for existing entries ---- */
   const buildCleaned = (d = formData) => {
-    let out = { ...d };
+    // Strip server-managed fields so updates can never accidentally try to
+    // change the primary key or touch created_at — this was the source of
+    // "duplicate key value violates unique constraint time_entries_pkey"
+    // when residual state from a prior edit leaked into the payload.
+    // eslint-disable-next-line no-unused-vars
+    const { id, created_at, updated_at, ...rest } = d;
+    let out = { ...rest };
     if (!out.hours && out.start_time && out.end_time) {
       const start = new Date(`${out.date}T${out.start_time}`);
       const end = new Date(`${out.date}T${out.end_time}`);
