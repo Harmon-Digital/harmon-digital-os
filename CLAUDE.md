@@ -24,6 +24,7 @@
 
 ## Payroll routine — known patterns
 - Tyler and Jalen log hours in the OS under `time_entries` with `contractor_paid` flag. Query `contractor_paid = false` for unpaid hours in the period.
+- Also query for contractors with **zero entries at all** in the period (not just zero unpaid) — that's the real gap signal (e.g. Jalen paid 13.4h in Gusto on 2026-05-18 but had no OS entries from May 9 onward; he needed to log them after the fact).
 - Cross-check: OS unpaid hours × hourly_rate should roughly match the Gusto contractor payment for the same period.
 - All hours must be logged in the OS before being paid in Gusto. If OS shows 0h for a contractor but Gusto shows a payment, that is a real data gap — the contractor likely hasn't logged their hours yet (or entries weren't saved). Flag it and ask them to log before approving future payments.
 - Referral payouts flow through `referral_payouts` table; check `status IN ('pending','due','approved')` for anything due this cycle.
