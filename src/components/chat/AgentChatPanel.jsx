@@ -263,14 +263,18 @@ export function AgentChatPanel({ isOpen, onClose, accounts = [], fullWidth = fal
   // Load messages when channel or agent changes
   const loadMessages = useCallback(async (cid, agentId) => {
     if (!cid) return;
-    const { data } = await supabase
-      .from("bot_messages")
-      .select("id, role, content, created_at, metadata")
-      .eq("channel_id", cid)
-      .eq("metadata->>agent_id", agentId)
-      .order("created_at", { ascending: true })
-      .limit(200);
-    setMessages(data || []);
+    try {
+      const { data } = await supabase
+        .from("bot_messages")
+        .select("id, role, content, created_at, metadata")
+        .eq("channel_id", cid)
+        .eq("metadata->>agent_id", agentId)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      setMessages(data || []);
+    } catch (err) {
+      console.error("Failed to load messages:", err);
+    }
   }, []);
 
   useEffect(() => {
@@ -282,7 +286,6 @@ export function AgentChatPanel({ isOpen, onClose, accounts = [], fullWidth = fal
   // Supabase Realtime subscription
   useEffect(() => {
     if (!channelId) return;
-    if (realtimeRef.current) supabase.removeChannel(realtimeRef.current);
 
     const channel = supabase
       .channel(`bot-msgs-${channelId}-${selectedAgentId}`)

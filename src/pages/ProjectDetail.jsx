@@ -248,8 +248,8 @@ export default function ProjectDetail() {
     if (!project.api_key) {
       const newApiKey = 'pk_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       await Project.update(projectId, { api_key: newApiKey });
-      setProject({ ...project, api_key: newApiKey });
-      setEditedProject({ ...editedProject, api_key: newApiKey });
+      setProject(prev => ({ ...prev, api_key: newApiKey }));
+      setEditedProject(prev => ({ ...prev, api_key: newApiKey }));
     }
   };
 
@@ -712,7 +712,7 @@ export default function ProjectDetail() {
                               ? "bg-yellow-500"
                               : "bg-green-500"
                         }`}
-                        style={{ width: `${Math.min((month.hours / month.budget) * 100, 100)}%` }}
+                        style={{ width: `${month.budget ? Math.min((month.hours / month.budget) * 100, 100) : 0}%` }}
                       />
                     </div>
                   </div>

@@ -323,22 +323,29 @@ export default function Tasks() {
 
     const task = tasks.find(t => t.id === draggableId);
     if (task && source.droppableId !== destination.droppableId) {
-      await Task.update(task.id, { status: destination.droppableId });
-      
-      setTasks(prevTasks => 
+      setTasks(prevTasks =>
         prevTasks.map(t => t.id === draggableId ? { ...t, status: destination.droppableId } : t)
       );
+      try {
+        await Task.update(task.id, { status: destination.droppableId });
+      } catch (error) {
+        setTasks(prevTasks =>
+          prevTasks.map(t => t.id === draggableId ? { ...t, status: source.droppableId } : t)
+        );
+        toast.error("Failed to update task status");
+      }
     }
   };
 
   const handleBulkDelete = async () => {
-    const count = deleteConfirmDialog.taskIds.length;
+    const taskIds = deleteConfirmDialog.taskIds;
+    const count = taskIds.length;
     try {
-      await Promise.all(deleteConfirmDialog.taskIds.map(id => Task.delete(id)));
+      await Promise.all(taskIds.map(id => Task.delete(id)));
       setSelectedTasks([]);
       setDeleteConfirmDialog({ open: false, taskIds: [] });
 
-      setTasks(prevTasks => prevTasks.filter(t => !deleteConfirmDialog.taskIds.includes(t.id)));
+      setTasks(prevTasks => prevTasks.filter(t => !taskIds.includes(t.id)));
       toast.success(`${count} task${count === 1 ? "" : "s"} deleted`);
     } catch (error) {
       console.error("Error deleting tasks:", error);

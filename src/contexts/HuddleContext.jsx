@@ -92,12 +92,8 @@ export function HuddleProvider({ children }) {
           .maybeSingle();
 
         if (existing) {
-          // Active huddle already exists — just join it by bumping count
           huddleId = existing.id;
-          await supabase
-            .from("huddles")
-            .update({ participant_count: (existing.participant_count || 0) + 1 })
-            .eq("id", existing.id);
+          await supabase.rpc("huddle_join", { huddle_id: existing.id });
           toast.success(asStarter ? "Joined existing huddle" : "Joined huddle");
         } else {
           // No active huddle — create one
@@ -122,6 +118,11 @@ export function HuddleProvider({ children }) {
       } catch (err) {
         console.error("Failed to join huddle:", err);
         toast.error("Couldn't join huddle", { description: err.message });
+        if (roomRef.current) {
+          try { await roomRef.current.disconnect(); } catch {}
+          roomRef.current = null;
+          setRoom(null);
+        }
       } finally {
         setConnecting(false);
       }
@@ -138,17 +139,10 @@ export function HuddleProvider({ children }) {
       console.warn("Huddle disconnect error:", err);
     }
     if (huddle?.id) {
-      // Decrement participant count; if zero, mark ended
-      const { data: h } = await supabase
-        .from("huddles")
-        .select("participant_count")
-        .eq("id", huddle.id)
-        .maybeSingle();
-      const next = Math.max((h?.participant_count || 1) - 1, 0);
-      if (next <= 0) {
-        await supabase.from("huddles").update({ ended_at: new Date().toISOString(), participant_count: 0 }).eq("id", huddle.id);
-      } else {
-        await supabase.from("huddles").update({ participant_count: next }).eq("id", huddle.id);
+      try {
+        await supabase.rpc("huddle_leave", { huddle_id: huddle.id });
+      } catch (err) {
+        console.error("Failed to update huddle on leave:", err);
       }
     }
     setActiveHuddle(null);

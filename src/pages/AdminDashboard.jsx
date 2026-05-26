@@ -138,6 +138,7 @@ export default function AdminDashboard() {
   // Overdue Invoices
   const overdueInvoices = invoices.filter(inv => {
     if (inv.status !== 'sent' && inv.status !== 'overdue') return false;
+    if (!inv.due_date) return false;
     return parseLocalDate(inv.due_date) < new Date();
   });
 

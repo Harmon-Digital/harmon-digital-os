@@ -12,7 +12,7 @@ const ALLOWED_TAGS = new Set([
     "tr", "u", "ul",
 ]);
 const ALLOWED_ATTRS = new Set([
-    "href", "src", "alt", "title", "class", "style", "target", "rel",
+    "href", "src", "alt", "title", "class", "target", "rel",
     "width", "height", "colspan", "rowspan",
 ]);
 
@@ -58,4 +58,11 @@ export function parseLocalDate(dateStr: string): Date {
     // If it's already a full ISO string or has a time component, parse as-is
     if (dateStr.includes('T') || dateStr.includes(' ')) return new Date(dateStr);
     return new Date(dateStr + 'T00:00:00');
+}
+
+export function formatLocalDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }

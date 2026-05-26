@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/api/supabaseClient";
-import { parseLocalDate } from "@/utils";
+import { parseLocalDate, formatLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,6 +98,7 @@ export default function ReferralPayouts() {
           (p) =>
             p.referral_id === referral.id &&
             p.payout_type === "retainer" &&
+            p.period_start &&
             parseLocalDate(p.period_start).getMonth() === periodStart.getMonth() &&
             parseLocalDate(p.period_start).getFullYear() === periodStart.getFullYear()
         );
@@ -109,7 +110,7 @@ export default function ReferralPayouts() {
           (p) => p.referral_id === referral.id && p.payout_type === "retainer"
         );
 
-        if (retainerPayouts.length >= referral.commission_months) continue;
+        if (referral.commission_months && retainerPayouts.length >= referral.commission_months) continue;
 
         // Calculate commission
         const monthlyRetainer = referral.projects?.monthly_retainer || 0;
@@ -121,8 +122,8 @@ export default function ReferralPayouts() {
             referral_id: referral.id,
             amount,
             payout_type: "retainer",
-            period_start: periodStart.toISOString().split("T")[0],
-            period_end: periodEnd.toISOString().split("T")[0],
+            period_start: formatLocalDate(periodStart),
+            period_end: formatLocalDate(periodEnd),
             status: "pending",
           });
         }
@@ -156,7 +157,7 @@ export default function ReferralPayouts() {
         .from("referral_payouts")
         .update({
           status: "paid",
-          paid_date: new Date().toISOString().split("T")[0],
+          paid_date: formatLocalDate(new Date()),
           payment_reference: paymentReference,
         })
         .in("id", selectedIds);

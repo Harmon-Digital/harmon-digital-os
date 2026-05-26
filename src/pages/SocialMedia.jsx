@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
-import { parseLocalDate } from "@/utils";
+import { parseLocalDate, formatLocalDate } from "@/utils";
 import { Account, TeamMember } from "@/api/entities";
 import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -186,26 +186,34 @@ export default function SocialMedia() {
   };
 
   const handleStatusChange = async (postId, newStatus) => {
-    const { error } = await supabase.from("social_posts").update({ status: newStatus }).eq("id", postId);
-    if (error) { console.error("Error updating post status:", error); return; }
-    const post = socialPosts.find(p => p.id === postId);
+    try {
+      const { error } = await supabase.from("social_posts").update({ status: newStatus }).eq("id", postId);
+      if (error) throw error;
+      const post = socialPosts.find(p => p.id === postId);
 
-    if (newStatus === "published") {
-      await notifyAdmins({
-        title: "Social post published",
-        message: `Published: ${post?.title || "Untitled"}`,
-        source: "social.post_published",
-      });
+      if (newStatus === "published") {
+        await notifyAdmins({
+          title: "Social post published",
+          message: `Published: ${post?.title || "Untitled"}`,
+          source: "social.post_published",
+        });
+      }
+
+      setSocialPosts(prev => prev.map(p => p.id === postId ? { ...p, status: newStatus } : p));
+    } catch (err) {
+      toast.error("Couldn't update status", { description: err.message });
     }
-
-    setSocialPosts(prev => prev.map(p => p.id === postId ? { ...p, status: newStatus } : p));
   };
 
   const handleApprovalToggle = async (postId, currentApproved) => {
     const newApproved = !currentApproved;
-    const { error } = await supabase.from("social_posts").update({ approved: newApproved }).eq("id", postId);
-    if (error) { console.error("Error toggling approval:", error); return; }
-    setSocialPosts(prev => prev.map(p => p.id === postId ? { ...p, approved: newApproved } : p));
+    try {
+      const { error } = await supabase.from("social_posts").update({ approved: newApproved }).eq("id", postId);
+      if (error) throw error;
+      setSocialPosts(prev => prev.map(p => p.id === postId ? { ...p, approved: newApproved } : p));
+    } catch (err) {
+      toast.error("Couldn't update approval", { description: err.message });
+    }
   };
 
   const getAccountName = (accountId) => {
@@ -291,7 +299,7 @@ export default function SocialMedia() {
 
   const getPostsForDate = (date) => {
     if (!date) return [];
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatLocalDate(date);
     return filteredPosts.filter(post => post.scheduled_date === dateStr);
   };
 

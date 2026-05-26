@@ -604,7 +604,8 @@ export function LinearSidebar({ children }) {
       .from("accounts")
       .select("id,company_name")
       .order("company_name", { ascending: true })
-      .then(({ data }) => setAccounts(data || []));
+      .then(({ data }) => setAccounts(data || []))
+      .catch(() => {});
   }, []);
 
   // Active (non-internal) projects for the sidebar dropdown
@@ -619,7 +620,8 @@ export function LinearSidebar({ children }) {
           (p) => !p.is_internal && p.billing_type !== "internal",
         );
         setProjectItems(filtered);
-      });
+      })
+      .catch(() => {});
   }, []);
 
   // Keyboard shortcuts: Cmd+\ toggle chat, Cmd+. toggle collapse

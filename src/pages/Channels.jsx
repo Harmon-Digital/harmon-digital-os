@@ -306,9 +306,9 @@ export default function Channels() {
       .on("postgres_changes", { event: "*", schema: "public", table: "huddles" }, (payload) => {
         setActiveHuddles((prev) => {
           const next = new Map(prev);
-          const row = payload.new || payload.old;
-          if (!row) return next;
-          if (payload.eventType === "DELETE" || (payload.new && payload.new.ended_at)) {
+          const row = payload.eventType === "DELETE" ? payload.old : payload.new;
+          if (!row?.channel_id) return next;
+          if (payload.eventType === "DELETE" || row.ended_at) {
             next.delete(row.channel_id);
           } else {
             next.set(row.channel_id, payload.new);
@@ -511,7 +511,6 @@ export default function Channels() {
   // Realtime subscription scoped to selected channel
   useEffect(() => {
     if (!selectedChannelId) return;
-    if (realtimeRef.current) supabase.removeChannel(realtimeRef.current);
 
     const ch = supabase
       .channel(`chat-channel-${selectedChannelId}`)

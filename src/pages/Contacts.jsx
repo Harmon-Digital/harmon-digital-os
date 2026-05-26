@@ -547,7 +547,7 @@ export default function Contacts() {
                             {activity.subject}
                           </span>
                           <span className="text-[11px] text-gray-400 dark:text-gray-500">
-                            {parseLocalDate(activity.date).toLocaleString()}
+                            {activity.date?.includes('T') ? parseLocalDate(activity.date).toLocaleString() : parseLocalDate(activity.date).toLocaleDateString()}
                             {activity.duration_minutes > 0 && ` · ${activity.duration_minutes} min`}
                           </span>
                         </div>
@@ -585,8 +585,12 @@ export default function Contacts() {
                           type="button"
                           onClick={async () => {
                             if (confirm("Delete this activity?")) {
-                              await Activity.delete(activity.id);
-                              loadData();
+                              try {
+                                await Activity.delete(activity.id);
+                                loadData();
+                              } catch (err) {
+                                toast.error("Couldn't delete activity", { description: err.message });
+                              }
                             }
                           }}
                           className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600"

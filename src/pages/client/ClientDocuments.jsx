@@ -23,6 +23,7 @@ export default function ClientDocuments() {
           .select("id, name")
           .eq("account_id", contact.account_id);
         const projectMap = new Map(projs.map((p) => [p.id, p.name]));
+        if (projs.length === 0) { setLoading(false); return; }
         const { data = [] } = await supabase
           .from("project_documents")
           .select("id, name, file_path, file_size, project_id, created_at")
@@ -57,7 +58,7 @@ export default function ClientDocuments() {
           documents.map((d) => (
             <a
               key={d.id}
-              href={d.file_path}
+              href={d.file_path?.startsWith('http') ? d.file_path : supabase.storage.from('project-documents').getPublicUrl(d.file_path).data.publicUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="group flex items-center gap-3 px-2 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"

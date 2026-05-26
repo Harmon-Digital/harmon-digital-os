@@ -652,7 +652,8 @@ export function ModernSidebar({ children }) {
       .from("accounts")
       .select("id,company_name")
       .order("company_name", { ascending: true })
-      .then(({ data }) => setAccounts(data || []));
+      .then(({ data }) => setAccounts(data || []))
+      .catch(() => {});
   }, []);
 
   // Keyboard shortcut: Cmd+\ or Ctrl+\ to toggle chat panel (desktop only)

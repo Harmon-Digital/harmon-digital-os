@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/api/supabaseClient";
+import { formatLocalDate } from "@/utils";
 import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -33,7 +34,7 @@ export default function PartnerSubmitReferral() {
         .from("referral_partners")
         .select("id, contact_name, commission_rate, commission_months")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       setPartner(data);
     } catch (error) {
@@ -64,7 +65,7 @@ export default function PartnerSubmitReferral() {
           status: "pending",
           commission_rate: partner.commission_rate || 15,
           commission_months: partner.commission_months || 6,
-          referral_date: new Date().toISOString().split("T")[0],
+          referral_date: formatLocalDate(new Date()),
           submitted_at: new Date().toISOString(),
         })
         .select()

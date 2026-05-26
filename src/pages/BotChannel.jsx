@@ -317,29 +317,34 @@ export default function BotChannel() {
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      const [{ data: channels }, { data: accountData }] = await Promise.all([
-        supabase
-          .from("bot_channels")
-          .select("id,name")
-          .eq("is_active", true)
-          .order("created_at", { ascending: true })
-          .limit(1),
-        supabase.from("accounts").select("id,company_name").order("company_name", { ascending: true }),
-      ]);
+      try {
+        const [{ data: channels }, { data: accountData }] = await Promise.all([
+          supabase
+            .from("bot_channels")
+            .select("id,name")
+            .eq("is_active", true)
+            .order("created_at", { ascending: true })
+            .limit(1),
+          supabase.from("accounts").select("id,company_name").order("company_name", { ascending: true }),
+        ]);
 
-      let cid = channels?.[0]?.id;
-      if (!cid) {
-        const { data: inserted } = await supabase
-          .from("bot_channels")
-          .insert({ name: "harmon-bot", kind: "internal", is_active: true })
-          .select("id")
-          .single();
-        cid = inserted?.id;
+        let cid = channels?.[0]?.id;
+        if (!cid) {
+          const { data: inserted } = await supabase
+            .from("bot_channels")
+            .insert({ name: "harmon-bot", kind: "internal", is_active: true })
+            .select("id")
+            .single();
+          cid = inserted?.id;
+        }
+
+        setChannelId(cid || null);
+        setAccounts(accountData || []);
+      } catch (err) {
+        console.error("Failed to initialize bot channel:", err);
+      } finally {
+        setLoading(false);
       }
-
-      setChannelId(cid || null);
-      setAccounts(accountData || []);
-      setLoading(false);
     };
     init();
   }, []);
@@ -347,14 +352,18 @@ export default function BotChannel() {
   // Load messages when channel or agent changes
   const loadMessages = useCallback(async (cid, agentId) => {
     if (!cid) return;
-    const { data } = await supabase
-      .from("bot_messages")
-      .select("id, role, content, created_at, metadata")
-      .eq("channel_id", cid)
-      .eq("metadata->>agent_id", agentId)
-      .order("created_at", { ascending: true })
-      .limit(200);
-    setMessages(data || []);
+    try {
+      const { data } = await supabase
+        .from("bot_messages")
+        .select("id, role, content, created_at, metadata")
+        .eq("channel_id", cid)
+        .eq("metadata->>agent_id", agentId)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      setMessages(data || []);
+    } catch (err) {
+      console.error("Failed to load messages:", err);
+    }
   }, []);
 
   useEffect(() => {
@@ -366,7 +375,6 @@ export default function BotChannel() {
   // Supabase Realtime subscription
   useEffect(() => {
     if (!channelId) return;
-    if (realtimeRef.current) supabase.removeChannel(realtimeRef.current);
 
     const channel = supabase
       .channel(`bot-page-${channelId}-${selectedAgentId}`)

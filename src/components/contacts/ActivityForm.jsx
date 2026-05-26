@@ -6,13 +6,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function ActivityForm({ activity, contactId, accountId, onSubmit, onCancel }) {
-  const [formData, setFormData] = useState(activity || {
+  const [formData, setFormData] = useState(activity ? {
+    ...activity,
+    subject: activity.subject || "",
+    description: activity.description || "",
+    outcome: activity.outcome || "",
+    next_action: activity.next_action || "",
+    next_action_date: activity.next_action_date || "",
+    duration_minutes: activity.duration_minutes || 0,
+  } : {
     contact_id: contactId,
     account_id: accountId,
     type: "note",
     subject: "",
     description: "",
-    date: new Date().toISOString().slice(0, 16), // YYYY-MM-DDTHH:MM format
+    date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; })(),
     duration_minutes: 0,
     outcome: "",
     next_action: "",

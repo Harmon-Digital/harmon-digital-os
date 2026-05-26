@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { formatLocalDate } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,10 +7,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function PaymentForm({ payment, teamMembers = [], onSubmit, onCancel }) {
-  const [formData, setFormData] = useState(payment || {
+  const [formData, setFormData] = useState(payment ? {
+    ...payment,
+    period_start: payment.period_start ?? "",
+    period_end: payment.period_end ?? "",
+    notes: payment.notes ?? "",
+    amount: payment.amount ?? 0,
+    hours_worked: payment.hours_worked ?? 0,
+    payment_method: payment.payment_method || "bank_transfer",
+    status: payment.status || "pending",
+  } : {
     team_member_id: "",
     amount: 0,
-    payment_date: new Date().toISOString().split('T')[0],
+    payment_date: formatLocalDate(new Date()),
     period_start: "",
     period_end: "",
     payment_method: "bank_transfer",

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Transaction, Expense, Payment, Account } from "@/api/entities";
-import { parseLocalDate } from "@/utils";
+import { parseLocalDate, formatLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,7 +51,7 @@ export default function Accounting() {
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [expenseData, setExpenseData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: formatLocalDate(new Date()),
     description: '',
     amount: 0,
     category: 'other',
@@ -137,7 +137,7 @@ export default function Accounting() {
       await Expense.create(expenseData);
       setShowExpenseDialog(false);
       setExpenseData({
-        date: new Date().toISOString().split('T')[0],
+        date: formatLocalDate(new Date()),
         description: '',
         amount: 0,
         category: 'other',

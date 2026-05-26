@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { api } from "@/api/legacyClient";
-import { parseLocalDate } from "@/utils";
+import { parseLocalDate, formatLocalDate } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw, Package, CreditCard, Users, CheckCircle, XCircle, Link2, X, FileText, Edit, Trash2, Plus } from "lucide-react";
@@ -86,8 +86,8 @@ export default function StripeSync() {
       ]);
 
       setUser(currentUser);
-      
-      if (currentUser.role === "admin") {
+
+      if (currentUser?.role === "admin") {
         setProducts(productsData);
         setSubscriptions(subscriptionsData);
         setAccounts(accountsData);
@@ -677,8 +677,8 @@ export default function StripeSync() {
                             {invoice.invoice_number || `INV-${invoice.id.slice(0, 8)}`}
                           </TableCell>
                           <TableCell>{account?.company_name || '—'}</TableCell>
-                          <TableCell>{parseLocalDate(invoice.issue_date).toLocaleDateString()}</TableCell>
-                          <TableCell>{parseLocalDate(invoice.due_date).toLocaleDateString()}</TableCell>
+                          <TableCell>{invoice.issue_date ? parseLocalDate(invoice.issue_date).toLocaleDateString() : '—'}</TableCell>
+                          <TableCell>{invoice.due_date ? parseLocalDate(invoice.due_date).toLocaleDateString() : '—'}</TableCell>
                           <TableCell className="font-semibold">
                             ${(invoice.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </TableCell>
@@ -757,7 +757,7 @@ export default function StripeSync() {
                           <div className="flex flex-wrap gap-1">
                             {product.prices?.slice(0, 3).map((price, idx) => (
                               <Badge key={idx} variant="outline" className="text-xs">
-                                ${price.unit_amount} {price.currency.toUpperCase()}
+                                ${((price.unit_amount || 0) / 100).toFixed(2)} {(price.currency || 'usd').toUpperCase()}
                                 {price.recurring && ` / ${price.recurring.interval}`}
                               </Badge>
                             ))}
@@ -948,15 +948,15 @@ export default function StripeSync() {
 function InvoiceForm({ invoice, accounts, projects, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(invoice ? {
     ...invoice,
-    issue_date: invoice.issue_date ? parseLocalDate(invoice.issue_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-    due_date: invoice.due_date ? parseLocalDate(invoice.due_date).toISOString().split('T')[0] : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    project_id: invoice.project_id || "" // Ensure project_id is empty string for Select 'None' option
+    issue_date: invoice.issue_date ? formatLocalDate(parseLocalDate(invoice.issue_date)) : formatLocalDate(new Date()),
+    due_date: invoice.due_date ? formatLocalDate(parseLocalDate(invoice.due_date)) : formatLocalDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+    project_id: invoice.project_id || ""
   } : {
     invoice_number: '',
     account_id: '',
     project_id: '',
-    issue_date: new Date().toISOString().split('T')[0],
-    due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    issue_date: formatLocalDate(new Date()),
+    due_date: formatLocalDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
     status: 'draft',
     line_items: [],
     subtotal: 0,

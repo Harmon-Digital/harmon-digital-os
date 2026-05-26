@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { Lead, TeamMember, Task, Project } from "@/api/entities";
-import { parseLocalDate } from "@/utils";
+import { parseLocalDate, formatLocalDate } from "@/utils";
 import { sendNotification } from "@/api/functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -401,7 +401,7 @@ export default function CRM() {
       // Update lead's last contact if it's a call or email
       if (activityType === "call" || activityType === "email") {
         await Lead.update(selectedLead.id, {
-          last_contact: new Date().toISOString().split("T")[0],
+          last_contact: formatLocalDate(new Date()),
         });
       }
 
@@ -974,7 +974,8 @@ export default function CRM() {
                       const done = task.status === "completed";
                       const dueDate = task.due_date ? parseLocalDate(task.due_date) : null;
                       const dueSoon = dueDate && !done && dueDate < new Date(Date.now() + 24 * 60 * 60 * 1000);
-                      const overdue = dueDate && !done && dueDate < new Date(new Date().toDateString());
+                      const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+                      const overdue = dueDate && !done && dueDate < todayMidnight;
                       return (
                         <div
                           key={task.id}

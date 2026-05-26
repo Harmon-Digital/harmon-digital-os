@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/api/supabaseClient";
-import { parseLocalDate } from "@/utils";
+import { parseLocalDate, formatLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -205,7 +205,7 @@ export default function BrokerOutreach() {
       if (activityError) throw activityError;
 
       const updates = {
-        last_contact: new Date().toISOString().split("T")[0],
+        last_contact: formatLocalDate(new Date()),
         updated_at: new Date().toISOString(),
       };
       if (reachOutBroker.status === "new") {
@@ -230,21 +230,25 @@ export default function BrokerOutreach() {
   const handleSaveKpi = async () => {
     if (!kpiMember) return;
 
-    const currentWeekStart = toWeekStart(new Date());
-    const existingStat = kpiStats.find(s => s.id === kpiMember.id);
+    try {
+      const currentWeekStart = toWeekStart(new Date());
+      const existingStat = kpiStats.find(s => s.id === kpiMember.id);
 
-    await saveEntries([{
-      slug: "brokers_contacted",
-      month: currentWeekStart,
-      actual_value: existingStat?.weekCount || 0,
-      target_value: kpiWeeklyGoal,
-      bonus_amount: kpiBonus || null,
-      team_member_id: kpiMember.id,
-    }]);
+      await saveEntries([{
+        slug: "brokers_contacted",
+        month: currentWeekStart,
+        actual_value: existingStat?.weekCount || 0,
+        target_value: kpiWeeklyGoal,
+        bonus_amount: kpiBonus || null,
+        team_member_id: kpiMember.id,
+      }]);
 
-    setShowKpiSettings(false);
-    setKpiMember(null);
-    loadData();
+      setShowKpiSettings(false);
+      setKpiMember(null);
+      loadData();
+    } catch (err) {
+      console.error("Failed to save KPI:", err);
+    }
   };
 
   const openKpiSettings = (member) => {

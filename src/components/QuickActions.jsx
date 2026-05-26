@@ -111,7 +111,8 @@ export default function QuickActions() {
   const loadTimerState = () => {
     const saved = localStorage.getItem('quickActionsTimer');
     if (saved) {
-      const state = JSON.parse(saved);
+      let state;
+      try { state = JSON.parse(saved); } catch { return; }
       setTimerRunning(state.running || false);
       setTimerPaused(state.paused || false);
       setStartTime(state.startTime || null);

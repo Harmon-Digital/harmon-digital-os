@@ -131,43 +131,18 @@ export function AuthProvider({ children }) {
   };
 
   const invitePartner = async (email, contactName, companyName) => {
-    // Use Supabase admin invite (requires service role in edge function)
-    // For now, we'll create the user profile and send a password reset
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password: crypto.randomUUID(), // Random password, they'll reset it
-      options: {
-        data: {
-          full_name: contactName,
-        },
-      },
+    // Use edge function to create partner with service role key,
+    // so the admin's session is never replaced.
+    const { data, error } = await supabase.functions.invoke('invite-partner', {
+      body: { email, contactName, companyName },
     });
     if (error) throw error;
+    if (data?.error) throw new Error(data.error);
 
-    // Create user profile with partner role
-    if (data.user) {
-      const { error: profileError } = await supabase.from('user_profiles').upsert({
-        id: data.user.id,
-        email,
-        full_name: contactName,
-        role: 'partner',
-      });
-      if (profileError) throw profileError;
-
-      // Create referral_partners record
-      const { error: partnerError } = await supabase.from('referral_partners').insert({
-        user_id: data.user.id,
-        contact_name: contactName,
-        company_name: companyName,
-        email,
-      });
-      if (partnerError) throw partnerError;
-
-      // Send password reset email so they can set their password
-      await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/partner/login`,
-      });
-    }
+    // Send password reset email so they can set their password
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/partner/login`,
+    });
 
     return data;
   };
