@@ -115,7 +115,7 @@ export default function TimeTracking() {
   };
 
   const navigateWeek = (direction) => {
-    const current = new Date(startDate);
+    const current = parseLocalDate(startDate);
     current.setDate(current.getDate() + (direction * 7));
     const end = new Date(current);
     end.setDate(current.getDate() + 6);
@@ -263,12 +263,12 @@ export default function TimeTracking() {
       entryDate.setHours(0, 0, 0, 0);
 
       if (startDate) {
-        const start = new Date(startDate);
+        const start = parseLocalDate(startDate);
         start.setHours(0, 0, 0, 0);
         if (entryDate < start) return false;
       }
       if (endDate) {
-        const end = new Date(endDate);
+        const end = parseLocalDate(endDate);
         end.setHours(23, 59, 59, 999);
         if (entryDate > end) return false;
       }
@@ -609,6 +609,7 @@ export default function TimeTracking() {
         description={editingEntry ? "Update time entry details" : "Record hours worked on a project"}
       >
         <TimeEntryForm
+          key={editingEntry?.id || "new"}
           timeEntry={editingEntry}
           projects={projects}
           tasks={tasks}
