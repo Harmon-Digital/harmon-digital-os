@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { api } from "@/api/legacyClient";
+import { parseLocalDate } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Info } from "lucide-react";
+import { toast } from "@/lib/toast";
 
 // Helper function to convert time string to HH:mm format for input
 const extractTimeForInput = (timeStr) => {
@@ -63,6 +65,15 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
   const [loadingMonthlyData, setLoadingMonthlyData] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
 
+  // Backfill team_member_id once currentTeamMember loads (it can arrive after the
+  // form mounts, which previously left team_member_id="" and the DB rejected the
+  // empty string with "invalid input syntax for type uuid").
+  useEffect(() => {
+    if (currentTeamMember?.id && !formData.team_member_id) {
+      setFormData(prev => ({ ...prev, team_member_id: currentTeamMember.id }));
+    }
+  }, [currentTeamMember?.id, formData.team_member_id]);
+
   useEffect(() => {
     if (formData.project_id) {
       const project = projects.find(p => p.id === formData.project_id);
@@ -102,7 +113,7 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
       const retainerBudget = project?.retainer_hours_included || project?.budget_hours;
       if (project?.billing_type === 'retainer' && retainerBudget) {
         // Get the month from the selected date
-        const selectedDate = new Date(date);
+        const selectedDate = parseLocalDate(date);
         const year = selectedDate.getFullYear();
         const month = selectedDate.getMonth();
         
@@ -149,7 +160,24 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
+    // Guard against the async-load race that produced
+    // "invalid input syntax for type uuid: ''" errors.
+    if (!formData.project_id) {
+      toast.error("Pick a project before saving");
+      return;
+    }
+    if (!formData.team_member_id) {
+      toast.error("Pick a team member before saving", {
+        description: "Your profile is still loading — try again in a moment, or pick yourself from the dropdown.",
+      });
+      return;
+    }
+    if (!formData.date) {
+      toast.error("Pick a date before saving");
+      return;
+    }
+
     // Ensure hours is calculated
     let submissionData = { ...formData };
     if (!submissionData.hours && submissionData.start_time && submissionData.end_time) {
@@ -158,6 +186,11 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
       if (end > start) {
         submissionData.hours = Math.round((end - start) / (1000 * 60 * 60) * 100) / 100;
       }
+    }
+
+    if (!submissionData.hours || submissionData.hours <= 0) {
+      toast.error("End time must be after start time");
+      return;
     }
     
     // Warning if adding time to over-budget retainer project
@@ -260,18 +293,17 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
   // Convert existing hours to start/end if editing old entry (legacy entries without start/end times)
   useEffect(() => {
     if (timeEntry && timeEntry.hours && !timeEntry.start_time) {
-      // Default start time to 9 AM if not set
       const startTime = "09:00";
-      const start = new Date(`${formData.date}T${startTime}`);
-      const end = new Date(start.getTime() + timeEntry.hours * 60 * 60 * 1000);
-      
+      const end = new Date(new Date(`2000-01-01T${startTime}`).getTime() + timeEntry.hours * 60 * 60 * 1000);
+
       setFormData(prev => ({
         ...prev,
         start_time: startTime,
         end_time: end.toTimeString().slice(0, 5),
       }));
     }
-  }, [timeEntry, formData.date]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeEntry]);
 
   const willExceedBudget = monthlyHoursData && formData.hours > 0 && 
     (monthlyHoursData.hoursUsed + formData.hours) > monthlyHoursData.monthlyBudget;
