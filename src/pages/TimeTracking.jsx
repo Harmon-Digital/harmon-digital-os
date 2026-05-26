@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { TimeEntry, Project, Task, TeamMember } from "@/api/entities";
 import { parseLocalDate } from "@/utils";
@@ -172,7 +172,12 @@ export default function TimeTracking() {
     setShowDrawer(true);
   };
 
-  const handleAutoSave = async (entryData) => {
+  // Stable reference — TimeEntryForm's auto-save effect uses this in its
+  // deps. If it changed every render (e.g. when the QuickActions running
+  // timer ticks every second), the effect would re-run, clear the pending
+  // 500ms debounce timer, and the save would never actually fire — leaving
+  // the form stuck on "Saving…" forever.
+  const handleAutoSave = useCallback(async (entryData) => {
     if (!editingEntry?.id) return;
     try {
       const saved = await TimeEntry.update(editingEntry.id, entryData);
@@ -182,7 +187,7 @@ export default function TimeTracking() {
       console.error("Auto-save failed:", err);
       throw err;
     }
-  };
+  }, [editingEntry?.id]);
 
   const handleQuickBillableToggle = async (entryId, currentBillable) => {
     try {
