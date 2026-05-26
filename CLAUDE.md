@@ -12,15 +12,14 @@
 - Company UUID: `90b7d65a-d95a-431c-ae17-75bc97de8f6a`
 - **Contractor-only shop** — no W-2 employees, no open payroll runs. Compensation flows through contractor payments (`list_contractor_payments`, `list_contractors`). Skip `list_payrolls` / `list_pay_periods` / `list_time_records` — they return empty.
 - Active contractors (as of 2026-05-26):
-  - **Tyler James** · UUID `5a3f3615-2430-43cd-b460-dc4604239ccb` · $15/hr · marketing
   - **Jalen McGarrah** · UUID `f451ef9f-169d-4212-bcc9-fe8cd962b237` · $22/hr · development
-- Inactive (dismissed): Andrew Kruszka (dismissed 2025-01-16) — expected, not in OS
+- Inactive/dismissed: Andrew Kruszka (dismissed 2025-01-16), Tyler James (departed 2026-05-26, needs Gusto dismissal) — both expected to be absent from active roster
 - Gusto has no native time tracking integration (`source: 'none'`); hours are entered manually per payment
 
 ## Team roster notes
 - **Isaac Harmon** — owner/PM, in OS at $0/hr, not in Gusto (expected)
 - **Harmon Bot** — automation account in OS, not in Gusto (expected)
-- **Isaac TEST** (`isaacdouglasharmon@gmail.com`) — test account in OS at $20/hr contractor, no Gusto counterpart. Flag each run until deactivated.
+- **Isaac TEST** (`isaacdouglasharmon@gmail.com`) — deactivated in OS on 2026-05-26, no Gusto counterpart. No further action needed.
 
 ## Payroll routine — known patterns
 - Tyler and Jalen log hours in the OS under `time_entries` with `contractor_paid` flag. Query `contractor_paid = false` for unpaid hours in the period.
