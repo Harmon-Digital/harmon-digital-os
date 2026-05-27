@@ -83,28 +83,30 @@ function ProjectPicker({ value, projects, onChange }) {
           <ChevronDown className="w-3 h-3 text-gray-400" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-1 max-h-80 overflow-y-auto">
-        <button
-          type="button"
-          onClick={() => onChange(null)}
-          className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${
-            !value ? "bg-gray-100 font-medium" : ""
-          }`}
-        >
-          No project
-        </button>
-        {projects.map((p) => (
+      <PopoverContent align="start" className="w-64 p-0">
+        <div className="max-h-80 overflow-y-auto overscroll-contain p-1">
           <button
-            key={p.id}
             type="button"
-            onClick={() => onChange(p.id)}
-            className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 truncate ${
-              value === p.id ? "bg-gray-100 font-medium" : ""
+            onClick={() => onChange(null)}
+            className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${
+              !value ? "bg-gray-100 font-medium" : ""
             }`}
           >
-            {p.name}
+            No project
           </button>
-        ))}
+          {projects.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onChange(p.id)}
+              className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 truncate ${
+                value === p.id ? "bg-gray-100 font-medium" : ""
+              }`}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
       </PopoverContent>
     </Popover>
   );
@@ -124,31 +126,33 @@ function LeadPicker({ value, leads, onChange }) {
           <ChevronDown className="w-3 h-3 text-gray-400" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-1 max-h-80 overflow-y-auto">
-        <button
-          type="button"
-          onClick={() => onChange(null)}
-          className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${
-            !value ? "bg-gray-100 font-medium" : ""
-          }`}
-        >
-          No deal
-        </button>
-        {leads.map((l) => (
+      <PopoverContent align="start" className="w-64 p-0">
+        <div className="max-h-80 overflow-y-auto overscroll-contain p-1">
           <button
-            key={l.id}
             type="button"
-            onClick={() => onChange(l.id)}
-            className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 truncate ${
-              value === l.id ? "bg-gray-100 font-medium" : ""
+            onClick={() => onChange(null)}
+            className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${
+              !value ? "bg-gray-100 font-medium" : ""
             }`}
           >
-            <div className="truncate">{l.company_name || "Untitled"}</div>
-            {l.contact_name && (
-              <div className="text-[11px] text-gray-500 truncate">{l.contact_name}</div>
-            )}
+            No deal
           </button>
-        ))}
+          {leads.map((l) => (
+            <button
+              key={l.id}
+              type="button"
+              onClick={() => onChange(l.id)}
+              className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 truncate ${
+                value === l.id ? "bg-gray-100 font-medium" : ""
+              }`}
+            >
+              <div className="truncate">{l.company_name || "Untitled"}</div>
+              {l.contact_name && (
+                <div className="text-[11px] text-gray-500 truncate">{l.contact_name}</div>
+              )}
+            </button>
+          ))}
+        </div>
       </PopoverContent>
     </Popover>
   );
@@ -181,33 +185,35 @@ function AssigneePicker({ value, teamMembers, onChange }) {
           <ChevronDown className="w-3 h-3 text-gray-400" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-56 p-1 max-h-64 overflow-y-auto">
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${
-            !value ? "bg-gray-100 font-medium" : ""
-          }`}
-        >
-          Unassigned
-        </button>
-        {teamMembers
-          .filter((tm) => tm.status === "active")
-          .map((tm) => (
-            <button
-              key={tm.id}
-              type="button"
-              onClick={() => onChange(tm.id)}
-              className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 flex items-center gap-2 ${
-                value === tm.id ? "bg-gray-100 font-medium" : ""
-              }`}
-            >
-              <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center shrink-0">
-                {initialsOf(tm.full_name)}
-              </div>
-              <span className="truncate">{tm.full_name}</span>
-            </button>
-          ))}
+      <PopoverContent align="start" className="w-56 p-0">
+        <div className="max-h-64 overflow-y-auto overscroll-contain p-1">
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${
+              !value ? "bg-gray-100 font-medium" : ""
+            }`}
+          >
+            Unassigned
+          </button>
+          {teamMembers
+            .filter((tm) => tm.status === "active")
+            .map((tm) => (
+              <button
+                key={tm.id}
+                type="button"
+                onClick={() => onChange(tm.id)}
+                className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 flex items-center gap-2 ${
+                  value === tm.id ? "bg-gray-100 font-medium" : ""
+                }`}
+              >
+                <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center shrink-0">
+                  {initialsOf(tm.full_name)}
+                </div>
+                <span className="truncate">{tm.full_name}</span>
+              </button>
+            ))}
+        </div>
       </PopoverContent>
     </Popover>
   );
