@@ -21,8 +21,22 @@ function VideoGrid({ room, participants }) {
     if (!room || !containerRef.current) return;
     const container = containerRef.current;
 
-    const attachAll = () => {
+    const detachAll = () => {
+      const allP = [
+        ...Array.from(room.remoteParticipants.values()),
+        room.localParticipant,
+      ];
+      allP.forEach((p) => {
+        if (!p?.trackPublications) return;
+        p.trackPublications.forEach((pub) => {
+          if (pub.track) pub.track.detach();
+        });
+      });
       container.innerHTML = "";
+    };
+
+    const attachAll = () => {
+      detachAll();
       const allParticipants = [
         ...Array.from(room.remoteParticipants.values()),
         room.localParticipant,
@@ -128,7 +142,7 @@ function VideoGrid({ room, participants }) {
       room.off("trackPublished", handler);
       room.off("trackUnpublished", handler);
       try {
-        if (container) container.innerHTML = "";
+        detachAll();
       } catch {}
     };
   }, [room, participants]);

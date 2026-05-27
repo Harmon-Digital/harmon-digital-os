@@ -10,6 +10,7 @@ export function AuthProvider({ children }) {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
+  const profileRequestId = useRef(0);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -46,6 +47,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const fetchUserProfile = async (userId) => {
+    const requestId = ++profileRequestId.current;
     try {
       const { data, error } = await supabase
         .from('user_profiles')
@@ -53,23 +55,21 @@ export function AuthProvider({ children }) {
         .eq('id', userId)
         .single();
 
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || requestId !== profileRequestId.current) return;
 
       if (error && error.code !== 'PGRST116') {
-        // Ignore abort errors
         if (!error.message?.includes('aborted')) {
           console.error('Error fetching user profile:', error);
         }
       }
       setUserProfile(data || null);
     } catch (error) {
-      if (!mountedRef.current) return;
-      // Ignore abort errors
+      if (!mountedRef.current || requestId !== profileRequestId.current) return;
       if (!error.message?.includes('aborted')) {
         console.error('Error fetching user profile:', error);
       }
     } finally {
-      if (mountedRef.current) setLoading(false);
+      if (mountedRef.current && requestId === profileRequestId.current) setLoading(false);
     }
   };
 

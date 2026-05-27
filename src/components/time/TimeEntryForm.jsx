@@ -74,6 +74,7 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
     }
   }, [currentTeamMember?.id, formData.team_member_id]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (formData.project_id) {
       const project = projects.find(p => p.id === formData.project_id);
@@ -81,7 +82,6 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
       setFilteredTasks(tasks.filter(t => t.project_id === formData.project_id));
       loadMonthlyRetainerData(formData.project_id, formData.date);
 
-      // For retainer and exit projects, billable doesn't apply (covered by retainer)
       if (project && (project.billing_type === 'retainer' || project.billing_type === 'exit')) {
         setFormData(prev => ({ ...prev, billable: false }));
       }
@@ -90,7 +90,7 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
       setFilteredTasks([]);
       setMonthlyHoursData(null);
     }
-  }, [formData.project_id, formData.date, tasks, projects]);
+  }, [formData.project_id, formData.date]);
 
   // Calculate hours when start/end time changes
   useEffect(() => {

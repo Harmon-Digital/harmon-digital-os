@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 
 const HOUR_HEIGHT = 48;
 const START_HOUR = 6;
@@ -100,9 +100,19 @@ export default function WeeklyCalendarView({ timeEntries, projects, users, teamM
     .filter((e) => e.date >= toDateStr(weekDays[0]) && e.date <= toDateStr(weekDays[6]))
     .reduce((s, e) => s + (e.hours || 0), 0);
 
-  // Current time indicator
-  const now = new Date();
-  const nowHour = now.getHours() + now.getMinutes() / 60;
+  // Current time indicator — update every 60s so the line moves
+  const [nowMinutes, setNowMinutes] = useState(() => {
+    const n = new Date();
+    return n.getHours() * 60 + n.getMinutes();
+  });
+  useEffect(() => {
+    const id = setInterval(() => {
+      const n = new Date();
+      setNowMinutes(n.getHours() * 60 + n.getMinutes());
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const nowHour = nowMinutes / 60;
   const showNowLine = nowHour >= START_HOUR && nowHour <= END_HOUR;
 
   // Position entry blocks within the hour grid

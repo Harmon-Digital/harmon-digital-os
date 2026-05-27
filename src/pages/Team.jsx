@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { TeamMember } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, UserCheck, UserX, Users, Search, Send, Loader2, Trash2, Shield, ShieldCheck, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -69,27 +70,31 @@ export default function Team() {
   };
 
   const handleSubmit = async (memberData) => {
-    if (editingMember) {
-      await TeamMember.update(editingMember.id, memberData);
-    } else {
-      // Check if team member with this email already exists
-      if (memberData.email) {
-        const { data: existing } = await supabase
-          .from("team_members")
-          .select("id")
-          .eq("email", memberData.email)
-          .limit(1);
+    try {
+      if (editingMember) {
+        await TeamMember.update(editingMember.id, memberData);
+      } else {
+        if (memberData.email) {
+          const { data: existing } = await supabase
+            .from("team_members")
+            .select("id")
+            .eq("email", memberData.email)
+            .limit(1);
 
-        if (existing?.length > 0) {
-          alert("A team member with this email already exists");
-          return;
+          if (existing?.length > 0) {
+            alert("A team member with this email already exists");
+            return;
+          }
         }
+        await TeamMember.create(memberData);
       }
-      await TeamMember.create(memberData);
+      setShowDrawer(false);
+      setEditingMember(null);
+      loadData();
+    } catch (error) {
+      console.error("Error saving team member:", error);
+      toast.error("Failed to save team member");
     }
-    setShowDrawer(false);
-    setEditingMember(null);
-    loadData();
   };
 
   const handleEdit = (member) => {

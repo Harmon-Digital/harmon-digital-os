@@ -155,18 +155,40 @@ export function HuddleProvider({ children }) {
   const toggleAudio = useCallback(async () => {
     const rm = roomRef.current;
     if (!rm) return;
-    const next = !audioOn;
-    await rm.localParticipant.setMicrophoneEnabled(next);
-    setAudioOn(next);
-  }, [audioOn]);
+    try {
+      setAudioOn((prev) => {
+        const next = !prev;
+        rm.localParticipant.setMicrophoneEnabled(next).catch((err) => {
+          console.error("Mic toggle failed:", err);
+          toast.error("Microphone toggle failed");
+          setAudioOn(prev);
+        });
+        return next;
+      });
+    } catch (err) {
+      console.error("Mic toggle failed:", err);
+      toast.error("Microphone toggle failed");
+    }
+  }, []);
 
   const toggleVideo = useCallback(async () => {
     const rm = roomRef.current;
     if (!rm) return;
-    const next = !videoOn;
-    await rm.localParticipant.setCameraEnabled(next);
-    setVideoOn(next);
-  }, [videoOn]);
+    try {
+      setVideoOn((prev) => {
+        const next = !prev;
+        rm.localParticipant.setCameraEnabled(next).catch((err) => {
+          console.error("Camera toggle failed:", err);
+          toast.error("Camera toggle failed");
+          setVideoOn(prev);
+        });
+        return next;
+      });
+    } catch (err) {
+      console.error("Camera toggle failed:", err);
+      toast.error("Camera toggle failed");
+    }
+  }, []);
 
   const toggleScreenShare = useCallback(async () => {
     const rm = roomRef.current;

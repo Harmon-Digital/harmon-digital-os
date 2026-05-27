@@ -93,7 +93,8 @@ export async function saveEntries(entries) {
       matchQuery = matchQuery.is("team_member_id", null);
     }
 
-    const { data: existing } = await matchQuery.maybeSingle();
+    const { data: existing, error: matchError } = await matchQuery.maybeSingle();
+    if (matchError) throw matchError;
 
     if (existing) {
       const { data, error } = await supabase
