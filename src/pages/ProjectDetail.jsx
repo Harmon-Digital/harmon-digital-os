@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Project, Account, Task, TimeEntry, Contact, Invoice, TeamMember } from "@/api/entities";
 import { parseLocalDate } from "@/utils";
@@ -305,9 +305,11 @@ export default function ProjectDetail() {
     }
   };
 
-  // Auto-save from the task drawer: persist edits in place and keep state in sync.
-  // Without this, TaskForm's edit mode (which has no Save button) silently drops changes.
-  const handleTaskAutoSave = async (taskData) => {
+  // Stable reference — TaskForm's auto-save effect uses this in its deps.
+  // If it changed every render, the effect would re-run and clear the
+  // pending 500ms debounce timer before the save could fire, so status
+  // edits would silently never persist.
+  const handleTaskAutoSave = useCallback(async (taskData) => {
     if (!editingTask?.id) return;
     try {
       const saved = await Task.update(editingTask.id, taskData);
@@ -317,7 +319,7 @@ export default function ProjectDetail() {
       console.error("Auto-save failed:", error);
       throw error;
     }
-  };
+  }, [editingTask?.id]);
 
   const handleTimeSubmit = async (timeData) => {
     try {
