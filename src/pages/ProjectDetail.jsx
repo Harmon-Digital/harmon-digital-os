@@ -305,6 +305,20 @@ export default function ProjectDetail() {
     }
   };
 
+  // Auto-save from the task drawer: persist edits in place and keep state in sync.
+  // Without this, TaskForm's edit mode (which has no Save button) silently drops changes.
+  const handleTaskAutoSave = async (taskData) => {
+    if (!editingTask?.id) return;
+    try {
+      const saved = await Task.update(editingTask.id, taskData);
+      setEditingTask((prev) => (prev ? { ...prev, ...saved } : prev));
+      setTasks((prev) => prev.map((t) => (t.id === editingTask.id ? { ...t, ...saved } : t)));
+    } catch (error) {
+      console.error("Auto-save failed:", error);
+      throw error;
+    }
+  };
+
   const handleTimeSubmit = async (timeData) => {
     try {
       if (editingTimeEntry) {
@@ -1792,6 +1806,7 @@ export default function ProjectDetail() {
           projects={[project]}
           teamMembers={teamMembers}
           onSubmit={handleTaskSubmit}
+          onAutoSave={handleTaskAutoSave}
           onCancel={() => {
             setShowTaskDrawer(false);
             setEditingTask(null);
