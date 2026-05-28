@@ -1,27 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/api/supabaseClient";
+import { useClientAccount } from "@/hooks/useClientAccount";
 import { FileText, Download, Folder } from "lucide-react";
 
 export default function ClientDocuments() {
-  const { user } = useAuth();
+  const { accountId, loading: accountLoading } = useClientAccount();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (accountLoading) return;
+    if (!accountId) { setLoading(false); return; }
     (async () => {
       try {
-        const { data: contact } = await supabase
-          .from("contacts")
-          .select("account_id")
-          .eq("portal_user_id", user.id)
-          .maybeSingle();
-        if (!contact?.account_id) { setLoading(false); return; }
         const { data: projs = [] } = await supabase
           .from("projects")
           .select("id, name")
-          .eq("account_id", contact.account_id);
+          .eq("account_id", accountId);
         const projectMap = new Map(projs.map((p) => [p.id, p.name]));
         if (projs.length === 0) { setLoading(false); return; }
         const { data = [] } = await supabase
@@ -37,7 +32,7 @@ export default function ClientDocuments() {
         setLoading(false);
       }
     })();
-  }, [user?.id]);
+  }, [accountId, accountLoading]);
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">

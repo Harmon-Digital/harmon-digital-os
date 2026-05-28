@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/api/supabaseClient";
+import { useClientAccount } from "@/hooks/useClientAccount";
 import { FolderKanban, CheckSquare, FileText, ArrowRight } from "lucide-react";
 
 export default function ClientDashboard() {
-  const { user, userProfile } = useAuth();
+  const { userProfile } = useAuth();
+  const { accountId, loading: accountLoading } = useClientAccount();
   const [stats, setStats] = useState({
     activeProjects: 0,
     pendingApprovals: 0,
@@ -15,20 +17,13 @@ export default function ClientDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (accountLoading) return;
+    if (!accountId) {
+      setLoading(false);
+      return;
+    }
     (async () => {
       try {
-        // Find accessible account(s) via the contact→auth linkage
-        const { data: contact } = await supabase
-          .from("contacts")
-          .select("account_id")
-          .eq("portal_user_id", user.id)
-          .maybeSingle();
-        if (!contact?.account_id) {
-          setLoading(false);
-          return;
-        }
-
         const [
           { data: projects = [] },
           { count: approvals = 0 },
@@ -37,7 +32,7 @@ export default function ClientDashboard() {
           supabase
             .from("projects")
             .select("id, name, status, risk_level")
-            .eq("account_id", contact.account_id)
+            .eq("account_id", accountId)
             .eq("client_visible", true)
             .eq("status", "active")
             .order("created_at", { ascending: false })
@@ -45,12 +40,12 @@ export default function ClientDashboard() {
           supabase
             .from("social_posts")
             .select("id", { count: "exact", head: true })
-            .eq("client_id", contact.account_id)
+            .eq("client_id", accountId)
             .eq("approved", false),
           supabase
             .from("invoices")
             .select("id", { count: "exact", head: true })
-            .eq("account_id", contact.account_id)
+            .eq("account_id", accountId)
             .in("status", ["sent", "overdue"]),
         ]);
 
@@ -66,7 +61,7 @@ export default function ClientDashboard() {
         setLoading(false);
       }
     })();
-  }, [user?.id]);
+  }, [accountId, accountLoading]);
 
   const firstName = (userProfile?.full_name || "").split(" ")[0] || "there";
 

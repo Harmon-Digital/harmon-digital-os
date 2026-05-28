@@ -1,30 +1,24 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/api/supabaseClient";
 import { parseLocalDate } from "@/utils";
+import { useClientAccount } from "@/hooks/useClientAccount";
 import { Check } from "lucide-react";
 import { toast } from "@/lib/toast";
 
 export default function ClientApprovals() {
-  const { user } = useAuth();
+  const { accountId, loading: accountLoading } = useClientAccount();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!user?.id) return;
+    if (accountLoading) return;
+    if (!accountId) { setLoading(false); return; }
     setLoading(true);
     try {
-      const { data: contact } = await supabase
-        .from("contacts")
-        .select("account_id")
-        .eq("portal_user_id", user.id)
-        .maybeSingle();
-      if (!contact?.account_id) { setLoading(false); return; }
-
       const { data } = await supabase
         .from("social_posts")
         .select("id, title, content, image_url, scheduled_date, platforms, approved, status")
-        .eq("client_id", contact.account_id)
+        .eq("client_id", accountId)
         .eq("approved", false)
         .in("status", ["draft", "scheduled"])
         .order("scheduled_date", { ascending: true });
@@ -34,7 +28,7 @@ export default function ClientApprovals() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [accountId, accountLoading]);
 
   useEffect(() => { load(); }, [load]);
 

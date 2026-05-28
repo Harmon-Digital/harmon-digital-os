@@ -1,36 +1,30 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/api/supabaseClient";
 import { parseLocalDate } from "@/utils";
-import { ArrowLeft, CheckSquare, FileText } from "lucide-react";
+import { useClientAccount } from "@/hooks/useClientAccount";
+import { ArrowLeft, CheckSquare, FileText, FileSignature } from "lucide-react";
 
 export default function ClientProjectDetail() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { accountId, loading: accountLoading } = useClientAccount();
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id || !user?.id) return;
+    if (!id || accountLoading) return;
+    if (!accountId) { setLoading(false); return; }
     setLoading(true);
     (async () => {
       try {
-        const { data: contact } = await supabase
-          .from("contacts")
-          .select("account_id")
-          .eq("portal_user_id", user.id)
-          .maybeSingle();
-        if (!contact?.account_id) { setLoading(false); return; }
-
         const [{ data: proj }, { data: ts = [] }, { data: docs = [] }] = await Promise.all([
           supabase
             .from("projects")
             .select("id, name, description, status, start_date, end_date, client_visible")
             .eq("id", id)
-            .eq("account_id", contact.account_id)
+            .eq("account_id", accountId)
             .maybeSingle(),
           supabase
             .from("tasks")
@@ -41,7 +35,7 @@ export default function ClientProjectDetail() {
             .limit(50),
           supabase
             .from("project_documents")
-            .select("id, name, file_path, file_size, created_at")
+            .select("id, name, file_path, file_size, category, created_at")
             .eq("project_id", id)
             .eq("client_visible", true)
             .order("created_at", { ascending: false }),
@@ -55,7 +49,10 @@ export default function ClientProjectDetail() {
         setLoading(false);
       }
     })();
-  }, [id, user?.id]);
+  }, [id, accountId, accountLoading]);
+
+  const contracts = documents.filter((d) => d.category === "contract");
+  const otherDocs = documents.filter((d) => d.category !== "contract");
 
   if (loading) {
     return <div className="py-10 text-center text-[13px] text-gray-400">Loading…</div>;
@@ -119,18 +116,48 @@ export default function ClientProjectDetail() {
         </div>
       </div>
 
+      {/* Contracts */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <FileSignature className="w-4 h-4 text-gray-500" />
+          <h2 className="text-[13px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Contracts</h2>
+          <span className="text-[11px] text-gray-400 tabular-nums">{contracts.length}</span>
+        </div>
+        <div className="border-t border-gray-200 dark:border-gray-800">
+          {contracts.length === 0 ? (
+            <div className="py-6 text-[13px] text-gray-500 dark:text-gray-400">No contracts shared yet.</div>
+          ) : (
+            contracts.map((d) => (
+              <a
+                key={d.id}
+                href={d.file_path}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-2 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+              >
+                <FileSignature className="w-4 h-4 text-gray-400" />
+                <span className="flex-1 text-[13px] text-gray-900 dark:text-gray-100 truncate">{d.name}</span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {d.file_size ? `${(d.file_size / 1024).toFixed(1)} KB` : ""}
+                </span>
+              </a>
+            ))
+          )}
+        </div>
+      </div>
+
       {/* Documents */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <FileText className="w-4 h-4 text-gray-500" />
           <h2 className="text-[13px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Shared documents</h2>
-          <span className="text-[11px] text-gray-400 tabular-nums">{documents.length}</span>
+          <span className="text-[11px] text-gray-400 tabular-nums">{otherDocs.length}</span>
         </div>
         <div className="border-t border-gray-200 dark:border-gray-800">
-          {documents.length === 0 ? (
+          {otherDocs.length === 0 ? (
             <div className="py-6 text-[13px] text-gray-500 dark:text-gray-400">No documents shared yet.</div>
           ) : (
-            documents.map((d) => (
+            otherDocs.map((d) => (
               <a
                 key={d.id}
                 href={d.file_path}

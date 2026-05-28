@@ -242,6 +242,17 @@ export default function ClientPortalAdmin() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1">
+                  {c.account_id && isAdmin && (
+                    <a
+                      href={`/client?preview_account=${c.account_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`Preview the portal as ${account?.company_name || "this client"}`}
+                      className="p-1.5 rounded text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </a>
+                  )}
                   {c.status === "none" && (
                     <Button
                       size="sm"

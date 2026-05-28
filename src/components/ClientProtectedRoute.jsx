@@ -17,7 +17,15 @@ export default function ClientProtectedRoute({ children }) {
     return <Navigate to="/client/login" state={{ from: location }} replace />;
   }
 
-  if (!userProfile || userProfile.role !== "client") {
+  // Staff (admin/team) may enter the portal in preview mode — either via the
+  // ?preview_account=<id> param or an already-active preview session.
+  const isStaff = userProfile && ["admin", "team"].includes(userProfile.role);
+  const previewing =
+    isStaff &&
+    (new URLSearchParams(location.search).get("preview_account") ||
+      sessionStorage.getItem("hdo.portalPreviewAccount"));
+
+  if ((!userProfile || userProfile.role !== "client") && !previewing) {
     return <Navigate to="/client/login" state={{ error: "Access denied" }} replace />;
   }
 

@@ -320,6 +320,16 @@ export default function Accounts() {
                 </span>
 
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                  <a
+                    href={`/client?preview_account=${account.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Preview client portal as this account"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
                   <button
                     type="button"
                     onClick={(e) => {

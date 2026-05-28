@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/api/supabaseClient";
+import { useClientAccount } from "@/hooks/useClientAccount";
 import { ArrowRight } from "lucide-react";
 
 const STATUS_DOT = {
@@ -12,25 +12,19 @@ const STATUS_DOT = {
 };
 
 export default function ClientProjects() {
-  const { user } = useAuth();
+  const { accountId, loading: accountLoading } = useClientAccount();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (accountLoading) return;
+    if (!accountId) { setLoading(false); return; }
     (async () => {
       try {
-        const { data: contact } = await supabase
-          .from("contacts")
-          .select("account_id")
-          .eq("portal_user_id", user.id)
-          .maybeSingle();
-        if (!contact?.account_id) { setLoading(false); return; }
-
         const { data } = await supabase
           .from("projects")
           .select("id, name, status, risk_level, description, start_date, end_date")
-          .eq("account_id", contact.account_id)
+          .eq("account_id", accountId)
           .eq("client_visible", true)
           .order("status", { ascending: true })
           .order("created_at", { ascending: false });
@@ -41,7 +35,7 @@ export default function ClientProjects() {
         setLoading(false);
       }
     })();
-  }, [user?.id]);
+  }, [accountId, accountLoading]);
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">

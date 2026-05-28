@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/api/supabaseClient";
 import { parseLocalDate } from "@/utils";
+import { useClientAccount } from "@/hooks/useClientAccount";
 import { FileText, ExternalLink } from "lucide-react";
 
 const STATUS_COLOR = {
@@ -12,24 +12,19 @@ const STATUS_COLOR = {
 };
 
 export default function ClientInvoices() {
-  const { user } = useAuth();
+  const { accountId, loading: accountLoading } = useClientAccount();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (accountLoading) return;
+    if (!accountId) { setLoading(false); return; }
     (async () => {
       try {
-        const { data: contact } = await supabase
-          .from("contacts")
-          .select("account_id")
-          .eq("portal_user_id", user.id)
-          .maybeSingle();
-        if (!contact?.account_id) { setLoading(false); return; }
         const { data } = await supabase
           .from("invoices")
           .select("id, invoice_number, due_date, total, status, stripe_invoice_url, pdf_url")
-          .eq("account_id", contact.account_id)
+          .eq("account_id", accountId)
           .order("due_date", { ascending: false });
         setInvoices(data || []);
       } catch (err) {
@@ -38,7 +33,7 @@ export default function ClientInvoices() {
         setLoading(false);
       }
     })();
-  }, [user?.id]);
+  }, [accountId, accountLoading]);
 
   const openCount = invoices.filter((i) => i.status === "sent" || i.status === "overdue").length;
   const openTotal = invoices

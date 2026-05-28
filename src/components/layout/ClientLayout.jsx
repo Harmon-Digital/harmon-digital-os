@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/api/supabaseClient";
+import { useClientAccount, exitPortalPreview } from "@/hooks/useClientAccount";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -11,6 +12,8 @@ import {
   Folder,
   Settings,
   LogOut,
+  Eye,
+  X,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -27,25 +30,20 @@ export default function ClientLayout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, userProfile, signOut } = useAuth();
+  const { accountId, isPreview } = useClientAccount();
   const [account, setAccount] = useState(null);
 
-  // Pull the client's linked account (via contacts.portal_user_id) so we
-  // can show their logo + company name in the header.
+  // Pull the resolved account (client's own, or the previewed one) so we can
+  // show their logo + company name in the header.
   useEffect(() => {
-    if (!user?.id) return;
+    if (!accountId) return;
     let cancelled = false;
     (async () => {
       try {
-        const { data: contact } = await supabase
-          .from("contacts")
-          .select("account_id")
-          .eq("portal_user_id", user.id)
-          .maybeSingle();
-        if (cancelled || !contact?.account_id) return;
         const { data: acc } = await supabase
           .from("accounts")
           .select("id, company_name, logo_url")
-          .eq("id", contact.account_id)
+          .eq("id", accountId)
           .maybeSingle();
         if (!cancelled) setAccount(acc || null);
       } catch (err) {
@@ -53,11 +51,16 @@ export default function ClientLayout({ children }) {
       }
     })();
     return () => { cancelled = true; };
-  }, [user?.id]);
+  }, [accountId]);
 
   const handleLogout = async () => {
     await signOut();
     navigate("/client/login");
+  };
+
+  const handleExitPreview = () => {
+    exitPortalPreview();
+    navigate("/ClientPortalAdmin");
   };
 
   const isActive = (item) => {
@@ -144,6 +147,21 @@ export default function ClientLayout({ children }) {
 
       {/* Main */}
       <main className="flex-1 overflow-auto bg-white dark:bg-gray-950">
+        {isPreview && (
+          <div className="sticky top-0 z-20 flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/40 border-b border-amber-300 dark:border-amber-700 text-[12px] text-amber-900 dark:text-amber-200">
+            <Eye className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>
+              Previewing as <span className="font-semibold">{account?.company_name || "client"}</span> — this is exactly what they see.
+            </span>
+            <button
+              type="button"
+              onClick={handleExitPreview}
+              className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-200 dark:bg-amber-800 hover:bg-amber-300 dark:hover:bg-amber-700 font-medium"
+            >
+              <X className="w-3 h-3" /> Exit preview
+            </button>
+          </div>
+        )}
         {children}
       </main>
     </div>
