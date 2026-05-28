@@ -27,6 +27,7 @@ import {
   Handshake,
   Receipt,
   KeyRound,
+  Timer,
   Search,
   ChevronRight,
   LogOut,
@@ -99,6 +100,7 @@ function buildGroups(user) {
         { icon: FileText, label: "SOPs", path: "SOPs" },
         { icon: Building2, label: "Branding", path: "Branding" },
         { icon: KeyRound, label: "API Keys", path: "McpApiKeys" },
+        { icon: Timer, label: "Toggl Sync", path: "TogglSync" },
       ],
     });
   }

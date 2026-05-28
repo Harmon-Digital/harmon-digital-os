@@ -1,0 +1,587 @@
+/**
+ * toggl-sync — Pull Toggl Track data into Harmon Digital OS.
+ *
+ * POST /functions/v1/toggl-sync
+ * Body (all optional): { backfill_from?: "YYYY-MM-DD", trigger?: "manual"|"cron"|"backfill" }
+ *
+ * Auth: requires a logged-in admin (verified via JWT against team_members.role='admin').
+ * The Toggl API token is read from the TOGGL_API_TOKEN env var — never trusted from the client.
+ *
+ * Sync order matters because time entries depend on projects + users, and projects
+ * depend on clients (accounts):
+ *   1. clients      -> public.accounts        (match on toggl_id, fall back to company_name)
+ *   2. projects     -> public.projects        (match on toggl_id, fall back to name + account)
+ *   3. users        -> public.team_members    (match on toggl_id, fall back to email)
+ *   4. time entries -> public.time_entries    (match on toggl_id; needs project + member resolved)
+ *
+ * Incremental window:
+ *   - Default: time entries updated since (last_sync_at - 5min) up to now.
+ *   - If toggl_settings.backfill_from is set OR the request body provides backfill_from,
+ *     the window opens to that date and the Reports API v3 is used for the bulk pull.
+ *     The settings.backfill_from is cleared after a successful run.
+ *
+ * Toggl API references (v9, public):
+ *   GET  /api/v9/me
+ *   GET  /api/v9/workspaces/{wid}/clients
+ *   GET  /api/v9/workspaces/{wid}/projects?active=both
+ *   GET  /api/v9/workspaces/{wid}/users
+ *   GET  /api/v9/me/time_entries?start_date=ISO&end_date=ISO     (recent only, ~3 months)
+ *   POST /reports/api/v3/workspace/{wid}/search/time_entries     (backfill / arbitrary range)
+ */
+
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const TOGGL_API_TOKEN = Deno.env.get("TOGGL_API_TOKEN");
+const TOGGL_API_BASE = "https://api.track.toggl.com/api/v9";
+const TOGGL_REPORTS_BASE = "https://api.track.toggl.com/reports/api/v3";
+const CRON_SECRET = Deno.env.get("TOGGL_CRON_SECRET");
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function togglAuthHeader(): string {
+  // Toggl Basic auth: base64("<api_token>:api_token")
+  const raw = `${TOGGL_API_TOKEN}:api_token`;
+  return `Basic ${btoa(raw)}`;
+}
+
+async function togglFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const url = path.startsWith("http") ? path : `${TOGGL_API_BASE}${path}`;
+  const headers = new Headers(init.headers ?? {});
+  headers.set("Authorization", togglAuthHeader());
+  headers.set("Content-Type", "application/json");
+  const res = await fetch(url, { ...init, headers });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Toggl ${init.method ?? "GET"} ${url} -> ${res.status}: ${text.slice(0, 500)}`);
+  }
+  return res;
+}
+
+type Counts = {
+  clients: { upserted: number; linked: number };
+  projects: { upserted: number; linked: number; skipped: number };
+  users: { upserted: number; linked: number; unmatched: number };
+  entries: { upserted: number; skipped_missing_project: number; skipped_missing_user: number };
+};
+
+function emptyCounts(): Counts {
+  return {
+    clients: { upserted: 0, linked: 0 },
+    projects: { upserted: 0, linked: 0, skipped: 0 },
+    users: { upserted: 0, linked: 0, unmatched: 0 },
+    entries: { upserted: 0, skipped_missing_project: 0, skipped_missing_user: 0 },
+  };
+}
+
+async function syncClients(
+  admin: SupabaseClient,
+  workspaceId: number,
+  counts: Counts,
+) {
+  const res = await togglFetch(`/workspaces/${workspaceId}/clients`);
+  const clients = (await res.json()) as Array<{ id: number; name: string; archived?: boolean }> | null;
+  if (!clients) return;
+
+  for (const c of clients) {
+    const togglId = String(c.id);
+
+    // Prefer toggl_id; otherwise back-link an existing account by name.
+    const { data: existing } = await admin
+      .from("accounts")
+      .select("id, toggl_id")
+      .or(`toggl_id.eq.${togglId},company_name.eq.${c.name.replace(/,/g, "\\,")}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      const wasLinked = existing.toggl_id === togglId;
+      await admin
+        .from("accounts")
+        .update({
+          toggl_id: togglId,
+          toggl_synced_at: new Date().toISOString(),
+          // Don't overwrite company_name if already linked — admin may have customized it.
+          ...(wasLinked ? {} : { company_name: c.name }),
+        })
+        .eq("id", existing.id);
+      if (wasLinked) counts.clients.upserted++;
+      else counts.clients.linked++;
+    } else {
+      await admin.from("accounts").insert({
+        company_name: c.name,
+        status: c.archived ? "inactive" : "active",
+        toggl_id: togglId,
+        toggl_synced_at: new Date().toISOString(),
+      });
+      counts.clients.upserted++;
+    }
+  }
+}
+
+async function syncProjects(
+  admin: SupabaseClient,
+  workspaceId: number,
+  counts: Counts,
+): Promise<Map<number, string>> {
+  // Returns Toggl project_id -> HDO project uuid (for time-entry mapping).
+  const map = new Map<number, string>();
+
+  const res = await togglFetch(`/workspaces/${workspaceId}/projects?active=both&per_page=200`);
+  const projects = (await res.json()) as Array<{
+    id: number;
+    name: string;
+    client_id?: number | null;
+    active?: boolean;
+    rate?: number | null;
+    billable?: boolean;
+  }> | null;
+  if (!projects) return map;
+
+  // Build client_id -> account uuid lookup once.
+  const { data: linkedAccounts } = await admin
+    .from("accounts")
+    .select("id, toggl_id")
+    .not("toggl_id", "is", null);
+  const clientToAccount = new Map<string, string>(
+    (linkedAccounts ?? []).map((a) => [a.toggl_id!, a.id]),
+  );
+
+  for (const p of projects) {
+    const togglId = String(p.id);
+    const accountId = p.client_id ? clientToAccount.get(String(p.client_id)) ?? null : null;
+
+    const { data: existing } = await admin
+      .from("projects")
+      .select("id, toggl_id, account_id")
+      .or(`toggl_id.eq.${togglId},name.eq.${p.name.replace(/,/g, "\\,")}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      const wasLinked = existing.toggl_id === togglId;
+      const patch: Record<string, unknown> = {
+        toggl_id: togglId,
+        toggl_synced_at: new Date().toISOString(),
+      };
+      if (!wasLinked) {
+        // First-time link: backfill basics from Toggl.
+        patch.name = p.name;
+        patch.status = p.active === false ? "completed" : "active";
+        if (accountId && !existing.account_id) patch.account_id = accountId;
+        if (p.rate != null) patch.hourly_rate = p.rate;
+      }
+      await admin.from("projects").update(patch).eq("id", existing.id);
+      map.set(p.id, existing.id);
+      if (wasLinked) counts.projects.upserted++;
+      else counts.projects.linked++;
+    } else {
+      // Need an account to satisfy projects.account_id NOT NULL.
+      const resolvedAccount = accountId ?? (await resolveDefaultAccount(admin));
+      if (!resolvedAccount) {
+        counts.projects.skipped++;
+        continue;
+      }
+      const { data: inserted } = await admin
+        .from("projects")
+        .insert({
+          name: p.name,
+          account_id: resolvedAccount,
+          status: p.active === false ? "completed" : "active",
+          billing_type: p.billable ? "hourly" : "fixed",
+          hourly_rate: p.rate ?? null,
+          toggl_id: togglId,
+          toggl_synced_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+      if (inserted) {
+        map.set(p.id, inserted.id);
+        counts.projects.upserted++;
+      } else {
+        counts.projects.skipped++;
+      }
+    }
+  }
+
+  return map;
+}
+
+async function resolveDefaultAccount(admin: SupabaseClient): Promise<string | null> {
+  const { data } = await admin
+    .from("toggl_settings")
+    .select("default_account_id")
+    .limit(1)
+    .maybeSingle();
+  return data?.default_account_id ?? null;
+}
+
+async function syncUsers(
+  admin: SupabaseClient,
+  workspaceId: number,
+  counts: Counts,
+): Promise<Map<number, string>> {
+  // Returns Toggl user_id -> HDO team_members uuid.
+  const map = new Map<number, string>();
+
+  const res = await togglFetch(`/workspaces/${workspaceId}/users`);
+  const users = (await res.json()) as Array<{
+    id: number;
+    email: string;
+    fullname?: string;
+    name?: string;
+  }> | null;
+  if (!users) return map;
+
+  for (const u of users) {
+    const togglId = String(u.id);
+
+    const { data: byToggl } = await admin
+      .from("team_members")
+      .select("id, toggl_id")
+      .eq("toggl_id", togglId)
+      .maybeSingle();
+
+    if (byToggl) {
+      await admin
+        .from("team_members")
+        .update({ toggl_synced_at: new Date().toISOString() })
+        .eq("id", byToggl.id);
+      map.set(u.id, byToggl.id);
+      counts.users.upserted++;
+      continue;
+    }
+
+    // Fall back to email match — team_members.email is the natural key for humans.
+    const { data: byEmail } = await admin
+      .from("team_members")
+      .select("id")
+      .ilike("email", u.email)
+      .limit(1)
+      .maybeSingle();
+
+    if (byEmail) {
+      await admin
+        .from("team_members")
+        .update({
+          toggl_id: togglId,
+          toggl_synced_at: new Date().toISOString(),
+        })
+        .eq("id", byEmail.id);
+      map.set(u.id, byEmail.id);
+      counts.users.linked++;
+    } else {
+      // We deliberately do NOT auto-create team_members — that requires an auth user
+      // and HR intent. Record the miss so the admin can resolve.
+      counts.users.unmatched++;
+    }
+  }
+
+  return map;
+}
+
+type TogglEntry = {
+  id: number;
+  workspace_id?: number;
+  project_id?: number | null;
+  user_id?: number;
+  uid?: number;            // Reports v3 alternate
+  pid?: number | null;     // Reports v3 alternate
+  description?: string | null;
+  billable?: boolean;
+  start: string;           // ISO 8601
+  stop?: string | null;
+  duration: number;        // seconds; negative = running
+  tags?: string[];
+  at?: string;             // last updated
+};
+
+async function syncTimeEntries(
+  admin: SupabaseClient,
+  workspaceId: number,
+  projectMap: Map<number, string>,
+  userMap: Map<number, string>,
+  range: { from: string; to: string; useReports: boolean },
+  counts: Counts,
+) {
+  const entries: TogglEntry[] = range.useReports
+    ? await fetchEntriesViaReports(workspaceId, range.from, range.to)
+    : await fetchEntriesViaMe(range.from, range.to);
+
+  for (const e of entries) {
+    // Running timers (duration < 0) are skipped — we only mirror completed entries.
+    if (!e.stop || e.duration < 0) continue;
+
+    const projectIdRaw = e.project_id ?? e.pid ?? null;
+    const userIdRaw = e.user_id ?? e.uid ?? null;
+
+    const projectUuid = projectIdRaw != null ? projectMap.get(projectIdRaw) : null;
+    const teamMemberUuid = userIdRaw != null ? userMap.get(userIdRaw) : null;
+
+    if (!projectUuid) {
+      counts.entries.skipped_missing_project++;
+      continue;
+    }
+    if (!teamMemberUuid) {
+      counts.entries.skipped_missing_user++;
+      continue;
+    }
+
+    const start = new Date(e.start);
+    const stop = new Date(e.stop);
+    const hours = Math.round((e.duration / 3600) * 100) / 100;
+    const date = start.toISOString().slice(0, 10);
+    const start_time = start.toISOString().slice(11, 19);
+    const end_time = stop.toISOString().slice(11, 19);
+    const togglId = String(e.id);
+
+    const { data: existing } = await admin
+      .from("time_entries")
+      .select("id")
+      .eq("toggl_id", togglId)
+      .maybeSingle();
+
+    const payload = {
+      project_id: projectUuid,
+      team_member_id: teamMemberUuid,
+      date,
+      start_time,
+      end_time,
+      hours,
+      description: e.description ?? null,
+      billable: e.billable ?? true,
+      toggl_id: togglId,
+      toggl_synced_at: new Date().toISOString(),
+      toggl_tags: e.tags ?? null,
+    };
+
+    if (existing) {
+      await admin.from("time_entries").update(payload).eq("id", existing.id);
+    } else {
+      await admin.from("time_entries").insert(payload);
+    }
+    counts.entries.upserted++;
+  }
+}
+
+async function fetchEntriesViaMe(start: string, end: string): Promise<TogglEntry[]> {
+  // /me/time_entries is capped to ~3 months; fine for incremental.
+  const url = `${TOGGL_API_BASE}/me/time_entries?start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}`;
+  const res = await togglFetch(url);
+  return (await res.json()) as TogglEntry[];
+}
+
+async function fetchEntriesViaReports(
+  workspaceId: number,
+  startDate: string,
+  endDate: string,
+): Promise<TogglEntry[]> {
+  // Reports v3 paginates with first_row_number; page size 50 (max for search/time_entries).
+  const all: TogglEntry[] = [];
+  let firstRowNumber: number | undefined = undefined;
+  for (let i = 0; i < 200; i++) {  // hard cap: 10k entries per backfill run
+    const body: Record<string, unknown> = {
+      start_date: startDate.slice(0, 10),
+      end_date: endDate.slice(0, 10),
+      page_size: 50,
+      order_by: "date",
+      order_dir: "ASC",
+    };
+    if (firstRowNumber) body.first_row_number = firstRowNumber;
+
+    const res = await togglFetch(`${TOGGL_REPORTS_BASE}/workspace/${workspaceId}/search/time_entries`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    const nextRow = res.headers.get("X-Next-Row-Number");
+    const page = (await res.json()) as Array<{
+      user_id: number;
+      project_id: number | null;
+      description: string;
+      billable: boolean;
+      time_entries: Array<{ id: number; start: string; stop: string; seconds: number; at: string }>;
+      tag_ids?: number[];
+    }>;
+
+    for (const group of page ?? []) {
+      for (const te of group.time_entries) {
+        all.push({
+          id: te.id,
+          user_id: group.user_id,
+          project_id: group.project_id,
+          description: group.description,
+          billable: group.billable,
+          start: te.start,
+          stop: te.stop,
+          duration: te.seconds,
+          at: te.at,
+        });
+      }
+    }
+
+    if (!nextRow) break;
+    firstRowNumber = Number(nextRow);
+  }
+  return all;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
+
+  if (!TOGGL_API_TOKEN) {
+    return json(
+      { ok: false, error: "TOGGL_API_TOKEN is not configured. Set it via Supabase project secrets." },
+      500,
+    );
+  }
+
+  // Authenticate: either an admin JWT, or a cron with TOGGL_CRON_SECRET header.
+  const cronHeader = req.headers.get("x-cron-secret");
+  const isCron = !!CRON_SECRET && cronHeader === CRON_SECRET;
+  let triggeredBy: string | null = null;
+
+  if (!isCron) {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return json({ ok: false, error: "Missing Authorization header" }, 401);
+    }
+    const jwt = authHeader.slice(7);
+    const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: `Bearer ${jwt}` } },
+    });
+    const { data: { user: authUser }, error: authErr } = await authClient.auth.getUser();
+    if (authErr || !authUser) return json({ ok: false, error: "Invalid token" }, 401);
+
+    const { data: tm } = await authClient
+      .from("team_members")
+      .select("role")
+      .eq("user_id", authUser.id)
+      .maybeSingle();
+    if (tm?.role !== "admin") return json({ ok: false, error: "Admin only" }, 403);
+    triggeredBy = authUser.id;
+  }
+
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  // Load settings.
+  const { data: settings } = await admin
+    .from("toggl_settings")
+    .select("*")
+    .limit(1)
+    .maybeSingle();
+  if (!settings) {
+    return json({ ok: false, error: "toggl_settings is empty — open the Toggl Sync admin page first" }, 400);
+  }
+  if (settings.enabled === false) {
+    return json({ ok: false, error: "Toggl sync is disabled in settings" }, 400);
+  }
+  if (!settings.workspace_id) {
+    return json({ ok: false, error: "workspace_id not set in toggl_settings" }, 400);
+  }
+
+  const body = await req.json().catch(() => ({}));
+  const trigger = isCron ? "cron" : (body.trigger as string) ?? "manual";
+  const backfillFrom: string | null = body.backfill_from ?? settings.backfill_from ?? null;
+
+  // Open run row.
+  const { data: runRow } = await admin
+    .from("toggl_sync_runs")
+    .insert({
+      status: "running",
+      trigger,
+      triggered_by: triggeredBy,
+      range_from: backfillFrom,
+    })
+    .select("id")
+    .single();
+
+  // Mark settings running.
+  await admin.from("toggl_settings").update({ last_sync_status: "running" }).eq("id", settings.id);
+
+  const counts = emptyCounts();
+  const now = new Date();
+  const rangeTo = now.toISOString();
+  // Default incremental window: 5 minutes of overlap before last_sync_at, falling back to 24h.
+  const defaultFrom = settings.last_sync_at
+    ? new Date(new Date(settings.last_sync_at).getTime() - 5 * 60_000).toISOString()
+    : new Date(now.getTime() - 24 * 60 * 60_000).toISOString();
+  const rangeFrom = backfillFrom
+    ? new Date(`${backfillFrom}T00:00:00Z`).toISOString()
+    : defaultFrom;
+  const useReports = !!backfillFrom;
+
+  try {
+    await syncClients(admin, Number(settings.workspace_id), counts);
+    const projectMap = await syncProjects(admin, Number(settings.workspace_id), counts);
+    const userMap = await syncUsers(admin, Number(settings.workspace_id), counts);
+    await syncTimeEntries(
+      admin,
+      Number(settings.workspace_id),
+      projectMap,
+      userMap,
+      { from: rangeFrom, to: rangeTo, useReports },
+      counts,
+    );
+
+    const patch: Record<string, unknown> = {
+      last_sync_at: now.toISOString(),
+      last_sync_status: "ok",
+      last_sync_error: null,
+      last_sync_summary: counts,
+    };
+    // Clear backfill_from after a successful backfill so next run is incremental.
+    if (settings.backfill_from && !body.backfill_from) patch.backfill_from = null;
+    await admin.from("toggl_settings").update(patch).eq("id", settings.id);
+
+    if (runRow) {
+      await admin
+        .from("toggl_sync_runs")
+        .update({
+          status: "ok",
+          finished_at: new Date().toISOString(),
+          range_from: rangeFrom.slice(0, 10),
+          range_to: rangeTo.slice(0, 10),
+          summary: counts,
+        })
+        .eq("id", runRow.id);
+    }
+
+    return json({ ok: true, counts, range: { from: rangeFrom, to: rangeTo, useReports } });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await admin
+      .from("toggl_settings")
+      .update({
+        last_sync_status: "error",
+        last_sync_error: message,
+        last_sync_summary: counts,
+      })
+      .eq("id", settings.id);
+    if (runRow) {
+      await admin
+        .from("toggl_sync_runs")
+        .update({
+          status: "error",
+          finished_at: new Date().toISOString(),
+          summary: counts,
+          error: message,
+        })
+        .eq("id", runRow.id);
+    }
+    return json({ ok: false, error: message, counts }, 500);
+  }
+});

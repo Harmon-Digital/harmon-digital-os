@@ -32,6 +32,7 @@ import {
   FileText,
   Calendar,
   KeyRound,
+  Timer,
   BarChart3,
   Plus,
   Briefcase,
@@ -57,6 +58,7 @@ const NAV_LINKS = [
   { name: "Branding", path: "/Branding", icon: Building2 },
   { name: "Settings", path: "/PersonalSettings", icon: Settings, keywords: "profile preferences" },
   { name: "API Keys", path: "/McpApiKeys", icon: KeyRound, keywords: "mcp" },
+  { name: "Toggl Sync", path: "/TogglSync", icon: Timer, keywords: "toggl integration time" },
 ];
 
 const RECENT_KEY = "hdo.cmdk.recent";
