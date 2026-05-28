@@ -40,6 +40,7 @@ import KPIs from "./KPIs";
 import BotChannel from "./BotChannel";
 import Channels from "./Channels";
 import McpApiKeys from "./McpApiKeys";
+import TogglSync from "./TogglSync";
 import ClientPortalAdmin from "./ClientPortalAdmin";
 
 // Partner portal pages
@@ -91,6 +92,7 @@ const PAGES = {
   BotChannel,
   Channels,
   McpApiKeys,
+  TogglSync,
   ClientPortalAdmin,
 };
 
@@ -330,6 +332,14 @@ function PagesContent() {
         <ProtectedRoute>
           <Layout currentPageName={currentPage}>
             <Channels />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/TogglSync" element={
+        <ProtectedRoute>
+          <Layout currentPageName={currentPage}>
+            <TogglSync />
           </Layout>
         </ProtectedRoute>
       } />
