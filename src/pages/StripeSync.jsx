@@ -109,7 +109,7 @@ export default function StripeSync() {
   const loadStripeCustomers = async () => {
     setSyncingCustomers(true);
     try {
-      const response = await api.functions.invoke('listStripeCustomers', {});
+      const response = await api.functions.invoke('list-stripe-customers', {});
       if (response.data?.success) {
         setStripeCustomers(response.data.customers);
       }
@@ -123,7 +123,7 @@ export default function StripeSync() {
   const loadStripeSubscriptions = async () => {
     setSyncingSubscriptions(true);
     try {
-      const response = await api.functions.invoke('listStripeSubscriptions', {});
+      const response = await api.functions.invoke('list-stripe-subscriptions', {});
       if (response.data?.success) {
         setStripeSubscriptions(response.data.subscriptions);
       }
@@ -138,7 +138,7 @@ export default function StripeSync() {
     setSyncing(true);
     setSyncResults(null);
     try {
-      const response = await api.functions.invoke('syncStripeData', { syncType });
+      const response = await api.functions.invoke('sync-stripe-data', { syncType });
       if (response.data?.success) {
         setSyncResults(response.data.results);
         await loadData();
