@@ -2,7 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProtectedRoute({ children }) {
-  const { user, loading, isPartner } = useAuth();
+  const { user, userProfile, loading, isPartner } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -20,6 +20,11 @@ export default function ProtectedRoute({ children }) {
   // Partners should only access the partner portal
   if (isPartner) {
     return <Navigate to="/partner" replace />;
+  }
+
+  // Clients should only access the client portal
+  if (userProfile?.role === 'client') {
+    return <Navigate to="/client" replace />;
   }
 
   return children;

@@ -100,12 +100,25 @@ async function syncClients(
     const togglId = String(c.id);
 
     // Prefer toggl_id; otherwise back-link an existing account by name.
-    const { data: existing } = await admin
+    // Use two sequential .eq() queries — composing this into a single .or()
+    // with raw client names is unsafe (Toggl names can contain PostgREST
+    // operator chars like `,`, `*`, `(`, `)` that break or mis-target the
+    // filter), and Supabase .eq() escapes its argument safely.
+    let { data: existing } = await admin
       .from("accounts")
       .select("id, toggl_id")
-      .or(`toggl_id.eq.${togglId},company_name.eq.${c.name.replace(/,/g, "\\,")}`)
-      .limit(1)
+      .eq("toggl_id", togglId)
       .maybeSingle();
+    if (!existing) {
+      const fallback = await admin
+        .from("accounts")
+        .select("id, toggl_id")
+        .eq("company_name", c.name)
+        .is("toggl_id", null)
+        .limit(1)
+        .maybeSingle();
+      existing = fallback.data;
+    }
 
     if (existing) {
       const wasLinked = existing.toggl_id === togglId;
@@ -164,12 +177,22 @@ async function syncProjects(
     const togglId = String(p.id);
     const accountId = p.client_id ? clientToAccount.get(String(p.client_id)) ?? null : null;
 
-    const { data: existing } = await admin
+    // See note in syncClients — avoid raw .or() against Toggl-controlled names.
+    let { data: existing } = await admin
       .from("projects")
       .select("id, toggl_id, account_id")
-      .or(`toggl_id.eq.${togglId},name.eq.${p.name.replace(/,/g, "\\,")}`)
-      .limit(1)
+      .eq("toggl_id", togglId)
       .maybeSingle();
+    if (!existing) {
+      const fallback = await admin
+        .from("projects")
+        .select("id, toggl_id, account_id")
+        .eq("name", p.name)
+        .is("toggl_id", null)
+        .limit(1)
+        .maybeSingle();
+      existing = fallback.data;
+    }
 
     if (existing) {
       const wasLinked = existing.toggl_id === togglId;

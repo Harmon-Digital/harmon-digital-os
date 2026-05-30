@@ -29,6 +29,17 @@ Deno.serve(async (req) => {
   const { data: { user }, error } = await authed.auth.getUser();
   if (error || !user) return json({ error: "Invalid auth" }, 401);
 
+  // Admins/team only — Stripe customer list contains contact info across clients.
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+  const { data: profile } = await admin
+    .from("user_profiles").select("role").eq("id", user.id).maybeSingle();
+  if (!profile || !["admin", "team"].includes(profile.role)) {
+    return json({ error: "Admins only" }, 403);
+  }
+
   try {
     const res = await fetch("https://api.stripe.com/v1/customers?limit=100", {
       headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },

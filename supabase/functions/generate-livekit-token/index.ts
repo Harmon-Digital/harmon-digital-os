@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  let payload: { roomName?: string; channelId?: string; identity?: string; name?: string };
+  let payload: { channelId?: string; name?: string };
   try {
     payload = await req.json();
   } catch {
@@ -117,14 +117,15 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { roomName, channelId, identity, name } = payload;
-  if (!roomName || !channelId) {
+  const { channelId, name } = payload;
+  if (!channelId) {
     return new Response(
-      JSON.stringify({ error: "roomName and channelId required" }),
+      JSON.stringify({ error: "channelId required" }),
       { status: 400, headers: { ...CORS, "Content-Type": "application/json" } },
     );
   }
 
+  // Verify the caller can see the channel (RLS-scoped read).
   const { data: channel } = await supabase
     .from("chat_channels")
     .select("id")
@@ -137,17 +138,23 @@ Deno.serve(async (req) => {
     );
   }
 
+  // Derive the room name from the channel id so the caller cannot supply
+  // an arbitrary roomName and join (or eavesdrop on) a room they shouldn't.
+  // Identity is forced to user.id for the same reason — no impersonation.
+  const roomName = `huddle-${channelId}`;
+  const identity = user.id;
+
   try {
     const token = await signLivekitJwt(
       LIVEKIT_API_KEY,
       LIVEKIT_API_SECRET,
-      identity || user.id,
+      identity,
       name || user.email || "User",
       roomName,
     );
     console.log("[livekit-token] success for user", user.id, "room", roomName);
     return new Response(
-      JSON.stringify({ token, url: LIVEKIT_URL }),
+      JSON.stringify({ token, url: LIVEKIT_URL, roomName }),
       { headers: { ...CORS, "Content-Type": "application/json" } },
     );
   } catch (err) {
