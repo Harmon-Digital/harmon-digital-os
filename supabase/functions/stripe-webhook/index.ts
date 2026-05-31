@@ -98,13 +98,23 @@ Deno.serve(async (req) => {
       case "invoice.updated": {
         const { data: acct } = await admin
           .from("accounts").select("id").eq("stripe_customer_id", obj.customer).maybeSingle();
+        // Look up the prior row's status to guard against an older event
+        // overwriting a terminal status (e.g. invoice.updated arriving after
+        // invoice.paid would otherwise regress from paid → sent).
+        const { data: prior } = await admin
+          .from("invoices").select("status").eq("stripe_invoice_id", obj.id).maybeSingle();
+        const nextStatus = mapInvoiceStatus(obj);
+        const TERMINAL = new Set(["paid", "void"]);
+        const finalStatus = prior?.status && TERMINAL.has(prior.status) && !TERMINAL.has(nextStatus)
+          ? prior.status
+          : nextStatus;
         await admin.from("invoices").upsert({
           stripe_invoice_id: obj.id,
           account_id: acct?.id || null,
           invoice_number: obj.number || null,
           issue_date: toISODate(obj.created),
           due_date: toISODate(obj.due_date),
-          status: mapInvoiceStatus(obj),
+          status: finalStatus,
           subtotal: (obj.subtotal || 0) / 100,
           tax: (obj.tax || 0) / 100,
           total: (obj.total || 0) / 100,

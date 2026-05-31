@@ -270,15 +270,23 @@ export default function ProjectDetail() {
 
   const handleSaveProject = async () => {
     try {
-      await Project.update(projectId, editedProject);
-      setProject(editedProject);
+      // Strip server-managed fields — sending them back can fail RLS or
+      // overwrite columns the row owns (like updated_at).
+      const { id: _id, created_at: _ca, updated_at: _ua, ...patch } = editedProject;
+      const updated = await Project.update(projectId, patch);
+      const newProject = updated || editedProject;
+      setProject(newProject);
+      setEditedProject(newProject);
       setHasChanges(false);
 
-      // Reload account data in case account changed
+      // Reload account + contacts if the account changed so the project's
+      // contact picker doesn't keep showing the previous account's contacts.
       if (editedProject.account_id !== project.account_id) {
         const accountData = await Account.list();
         const projectAccount = accountData.find(a => a.id === editedProject.account_id);
         setAccount(projectAccount);
+        const allContacts = await Contact.list();
+        setContacts(allContacts.filter(c => c.account_id === editedProject.account_id));
       }
     } catch (error) {
       console.error("Error updating project:", error);
@@ -1389,17 +1397,17 @@ export default function ProjectDetail() {
                     <span className="flex-1 text-[13px] text-gray-600 dark:text-gray-400 truncate">{entry.description || '—'}</span>
                     <span className={`text-[12px] ${typeColor} w-24 text-right`}>{typeLabel}</span>
                     <span className="text-[13px] text-gray-900 dark:text-gray-100 font-medium w-12 text-right">{entry.hours}h</span>
+                    {(isAdmin || entry.team_member_id === currentTeamMember?.id) && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const canDelete = isAdmin || entry.team_member_id === currentTeamMember?.id;
-                        if (canDelete) setDeleteConfirmDialog({ open: true, type: 'time', id: entry.id });
-                        else alert("You can only delete your own time entries.");
+                        setDeleteConfirmDialog({ open: true, type: 'time', id: entry.id });
                       }}
                       className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 dark:text-gray-500 hover:text-red-600"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                    )}
                   </div>
                 );
               })
@@ -1804,6 +1812,7 @@ export default function ProjectDetail() {
         description={editingTask ? "Update task details" : "Create a new task for this project"}
       >
         <TaskForm
+          key={editingTask?.id ?? "new"}
           task={editingTask}
           projects={[project]}
           teamMembers={teamMembers}
@@ -1825,6 +1834,7 @@ export default function ProjectDetail() {
         description={editingTimeEntry ? "Update time entry details" : "Log time for this project"}
       >
         <TimeEntryForm
+          key={editingTimeEntry?.id ?? "new"}
           timeEntry={editingTimeEntry}
           projects={[project]}
           tasks={tasks}

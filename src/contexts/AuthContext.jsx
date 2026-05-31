@@ -53,21 +53,29 @@ export function AuthProvider({ children }) {
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (!mountedRef.current || requestId !== profileRequestId.current) return;
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         if (!error.message?.includes('aborted')) {
           console.error('Error fetching user profile:', error);
         }
+        // Transient failure (network, RLS hiccup): keep the previous profile
+        // in place rather than blanking the user out and bouncing them to
+        // /login. We only clear on explicit signOut.
+        return;
       }
+
+      // Success — set the row (or null if the profile row genuinely doesn't
+      // exist yet, e.g. a brand-new signup before the trigger has run).
       setUserProfile(data || null);
     } catch (error) {
       if (!mountedRef.current || requestId !== profileRequestId.current) return;
       if (!error.message?.includes('aborted')) {
         console.error('Error fetching user profile:', error);
       }
+      // Same as above — don't overwrite the prior profile on transient error.
     } finally {
       if (mountedRef.current && requestId === profileRequestId.current) setLoading(false);
     }
@@ -80,12 +88,16 @@ export function AuthProvider({ children }) {
     });
     if (error) throw error;
 
-    // Update last_sign_in_at (non-blocking — don't let metadata failure break sign-in)
+    // Update last_sign_in_at (non-blocking — don't let metadata failure break sign-in).
+    // Use upsert in case the trigger that creates user_profiles hasn't run yet
+    // (first sign-in after a signup race), so the timestamp isn't silently dropped.
     if (data.user) {
       supabase
         .from('user_profiles')
-        .update({ last_sign_in_at: new Date().toISOString() })
-        .eq('id', data.user.id)
+        .upsert(
+          { id: data.user.id, last_sign_in_at: new Date().toISOString() },
+          { onConflict: 'id' }
+        )
         .then(({ error: updateErr }) => {
           if (updateErr) console.error('Failed to update last_sign_in_at:', updateErr);
         })
@@ -112,6 +124,11 @@ export function AuthProvider({ children }) {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    // Clear any portal-preview sessionStorage so the next user on this tab
+    // (e.g. a client logging in after a staff preview) doesn't inherit it.
+    try {
+      sessionStorage.removeItem('hdo.portalPreviewAccount');
+    } catch { /* sessionStorage may be unavailable; ignore */ }
     setUser(null);
     setUserProfile(null);
   };

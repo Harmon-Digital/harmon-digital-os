@@ -98,12 +98,17 @@ Deno.serve(async (req) => {
     }
     try {
       const deletedUserId = contact.portal_user_id;
+      // Delete auth user first; if that fails the contact stays linked so the
+      // admin can retry without losing the link. Then clear the contact and
+      // any orphan user_profile row.
+      const { error: authDelErr } = await admin.auth.admin.deleteUser(deletedUserId);
+      if (authDelErr) throw authDelErr;
+      await admin.from("user_profiles").delete().eq("id", deletedUserId);
       const { error: revokeUpdateErr } = await admin
         .from("contacts")
         .update({ portal_user_id: null, portal_invited_at: null, portal_last_login_at: null })
         .eq("id", contactId);
       if (revokeUpdateErr) throw revokeUpdateErr;
-      await admin.auth.admin.deleteUser(deletedUserId);
       return new Response(
         JSON.stringify({ success: true, revoked: true }),
         { headers: { ...CORS, "Content-Type": "application/json" } }
@@ -126,10 +131,11 @@ Deno.serve(async (req) => {
       });
     }
     try {
-      const { error: resendErr } = await admin.auth.admin.generateLink({
-        type: "magiclink",
-        email: contact.email,
-        options: { redirectTo: `${APP_ORIGIN}/client/login` },
+      // inviteUserByEmail actually sends the invite email via the configured
+      // SMTP/auth settings. generateLink only returns a URL and never delivers.
+      const { error: resendErr } = await admin.auth.admin.inviteUserByEmail(contact.email, {
+        redirectTo: `${APP_ORIGIN}/client/login`,
+        data: { full_name: fullName, role: "client" },
       });
       if (resendErr) throw resendErr;
       const { error: resendUpdateErr } = await admin
@@ -192,6 +198,7 @@ Deno.serve(async (req) => {
     );
   if (profileErr) {
     console.error("user_profiles upsert failed:", profileErr);
+    await admin.auth.admin.deleteUser(newUserId).catch(() => {});
     return new Response(JSON.stringify({ error: profileErr.message }), {
       status: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
@@ -207,6 +214,8 @@ Deno.serve(async (req) => {
     .eq("id", contactId);
   if (contactUpdateErr) {
     console.error("contacts update failed:", contactUpdateErr);
+    await admin.from("user_profiles").delete().eq("id", newUserId);
+    await admin.auth.admin.deleteUser(newUserId).catch(() => {});
     return new Response(JSON.stringify({ error: contactUpdateErr.message }), {
       status: 500,
       headers: { ...CORS, "Content-Type": "application/json" },

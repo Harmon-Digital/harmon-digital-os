@@ -326,6 +326,12 @@ export default function CRM() {
   };
 
   const handleOpenLeadDetail = async (lead) => {
+    // Clear the previous lead's sub-state so the drawer doesn't briefly show
+    // the old lead's activities/tasks/inputs while the new ones load in.
+    setActivities([]);
+    setLeadTasks([]);
+    setNewTaskTitle("");
+    setActivityDescription("");
     setSelectedLead(lead);
     setShowLeadDetail(true);
     await Promise.all([loadActivities(lead.id), loadLeadTasks(lead.id)]);
@@ -1124,6 +1130,7 @@ export default function CRM() {
         description={selectedLead ? `On deal: ${selectedLead.company_name || ""}` : ""}
       >
         <TaskForm
+          key={editingTask?.id ?? "new"}
           task={editingTask}
           projects={projects}
           teamMembers={teamMembers}

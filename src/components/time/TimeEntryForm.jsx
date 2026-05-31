@@ -97,11 +97,17 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
     if (formData.start_time && formData.end_time) {
       const start = new Date(`${formData.date}T${formData.start_time}`);
       const end = new Date(`${formData.date}T${formData.end_time}`);
-      
+
       if (end > start) {
         const hours = (end - start) / (1000 * 60 * 60); // Convert ms to hours
         setFormData(prev => ({ ...prev, hours: Math.round(hours * 100) / 100 })); // Round to 2 decimals
+      } else {
+        // Invalid range — zero out so the "Total: Xh" indicator doesn't lie.
+        setFormData(prev => (prev.hours === 0 ? prev : { ...prev, hours: 0 }));
       }
+    } else {
+      // Either bound missing — same reasoning.
+      setFormData(prev => (prev.hours === 0 ? prev : { ...prev, hours: 0 }));
     }
   }, [formData.start_time, formData.end_time, formData.date]);
 

@@ -163,8 +163,9 @@ async function handleMcpRequest(req: Request): Promise<Response> {
             })
           );
         } catch (err) {
+          const msg = (err as Error).message?.split(/\bDetails:/i)[0]?.trim()?.slice(0, 200) || "Resource read failed";
           return Response.json(
-            jsonRpcError(id, -32603, `Resource read failed: ${(err as Error).message}`)
+            jsonRpcError(id, -32603, `Resource read failed: ${msg}`)
           );
         }
       }
@@ -223,7 +224,9 @@ const ALLOWED_ORIGINS = [
 ];
 
 app.use("/*", cors({
-  origin: (origin) => ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+  // Reflect only allowlisted origins; omit the header for everything else
+  // rather than spoofing a valid origin into the response.
+  origin: (origin) => ALLOWED_ORIGINS.includes(origin) ? origin : null,
   allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization", "X-API-Key", "Mcp-Session-Id"],
 }));

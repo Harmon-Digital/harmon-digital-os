@@ -43,9 +43,10 @@ const createEntity = (tableName) => ({
       .from(tableName)
       .select('*');
 
-    // Apply filters
+    // Apply filters. Skip empty strings — a "" filter is almost always an
+    // "All" selector from the UI; passing it through silently returns no rows.
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
+      if (value !== undefined && value !== null && value !== "") {
         query = query.eq(key, value);
       }
     });

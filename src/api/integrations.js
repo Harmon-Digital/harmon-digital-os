@@ -1,9 +1,24 @@
 // Supabase integrations (file uploads, email, etc.)
 import { supabase } from './supabaseClient';
 
+// Strip path separators, control chars and non-ASCII from a filename so it
+// can't escape the upload prefix or trigger storage encoding mismatches.
+function sanitizeFilename(name) {
+  const fallback = "file";
+  if (!name) return fallback;
+  const clean = String(name)
+    .replace(/[\\/]/g, "_")
+    .replace(/[\x00-\x1f]/g, "")
+    .replace(/[^A-Za-z0-9._-]/g, "_")
+    .slice(0, 100);
+  return clean || fallback;
+}
+
 // File upload to Supabase Storage
 export const UploadFile = async ({ file }) => {
-  const fileName = `${Date.now()}-${file.name}`;
+  // Random UUID + sanitized name prevents collisions between simultaneous
+  // uploads of files with the same name (Date.now() collides in the same ms).
+  const fileName = `${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
   const { data, error } = await supabase.storage
     .from('uploads')
     .upload(fileName, file);
@@ -19,7 +34,7 @@ export const UploadFile = async ({ file }) => {
 
 // Private file upload
 export const UploadPrivateFile = async ({ file }) => {
-  const fileName = `private/${Date.now()}-${file.name}`;
+  const fileName = `private/${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
   const { data, error } = await supabase.storage
     .from('uploads')
     .upload(fileName, file);

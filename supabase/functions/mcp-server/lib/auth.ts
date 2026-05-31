@@ -15,16 +15,15 @@ async function hashKey(key: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function timingSafeCompare(a: string, b: string): Promise<boolean> {
-  const encoder = new TextEncoder();
-  const aBytes = encoder.encode(a);
-  const bBytes = encoder.encode(b);
-  if (aBytes.length !== bBytes.length) {
-    const pad = new Uint8Array(aBytes.length);
-    await crypto.subtle.timingSafeEqual(aBytes, pad);
-    return false;
+function timingSafeCompare(a: string, b: string): boolean {
+  // Always iterate over the longer string so the runtime is bounded by the
+  // expected secret length, not the attacker-controlled input length.
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
   }
-  return crypto.subtle.timingSafeEqual(aBytes, bBytes);
+  return diff === 0;
 }
 
 export async function authenticate(req: Request): Promise<AuthContext> {
@@ -41,16 +40,17 @@ export async function authenticate(req: Request): Promise<AuthContext> {
       .maybeSingle();
 
     if (data) {
-      serviceClient
+      // Edge Functions kill the isolate once the response is returned, so a
+      // fire-and-forget update may never run. Await it.
+      const { error: lastUsedErr } = await serviceClient
         .from("mcp_api_keys")
         .update({ last_used_at: new Date().toISOString() })
-        .eq("id", data.id)
-        .then(() => {})
-        .catch((err: unknown) => console.error("Failed to update last_used_at:", err));
+        .eq("id", data.id);
+      if (lastUsedErr) console.error("Failed to update last_used_at:", lastUsedErr);
       return { client: serviceClient, mode: "apikey" };
     }
 
-    if (MCP_API_KEY && await timingSafeCompare(apiKey, MCP_API_KEY)) {
+    if (MCP_API_KEY && timingSafeCompare(apiKey, MCP_API_KEY)) {
       return { client: serviceClient, mode: "apikey" };
     }
 

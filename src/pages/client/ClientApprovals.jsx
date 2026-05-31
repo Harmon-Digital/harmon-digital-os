@@ -6,7 +6,7 @@ import { Check } from "lucide-react";
 import { toast } from "@/lib/toast";
 
 export default function ClientApprovals() {
-  const { accountId, loading: accountLoading } = useClientAccount();
+  const { accountId, isPreview, loading: accountLoading } = useClientAccount();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,8 +33,19 @@ export default function ClientApprovals() {
   useEffect(() => { load(); }, [load]);
 
   const approve = async (postId) => {
+    if (isPreview) {
+      toast.info("Preview mode — clients see this button, but writes are blocked.");
+      return;
+    }
+    if (!accountId) return;
     try {
-      const { error } = await supabase.from("social_posts").update({ approved: true }).eq("id", postId);
+      // Scope the update by client_id so a guessed postId can't approve a
+      // post that doesn't belong to this account, even if RLS slips.
+      const { error } = await supabase
+        .from("social_posts")
+        .update({ approved: true })
+        .eq("id", postId)
+        .eq("client_id", accountId);
       if (error) throw error;
       setPosts((prev) => prev.filter((p) => p.id !== postId));
       toast.success("Approved");

@@ -161,13 +161,15 @@ async function calculateKpiValue(
 
   const { data, error } = await query;
   if (error) throw error;
-  if (!data) return 0;
+  if (!Array.isArray(data)) throw new Error(`KPI ${kpiDef.slug}: query returned no data`);
 
   if (aggregate === "count") return data.length;
-  if (aggregate === "sum" && field) {
-    return data.reduce((sum: number, row: Record<string, unknown>) => sum + (Number(row[field]) || 0), 0);
+  if (aggregate === "sum") {
+    if (!field) throw new Error(`KPI ${kpiDef.slug}: sum aggregate requires a field`);
+    const total = data.reduce((sum: number, row: Record<string, unknown>) => sum + (Number(row[field]) || 0), 0);
+    return Math.round(total * 100) / 100;
   }
-  return data.length;
+  throw new Error(`KPI ${kpiDef.slug}: unknown aggregate ${aggregate}`);
 }
 
 export function createKpiTools(): ToolDef[] {
@@ -270,23 +272,53 @@ export function createKpiTools(): ToolDef[] {
         for (const entry of entries) {
           const teamMemberId = (entry.team_member_id as string) || null;
 
-          const row = {
-            slug: entry.slug as string,
-            month: entry.month as string,
-            actual_value: entry.actual_value ?? 0,
-            target_value: entry.target_value ?? null,
-            bonus_amount: entry.bonus_amount ?? null,
-            notes: entry.notes ?? null,
-            team_member_id: teamMemberId,
-          };
-
-          const { data, error } = await client
+          // Postgres unique constraints treat NULL as distinct, so an upsert
+          // on (slug, month, team_member_id) duplicates company-level rows
+          // (where team_member_id IS NULL). Match explicitly and update/insert.
+          let matchQuery = client
             .from("kpi_entries")
-            .upsert(row, { onConflict: "slug,month,team_member_id" })
-            .select()
-            .single();
-          if (error) throw error;
-          results.push(data);
+            .select("id")
+            .eq("slug", entry.slug as string)
+            .eq("month", entry.month as string);
+          if (teamMemberId) {
+            matchQuery = matchQuery.eq("team_member_id", teamMemberId);
+          } else {
+            matchQuery = matchQuery.is("team_member_id", null);
+          }
+          const { data: existing, error: matchError } = await matchQuery.maybeSingle();
+          if (matchError) throw matchError;
+
+          if (existing) {
+            const { data, error } = await client
+              .from("kpi_entries")
+              .update({
+                actual_value: entry.actual_value ?? 0,
+                ...(entry.target_value !== undefined && { target_value: entry.target_value }),
+                ...(entry.bonus_amount !== undefined && { bonus_amount: entry.bonus_amount }),
+                ...(entry.notes !== undefined && { notes: entry.notes }),
+              })
+              .eq("id", existing.id)
+              .select()
+              .single();
+            if (error) throw error;
+            results.push(data);
+          } else {
+            const { data, error } = await client
+              .from("kpi_entries")
+              .insert({
+                slug: entry.slug as string,
+                month: entry.month as string,
+                actual_value: entry.actual_value ?? 0,
+                target_value: entry.target_value ?? null,
+                bonus_amount: entry.bonus_amount ?? null,
+                notes: entry.notes ?? null,
+                team_member_id: teamMemberId,
+              })
+              .select()
+              .single();
+            if (error) throw error;
+            results.push(data);
+          }
         }
 
         return { saved: results.length, entries: results };

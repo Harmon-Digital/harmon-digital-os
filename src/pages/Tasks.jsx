@@ -955,6 +955,7 @@ export default function Tasks() {
         description={editingTask ? "Update task details" : "Create a new task"}
       >
         <TaskForm
+          key={editingTask?.id ?? "new"}
           task={editingTask}
           projects={projects}
           teamMembers={teamMembers}

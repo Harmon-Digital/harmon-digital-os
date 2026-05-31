@@ -82,6 +82,21 @@ Deno.serve(async (req) => {
     }
 
     const agentId = agent_id ?? "harmon-bot-core";
+
+    // Verify the caller can see the channel before writing to it.
+    // Using the user-scoped client here so RLS enforces membership.
+    const { data: channel, error: channelErr } = await authClient
+      .from("bot_channels")
+      .select("id")
+      .eq("id", channel_id)
+      .maybeSingle();
+    if (channelErr || !channel) {
+      return new Response(JSON.stringify({ ok: false, error: "Channel not found or access denied" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. Insert user message

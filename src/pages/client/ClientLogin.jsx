@@ -31,13 +31,16 @@ export default function ClientLogin() {
     setLoading(true);
     setError("");
     try {
-      await signIn(email, password);
+      const data = await signIn(email, password);
+      const signedInUserId = data?.user?.id;
+      if (!signedInUserId) throw new Error("Sign-in did not return a user");
 
-      // Verify role
+      // Verify role using the authenticated user ID — looking up by typed
+      // email is racy and can match the wrong row when emails collide.
       const { data: profile } = await supabase
         .from("user_profiles")
         .select("role")
-        .eq("email", email)
+        .eq("id", signedInUserId)
         .maybeSingle();
 
       if (profile?.role !== "client") {
@@ -51,7 +54,7 @@ export default function ClientLogin() {
       await supabase
         .from("contacts")
         .update({ portal_last_login_at: new Date().toISOString() })
-        .eq("portal_user_id", (await supabase.auth.getUser()).data?.user?.id);
+        .eq("portal_user_id", signedInUserId);
 
       navigate("/client");
     } catch (err) {

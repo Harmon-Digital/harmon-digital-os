@@ -58,7 +58,7 @@ export default function PersonalSettings() {
       .from("team_members")
       .select("*")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (data) {
       setTeamMember(data);

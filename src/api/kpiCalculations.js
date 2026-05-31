@@ -35,19 +35,20 @@ export async function calculateKpiValue(kpiDef, periodStart, teamMemberId = null
 
   const { data, error } = await query;
   if (error) throw error;
-  if (!Array.isArray(data)) return 0;
+  // A null payload means the request errored without `error` being set, or
+  // RLS hid the rows — don't silently persist that as a real 0.
+  if (!Array.isArray(data)) throw new Error(`KPI ${kpiDef.slug}: query returned no data`);
 
   if (aggregate === "count") {
     return data.length;
   } else if (aggregate === "sum") {
-    if (!field) {
-      console.error("KPI sum aggregate requires a field");
-      return 0;
-    }
-    return data.reduce((sum, row) => sum + (Number(row[field]) || 0), 0);
+    if (!field) throw new Error(`KPI ${kpiDef.slug}: sum aggregate requires a field`);
+    const total = data.reduce((sum, row) => sum + (Number(row[field]) || 0), 0);
+    // Round to cents to avoid float drift when summing decimal/money columns.
+    return Math.round(total * 100) / 100;
   }
 
-  return data.length;
+  throw new Error(`KPI ${kpiDef.slug}: unknown aggregate ${aggregate}`);
 }
 
 export async function calculateAllAutoKpis(periodStart, teamMemberId = null) {

@@ -38,8 +38,12 @@ function sanitizeError(err: unknown): string {
   return "Operation failed";
 }
 
-export function createCrudTools(tableName: string, label: string): CrudToolDefs[] {
-  return [
+export function createCrudTools(
+  tableName: string,
+  label: string,
+  searchColumns: string[] = [],
+): CrudToolDefs[] {
+  const tools: CrudToolDefs[] = [
     // LIST
     {
       name: `list_${tableName}`,
@@ -211,10 +215,16 @@ export function createCrudTools(tableName: string, label: string): CrudToolDefs[
       },
     },
 
-    // SEARCH
-    {
+  ];
+
+  // SEARCH — only register for tables that have searchable text columns
+  if (searchColumns.length > 0) {
+    // Validate the allowlist at registration time so a typo in the registry
+    // fails loudly instead of producing 400s at query time.
+    searchColumns.forEach(validateColumn);
+    tools.push({
       name: `search_${tableName}`,
-      description: `Search ${label} records by text (searches common text columns)`,
+      description: `Search ${label} records by text in columns: ${searchColumns.join(", ")}`,
       inputSchema: {
         type: "object",
         properties: {
@@ -228,19 +238,24 @@ export function createCrudTools(tableName: string, label: string): CrudToolDefs[
         if (!q) throw new Error("Search query cannot be empty");
         const limit = Math.min(Math.max((args.limit as number) || 20, 1), 100);
 
-        // Sanitize query: strip characters that could break PostgREST filter syntax
-        const safeQ = q.replace(/[%_.*(),\\]/g, "");
+        // Strip characters that could break PostgREST filter syntax —
+        // % _ are wildcards, , : are or() separators, ( ) wrap groups,
+        // . is the operator separator, * is reserved, \ is escape.
+        const safeQ = q.replace(/[%_.*(),:\\]/g, "");
         if (!safeQ) throw new Error("Search query contains only special characters");
 
+        const orFilter = searchColumns.map((c) => `${c}.ilike.%${safeQ}%`).join(",");
         const { data, error } = await client
           .from(tableName)
           .select("*")
-          .or(`name.ilike.%${safeQ}%,title.ilike.%${safeQ}%,description.ilike.%${safeQ}%,full_name.ilike.%${safeQ}%,company_name.ilike.%${safeQ}%,email.ilike.%${safeQ}%`)
+          .or(orFilter)
           .limit(limit);
 
         if (error) throw new Error(sanitizeError(error));
         return { data, count: data?.length || 0 };
       },
-    },
-  ];
+    });
+  }
+
+  return tools;
 }

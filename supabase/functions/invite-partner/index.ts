@@ -67,21 +67,31 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Create the partner user via admin API (does not affect caller session)
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
-    email,
-    password: crypto.randomUUID(),
-    email_confirm: true,
-    user_metadata: { full_name: contactName },
+  // Basic email validation
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return new Response(JSON.stringify({ error: "Invalid email format" }), {
+      status: 400,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
+  }
+
+  const APP_ORIGIN = Deno.env.get("APP_ORIGIN") || "https://os.harmon-digital.com";
+
+  // Invite the partner via the admin invite API — Supabase sends the invite
+  // email using the configured SMTP/auth settings. createUser with a random
+  // password gave the partner verified credentials they never received.
+  const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${APP_ORIGIN}/login`,
+    data: { full_name: contactName, role: "partner" },
   });
-  if (createErr || !created?.user) {
-    return new Response(JSON.stringify({ error: createErr?.message || "Failed to create user" }), {
+  if (inviteErr || !invited?.user) {
+    return new Response(JSON.stringify({ error: inviteErr?.message || "Failed to invite user" }), {
       status: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
     });
   }
 
-  const newUserId = created.user.id;
+  const newUserId = invited.user.id;
 
   // Create user profile with partner role
   const { error: profileErr } = await admin.from("user_profiles").upsert(
@@ -89,6 +99,8 @@ Deno.serve(async (req) => {
     { onConflict: "id" }
   );
   if (profileErr) {
+    // Roll back the auth user so retries don't accumulate orphans.
+    await admin.auth.admin.deleteUser(newUserId).catch(() => {});
     return new Response(JSON.stringify({ error: profileErr.message }), {
       status: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
@@ -103,6 +115,9 @@ Deno.serve(async (req) => {
     email,
   });
   if (partnerErr) {
+    // Roll back auth user + profile.
+    await admin.from("user_profiles").delete().eq("id", newUserId).catch?.(() => {});
+    await admin.auth.admin.deleteUser(newUserId).catch(() => {});
     return new Response(JSON.stringify({ error: partnerErr.message }), {
       status: 500,
       headers: { ...CORS, "Content-Type": "application/json" },

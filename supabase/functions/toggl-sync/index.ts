@@ -122,7 +122,7 @@ async function syncClients(
 
     if (existing) {
       const wasLinked = existing.toggl_id === togglId;
-      await admin
+      const { error: updErr } = await admin
         .from("accounts")
         .update({
           toggl_id: togglId,
@@ -131,15 +131,23 @@ async function syncClients(
           ...(wasLinked ? {} : { company_name: c.name }),
         })
         .eq("id", existing.id);
+      if (updErr) {
+        console.error("[toggl-sync] account update failed", { togglId, err: updErr.message });
+        continue;
+      }
       if (wasLinked) counts.clients.upserted++;
       else counts.clients.linked++;
     } else {
-      await admin.from("accounts").insert({
+      const { error: insErr } = await admin.from("accounts").insert({
         company_name: c.name,
         status: c.archived ? "inactive" : "active",
         toggl_id: togglId,
         toggl_synced_at: new Date().toISOString(),
       });
+      if (insErr) {
+        console.error("[toggl-sync] account insert failed", { togglId, err: insErr.message });
+        continue;
+      }
       counts.clients.upserted++;
     }
   }
@@ -207,7 +215,12 @@ async function syncProjects(
         if (accountId && !existing.account_id) patch.account_id = accountId;
         if (p.rate != null) patch.hourly_rate = p.rate;
       }
-      await admin.from("projects").update(patch).eq("id", existing.id);
+      const { error: updErr } = await admin.from("projects").update(patch).eq("id", existing.id);
+      if (updErr) {
+        console.error("[toggl-sync] project update failed", { togglId, err: updErr.message });
+        counts.projects.skipped++;
+        continue;
+      }
       map.set(p.id, existing.id);
       if (wasLinked) counts.projects.upserted++;
       else counts.projects.linked++;
@@ -332,6 +345,30 @@ type TogglEntry = {
   at?: string;             // last updated
 };
 
+// Formats a Date in the given IANA timezone as { date: YYYY-MM-DD, time: HH:MM:SS }.
+// Toggl returns ISO timestamps in UTC; storing the UTC date/time misallocates
+// late-evening entries to the next calendar day in the user's working timezone.
+function formatInTimezone(d: Date, tz: string): { date: string; time: string } {
+  // en-CA gives ISO-style YYYY-MM-DD; hour12=false avoids AM/PM mangling.
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
+  // Intl can render hour as "24" at midnight in some impls; normalize.
+  const hour = get("hour") === "24" ? "00" : get("hour");
+  return {
+    date: `${get("year")}-${get("month")}-${get("day")}`,
+    time: `${hour}:${get("minute")}:${get("second")}`,
+  };
+}
+
 async function syncTimeEntries(
   admin: SupabaseClient,
   workspaceId: number,
@@ -339,6 +376,7 @@ async function syncTimeEntries(
   userMap: Map<number, string>,
   range: { from: string; to: string; useReports: boolean },
   counts: Counts,
+  timezone: string,
 ) {
   const entries: TogglEntry[] = range.useReports
     ? await fetchEntriesViaReports(workspaceId, range.from, range.to)
@@ -366,9 +404,8 @@ async function syncTimeEntries(
     const start = new Date(e.start);
     const stop = new Date(e.stop);
     const hours = Math.round((e.duration / 3600) * 100) / 100;
-    const date = start.toISOString().slice(0, 10);
-    const start_time = start.toISOString().slice(11, 19);
-    const end_time = stop.toISOString().slice(11, 19);
+    const { date, time: start_time } = formatInTimezone(start, timezone);
+    const { time: end_time } = formatInTimezone(stop, timezone);
     const togglId = String(e.id);
 
     const { data: existing } = await admin
@@ -391,10 +428,12 @@ async function syncTimeEntries(
       toggl_tags: e.tags ?? null,
     };
 
-    if (existing) {
-      await admin.from("time_entries").update(payload).eq("id", existing.id);
-    } else {
-      await admin.from("time_entries").insert(payload);
+    const { error: writeErr } = existing
+      ? await admin.from("time_entries").update(payload).eq("id", existing.id)
+      : await admin.from("time_entries").insert(payload);
+    if (writeErr) {
+      console.error("[toggl-sync] time_entry write failed", { togglId, err: writeErr.message });
+      continue;
     }
     counts.entries.upserted++;
   }
@@ -551,6 +590,9 @@ Deno.serve(async (req) => {
     await syncClients(admin, Number(settings.workspace_id), counts);
     const projectMap = await syncProjects(admin, Number(settings.workspace_id), counts);
     const userMap = await syncUsers(admin, Number(settings.workspace_id), counts);
+    // Workspace timezone for bucketing entry date/start_time/end_time —
+    // toggl_settings.timezone if set, else America/Chicago (HD's working TZ).
+    const workspaceTz = (settings.timezone as string) || "America/Chicago";
     await syncTimeEntries(
       admin,
       Number(settings.workspace_id),
@@ -558,6 +600,7 @@ Deno.serve(async (req) => {
       userMap,
       { from: rangeFrom, to: rangeTo, useReports },
       counts,
+      workspaceTz,
     );
 
     const patch: Record<string, unknown> = {
