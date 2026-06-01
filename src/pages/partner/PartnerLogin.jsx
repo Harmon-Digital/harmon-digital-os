@@ -29,14 +29,20 @@ export default function PartnerLogin() {
     setError("");
 
     try {
-      await signIn(email, password);
+      const result = await signIn(email, password);
+      const signedInUserId = result?.user?.id || result?.id;
+      if (!signedInUserId) {
+        throw new Error("Sign-in succeeded but no user id was returned");
+      }
 
-      // Check if user is a partner
+      // Verify the role from the authoritative auth identity (uuid), not by
+      // the email the user typed. Two profiles could share an email; the
+      // typed value also bypassed the auth identity entirely.
       const { data: profile } = await supabase
         .from("user_profiles")
         .select("role")
-        .eq("email", email)
-        .single();
+        .eq("id", signedInUserId)
+        .maybeSingle();
 
       if (profile?.role !== "partner") {
         await supabase.auth.signOut();
@@ -71,86 +77,28 @@ export default function PartnerLogin() {
     }
 
     try {
-      // Create user account
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: contactName,
-          },
-        },
-      });
-
-      if (signUpError) throw signUpError;
-
-      if (data.user) {
-        // Create user profile with partner role
-        const { error: profileErr } = await supabase.from("user_profiles").upsert({
-          id: data.user.id,
-          email,
-          full_name: contactName,
-          role: "partner",
-        });
-        if (profileErr) throw profileErr;
-
-        // Create referral_partners record
-        const { data: partnerData, error: partnerErr } = await supabase
-          .from("referral_partners")
-          .insert({
-            user_id: data.user.id,
-            contact_name: contactName,
-            company_name: companyName,
-            email,
-          })
-          .select()
-          .single();
-        if (partnerErr) throw partnerErr;
-
-        // Link to brokers table (create or update)
-        if (partnerData) {
-          const { data: existingBroker } = await supabase
-            .from("brokers")
-            .select("id")
-            .eq("email", email)
-            .maybeSingle();
-
-          if (existingBroker) {
-            // Update existing broker to signed_up status (keep existing status if further along)
-            const { error: brokerUpdateErr } = await supabase
-              .from("brokers")
-              .update({
-                status: "signed_up",
-                partner_id: partnerData.id,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", existingBroker.id);
-            if (brokerUpdateErr) console.error("Error updating broker:", brokerUpdateErr);
-          } else {
-            // Create new broker record
-            const { error: brokerInsertErr } = await supabase.from("brokers").insert({
-              name: contactName,
-              firm: companyName || "",
-              email,
-              status: "signed_up",
-              partner_id: partnerData.id,
-            });
-            if (brokerInsertErr) console.error("Error creating broker:", brokerInsertErr);
-          }
-        }
-
-        // Check if user is already confirmed (auto-confirm disabled) or session exists
-        if (data.session) {
-          // Auto-signed in, redirect to dashboard
-          navigate("/partner");
-        } else {
-          // Email confirmation required - show confirmation screen
-          setSignupEmail(email);
-          setMode("confirm");
-          setPassword("");
-          setConfirmPassword("");
-        }
+      // Self-signup runs through the partner-self-signup edge function — it
+      // uses the service-role key to set role='partner' server-side, which
+      // is required after the role-guard trigger added in migration
+      // 20260601. Doing the role assignment client-side here used to allow
+      // anyone to grant themselves any role via the RLS-permitted user_profiles
+      // upsert.
+      const { data: result, error: fnError } = await supabase.functions.invoke(
+        "partner-self-signup",
+        { body: { email, password, contactName, companyName } },
+      );
+      if (fnError) throw new Error(fnError.message || "Failed to create account");
+      if (!result?.success) {
+        throw new Error(result?.error || "Failed to create account");
       }
+
+      // Email confirmation is required (createUser was called with
+      // email_confirm: false). Show the confirmation screen — the user
+      // signs in via the regular flow after confirming.
+      setSignupEmail(email);
+      setMode("confirm");
+      setPassword("");
+      setConfirmPassword("");
     } catch (err) {
       setError(err.message || "Failed to create account");
     } finally {

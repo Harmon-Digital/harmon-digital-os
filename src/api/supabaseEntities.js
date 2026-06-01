@@ -74,11 +74,14 @@ const createEntity = (tableName) => ({
     return data;
   },
 
-  // Update a record
+  // Update a record. Strip immutable fields so callers can safely spread
+  // a full entity (form state) into the update payload without overwriting
+  // primary keys or timestamps. updated_at is left to the DB to bump.
   async update(id, updates) {
+    const { id: _id, created_at: _ca, updated_at: _ua, ...patch } = updates || {};
     const { data, error } = await supabase
       .from(tableName)
-      .update(updates)
+      .update(patch)
       .eq('id', id)
       .select()
       .single();
@@ -135,7 +138,40 @@ export const StripeSubscription = createEntity('stripe_subscriptions');
 export const SocialPost = createEntity('social_posts');
 export const SOP = createEntity('sops');
 export const Notification = createEntity('notifications');
-export const NotificationPreference = createEntity('notification_preferences');
+
+// notification_preferences is keyed by user_id (no id column, no created_at).
+// The generic createEntity factory assumes both, so we hand-roll the
+// CRUD shape for this one table. All operations are scoped by user_id.
+export const NotificationPreference = {
+  async getForUser(userId) {
+    const { data, error } = await supabase
+      .from('notification_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  async upsertForUser(userId, prefs) {
+    const { data, error } = await supabase
+      .from('notification_preferences')
+      .upsert({ ...prefs, user_id: userId, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteForUser(userId) {
+    const { error } = await supabase
+      .from('notification_preferences')
+      .delete()
+      .eq('user_id', userId);
+    if (error) throw error;
+    return true;
+  },
+};
 export const BrandingSettings = createEntity('branding_settings');
 export const UserProfile = createEntity('user_profiles');
 export const KpiEntry = createEntity('kpi_entries');

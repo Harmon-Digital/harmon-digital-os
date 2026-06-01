@@ -516,6 +516,11 @@ Deno.serve(async (req) => {
   const isCron = !!CRON_SECRET && cronHeader === CRON_SECRET;
   let triggeredBy: string | null = null;
 
+  // The service-role admin client is needed both for the role lookup (so RLS
+  // can't hide an admin's own profile and cause a false 403) and for the
+  // sync writes below. Hoist its construction above the auth gate.
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
   if (!isCron) {
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -528,16 +533,18 @@ Deno.serve(async (req) => {
     const { data: { user: authUser }, error: authErr } = await authClient.auth.getUser();
     if (authErr || !authUser) return json({ ok: false, error: "Invalid token" }, 401);
 
-    const { data: tm } = await authClient
-      .from("team_members")
+    // Match the rest of the codebase — use user_profiles.role (the
+    // authoritative role column) via the service-role client. The previous
+    // version queried team_members via the JWT-scoped client, which let a
+    // missing team_members row or restrictive RLS lock real admins out.
+    const { data: profile } = await admin
+      .from("user_profiles")
       .select("role")
-      .eq("user_id", authUser.id)
+      .eq("id", authUser.id)
       .maybeSingle();
-    if (tm?.role !== "admin") return json({ ok: false, error: "Admin only" }, 403);
+    if (profile?.role !== "admin") return json({ ok: false, error: "Admin only" }, 403);
     triggeredBy = authUser.id;
   }
-
-  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   // Load settings.
   const { data: settings } = await admin

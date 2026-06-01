@@ -118,8 +118,11 @@ export default function KPIs() {
     setRefreshing(true);
     try {
       const autoValues = await calculateAllAutoKpis(selectedWeek, selectedTeamMember);
+      // `undefined` means the calc threw — skip those rather than writing 0.
+      // `null` is no longer produced by calculateAllAutoKpis, but stays here
+      // as a defensive belt for callers that pre-fill missing values.
       const entriesToSave = Object.entries(autoValues)
-        .filter(([, val]) => val !== null)
+        .filter(([, val]) => val !== null && val !== undefined)
         .map(([slug, value]) => {
           const existing = currentEntries.find((e) => e.slug === slug);
           return {

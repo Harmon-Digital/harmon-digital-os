@@ -91,11 +91,16 @@ export function createReportTools(): ToolDef[] {
 
         const { data: members, error: tmError } = await client
           .from("team_members")
-          .select("id, full_name, role, weekly_capacity")
+          .select("id, full_name, role")
           .eq("status", "active");
         if (tmError) throw tmError;
 
         const memberMap = new Map(members.map((m: Record<string, unknown>) => [m.id, m]));
+
+        // team_members does not have a per-member capacity column today, so we
+        // assume a standard 40-hour week. If/when a capacity column is added,
+        // include it in the select above and replace this constant.
+        const DEFAULT_WEEKLY_CAPACITY = 40;
 
         const utilization: Record<string, { name: string; role: string; total_hours: number; billable_hours: number; weekly_capacity: number }> = {};
 
@@ -108,7 +113,7 @@ export function createReportTools(): ToolDef[] {
               role: (member?.role as string) || "",
               total_hours: 0,
               billable_hours: 0,
-              weekly_capacity: (member?.weekly_capacity as number) || 40,
+              weekly_capacity: DEFAULT_WEEKLY_CAPACITY,
             };
           }
           utilization[mid].total_hours += Number(entry.hours) || 0;

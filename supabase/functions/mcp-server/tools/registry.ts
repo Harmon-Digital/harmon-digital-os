@@ -23,7 +23,7 @@ const ENTITIES: Array<[string, string, string[]?]> = [
   ["invoices", "Invoice", ["invoice_number"]],
   ["stripe_products", "Stripe Product", ["name", "description"]],
   ["stripe_subscriptions", "Stripe Subscription"],
-  ["social_posts", "Social Post", ["title", "caption"]],
+  ["social_posts", "Social Post", ["title", "content"]],
   ["sops", "SOP", ["title", "description"]],
   ["notifications", "Notification", ["title", "message"]],
   ["branding_settings", "Branding Setting"],
@@ -31,21 +31,26 @@ const ENTITIES: Array<[string, string, string[]?]> = [
   ["kpi_entries", "KPI Entry"],
   // Chat & collaboration
   ["chat_channels", "Chat Channel", ["name", "description"]],
-  ["chat_messages", "Chat Message", ["content"]],
+  ["chat_messages", "Chat Message", ["body"]],
   ["chat_message_reactions", "Chat Message Reaction"],
   ["chat_message_attachments", "Chat Message Attachment", ["file_name"]],
   ["task_attachments", "Task Attachment", ["file_name"]],
-  ["task_comments", "Task Comment", ["content"]],
-  ["notification_preferences", "Notification Preference"],
+  ["task_comments", "Task Comment", ["body"]],
+  // notification_preferences is keyed by user_id (no id column) — generic CRUD
+  // factory assumes an `id` PK and a `created_at`, so we deliberately do NOT
+  // expose it through MCP CRUD. Add a custom tool if/when needed.
   // Additional tables
-  ["brokers", "Broker", ["company_name", "contact_name", "email"]],
+  ["brokers", "Broker", ["name", "firm", "email"]],
   ["referral_partners", "Referral Partner", ["contact_name", "company_name", "email"]],
   ["referrals", "Referral"],
   ["referral_payouts", "Referral Payout"],
   ["broker_activities", "Broker Activity", ["description"]],
   ["lead_activities", "Lead Activity", ["description"]],
   ["project_documents", "Project Document", ["name"]],
-  ["mcp_api_keys", "MCP API Key", ["name"]],
+  // mcp_api_keys is intentionally NOT registered. Even with X-API-Key auth
+  // (service role), exposing list/get/delete on this table would let any key
+  // holder dump key_hash for every key and revoke any other key, including
+  // master/admin keys — full server compromise. Manage keys via the admin UI.
 ];
 
 export interface ToolDef {

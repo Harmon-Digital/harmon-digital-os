@@ -31,11 +31,13 @@ export default function PartnerSettings() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("referral_partners")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
+
+      if (error) throw error;
 
       if (data) {
         setPartner(data);
@@ -57,6 +59,10 @@ export default function PartnerSettings() {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    if (!partner?.id) {
+      setMessage({ type: "error", text: "Partner profile not loaded yet. Try refreshing." });
+      return;
+    }
     setSaving(true);
     setMessage({ type: "", text: "" });
 

@@ -53,9 +53,16 @@ export default function QuickActions() {
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    loadData();
+    // Restore timer immediately; defer data load until auth is hydrated so
+    // currentTeamMember resolves correctly. Without this guard, stop-timer
+    // bails with "missing project or team member" on first render.
     loadTimerState();
   }, []);
+
+  useEffect(() => {
+    if (!authUser?.id) return;
+    loadData();
+  }, [authUser?.id]);
 
   useEffect(() => {
     let interval;

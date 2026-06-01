@@ -67,7 +67,10 @@ export async function calculateAllAutoKpis(periodStart, teamMemberId = null) {
         results[kpi.slug] = await calculateKpiValue(kpi, periodStart, teamMemberId);
       } catch (err) {
         console.error(`Error calculating KPI ${kpi.slug}:`, err);
-        results[kpi.slug] = null;
+        // Surface failure as `undefined` so `saveEntries` can distinguish a
+        // failed calc from a real 0. (A real 0 stays as 0; a failed calc is
+        // intentionally omitted from the save batch by the caller.)
+        results[kpi.slug] = undefined;
       }
     })
   );
@@ -79,6 +82,13 @@ export async function saveEntries(entries) {
   const results = [];
 
   for (const entry of entries) {
+    // Refuse to persist entries with a missing actual value — calculateAllAutoKpis
+    // returns `undefined` for slugs whose query errored. Writing those as 0
+    // silently is the bug guard called out in calculateKpiValue.
+    if (entry.actual_value === undefined || entry.actual_value === null) {
+      continue;
+    }
+
     const teamMemberId = entry.team_member_id || null;
 
     // Find existing entry matching slug + period + team_member_id
@@ -117,7 +127,7 @@ export async function saveEntries(entries) {
         .insert({
           slug: entry.slug,
           month: entry.month,
-          actual_value: entry.actual_value ?? 0,
+          actual_value: entry.actual_value,
           target_value: entry.target_value ?? null,
           bonus_amount: entry.bonus_amount ?? null,
           notes: entry.notes ?? null,

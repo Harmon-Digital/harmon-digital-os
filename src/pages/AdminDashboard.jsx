@@ -120,7 +120,14 @@ export default function AdminDashboard() {
     .filter(te => te.billable && !te.client_billed)
     .reduce((sum, te) => sum + (te.hours || 0), 0);
 
-  const unbilledRevenue = unbilledHours * 150;
+  // Use the project's hourly_rate (matches Reports.jsx). Hardcoding $150 here
+  // produced numbers that disagreed with the unbilled total on the Reports page.
+  const unbilledRevenue = timeEntries
+    .filter(te => te.billable && !te.client_billed)
+    .reduce((sum, te) => {
+      const project = projects.find(p => p.id === te.project_id);
+      return sum + ((te.hours || 0) * (project?.hourly_rate || 0));
+    }, 0);
 
   // Project Metrics
   const activeProjects = projects.filter(p => p.status === 'active').length;

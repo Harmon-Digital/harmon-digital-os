@@ -98,19 +98,23 @@ Deno.serve(async (req) => {
       case "invoice.updated": {
         const { data: acct } = await admin
           .from("accounts").select("id").eq("stripe_customer_id", obj.customer).maybeSingle();
-        // Look up the prior row's status to guard against an older event
-        // overwriting a terminal status (e.g. invoice.updated arriving after
-        // invoice.paid would otherwise regress from paid → sent).
+        // Look up the prior row's status AND account_id. Status guards against
+        // an older event regressing a terminal status (e.g. invoice.updated
+        // arriving after invoice.paid). account_id is preserved when the
+        // current accounts lookup misses — sync-stripe-data may have linked
+        // the account previously, and we must not wipe it back to NULL on a
+        // later invoice event.
         const { data: prior } = await admin
-          .from("invoices").select("status").eq("stripe_invoice_id", obj.id).maybeSingle();
+          .from("invoices").select("status, account_id").eq("stripe_invoice_id", obj.id).maybeSingle();
         const nextStatus = mapInvoiceStatus(obj);
         const TERMINAL = new Set(["paid", "void"]);
         const finalStatus = prior?.status && TERMINAL.has(prior.status) && !TERMINAL.has(nextStatus)
           ? prior.status
           : nextStatus;
+        const finalAccountId = acct?.id ?? prior?.account_id ?? null;
         await admin.from("invoices").upsert({
           stripe_invoice_id: obj.id,
-          account_id: acct?.id || null,
+          account_id: finalAccountId,
           invoice_number: obj.number || null,
           issue_date: toISODate(obj.created),
           due_date: toISODate(obj.due_date),

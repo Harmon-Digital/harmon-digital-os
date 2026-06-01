@@ -39,8 +39,16 @@ function buildEmailTemplate(params: {
 
   const safeTitle = escapeHtml(title);
   const safeMessage = escapeHtml(message).replace(/\n/g, "<br/>");
-  const safeLink = link ? escapeHtml(link) : "";
-  const ctaHref = safeLink ? `https://os.harmon-digital.com${safeLink}` : "";
+  // Allow either an in-app path ("/tasks/123") or a fully-qualified URL
+  // ("https://docs…"). Bare paths get prefixed with the app origin so the
+  // CTA button opens the right place; absolute http(s) URLs pass through.
+  // Also block javascript:/data: schemes from sneaking through escapeHtml.
+  const isAbsoluteUrl = link ? /^https?:\/\//i.test(link) : false;
+  const isSafePath = link ? link.startsWith("/") : false;
+  const safeLink = link && (isAbsoluteUrl || isSafePath) ? escapeHtml(link) : "";
+  const ctaHref = safeLink
+    ? (isAbsoluteUrl ? safeLink : `https://os.harmon-digital.com${safeLink}`)
+    : "";
 
   return `<!DOCTYPE html>
 <html>
@@ -114,7 +122,7 @@ function buildEmailTemplate(params: {
                 </tr>
               </table>
 
-              ${link ? `
+              ${ctaHref ? `
               <!-- CTA -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
@@ -277,7 +285,13 @@ Deno.serve(async (req) => {
       const lines = [subject];
       if (record?.message) lines.push("", record.message);
       else if (payload.message) lines.push("", payload.message);
-      if (record?.link) lines.push("", `Open: https://os.harmon-digital.com${record.link}`);
+      if (record?.link) {
+        const recLink = String(record.link);
+        const fullUrl = /^https?:\/\//i.test(recLink)
+          ? recLink
+          : (recLink.startsWith("/") ? `https://os.harmon-digital.com${recLink}` : "");
+        if (fullUrl) lines.push("", `Open: ${fullUrl}`);
+      }
       lines.push("", "—", "Harmon Digital OS", "https://os.harmon-digital.com");
       return lines.join("\n");
     })();

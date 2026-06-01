@@ -13,6 +13,19 @@ export function createNotificationTools(): ToolDef[] {
           title: { type: "string", description: "Notification title" },
           message: { type: "string", description: "Notification body text" },
           link: { type: "string", description: "Optional in-app link path (e.g. /tasks/123)" },
+          category: {
+            type: "string",
+            description: "Routing category — used by notification_preferences to mute classes of email. Defaults to 'general'.",
+          },
+          priority: {
+            type: "string",
+            enum: ["low", "normal", "high"],
+            description: "Priority. Defaults to 'normal'.",
+          },
+          email_enabled: {
+            type: "boolean",
+            description: "If false, suppress the email trigger for this notification (in-app only). Defaults to true.",
+          },
         },
         required: ["user_id", "type", "title", "message"],
       },
@@ -26,6 +39,11 @@ export function createNotificationTools(): ToolDef[] {
             message: args.message,
             link: args.link || null,
             read: false,
+            // Match the in-app helper in src/api/functions.js so MCP-issued
+            // notifications go through the same email-routing pipeline.
+            category: (args.category as string) || "general",
+            priority: (args.priority as string) || "normal",
+            email_enabled: args.email_enabled !== undefined ? !!args.email_enabled : true,
           })
           .select()
           .single();

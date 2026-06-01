@@ -258,7 +258,7 @@ export default function Dashboard() {
                     )}
                     <div className="flex items-center gap-1.5 min-w-[80px]">
                       <span className={`w-1.5 h-1.5 rounded-full ${statusDot[task.status] || 'bg-gray-400'}`} />
-                      <span className="text-[12px] text-gray-600 dark:text-gray-400 capitalize">{task.status.replace(/_/g, ' ')}</span>
+                      <span className="text-[12px] text-gray-600 dark:text-gray-400 capitalize">{(task.status || '').replace(/_/g, ' ')}</span>
                     </div>
                   </div>
                 </div>

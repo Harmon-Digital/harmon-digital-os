@@ -159,8 +159,12 @@ export default function Tasks() {
   };
 
   useEffect(() => {
+    // Wait for authUser so currentTeamMember (matched on user_id) resolves
+    // correctly — otherwise the "Mine" view filter and QuickAddTask's default
+    // assignee silently stay null until the next reload.
+    if (!authUser?.id) return;
     loadData();
-  }, []);
+  }, [authUser?.id]);
 
   // Handle ?new=1 and ?taskId=X from command palette
   useEffect(() => {
