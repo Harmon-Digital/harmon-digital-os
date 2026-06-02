@@ -38,6 +38,50 @@ function sanitizeError(err: unknown): string {
   return "Operation failed";
 }
 
+// Columns that must never be set or mutated via the generic CRUD tools.
+// The DB-side trigger guards `user_profiles.role` explicitly for non-service
+// callers, but stripping it here gives a clear "field not allowed" error
+// instead of a silent no-op. `id`, `created_at`, `updated_at` are pinned so
+// the caller cannot retarget a row or back-date it.
+const FORBIDDEN_WRITE_COLUMNS = new Set([
+  "id",
+  "created_at",
+  "updated_at",
+  "created_by",
+  "password",
+  "password_hash",
+  "key_hash",
+  "key_prefix",
+  "service_role_key",
+  "encrypted_password",
+]);
+
+// Extra per-table restrictions for fields that should only flow through
+// system code (triggers, edge functions with service role) rather than
+// arbitrary MCP callers under JWT auth.
+const TABLE_FORBIDDEN_COLUMNS: Record<string, string[]> = {
+  user_profiles: ["role"],
+  invoices: ["paid_at"],
+  tasks: ["completed_at"],
+  leads: ["won_at"],
+  notifications: ["dedupe_key"],
+};
+
+export function sanitizeWritePayload(
+  table: string,
+  payload: Record<string, unknown> | null | undefined,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (!payload || typeof payload !== "object") return out;
+  const extra = TABLE_FORBIDDEN_COLUMNS[table] ?? [];
+  for (const [k, v] of Object.entries(payload)) {
+    if (FORBIDDEN_WRITE_COLUMNS.has(k)) continue;
+    if (extra.includes(k)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
 export function createCrudTools(
   tableName: string,
   label: string,
@@ -156,9 +200,10 @@ export function createCrudTools(
         required: ["record"],
       },
       handler: async (args, client) => {
+        const safeRecord = sanitizeWritePayload(tableName, args.record as Record<string, unknown>);
         const { data, error } = await client
           .from(tableName)
-          .insert(args.record as Record<string, unknown>)
+          .insert(safeRecord)
           .select()
           .single();
         if (error) throw new Error(sanitizeError(error));
@@ -183,9 +228,10 @@ export function createCrudTools(
         required: ["id", "updates"],
       },
       handler: async (args, client) => {
+        const safeUpdates = sanitizeWritePayload(tableName, args.updates as Record<string, unknown>);
         const { data, error } = await client
           .from(tableName)
-          .update(args.updates as Record<string, unknown>)
+          .update(safeUpdates)
           .eq("id", args.id as string)
           .select()
           .single();

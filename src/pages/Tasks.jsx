@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Task, Project, Account, TeamMember, TaskAttachment, Lead } from "@/api/entities";
 import { supabase } from "@/api/supabaseClient";
@@ -265,19 +265,22 @@ export default function Tasks() {
     setShowDrawer(true);
   };
 
-  // Auto-save from the task drawer: update row in-place, keep drawer open
-  const handleAutoSave = async (taskData) => {
+  // Auto-save from the task drawer: update row in-place, keep drawer open.
+  // Wrapped in useCallback keyed off the editing task id so unrelated parent
+  // re-renders don't recreate this prop — TaskForm's auto-save effect lists
+  // it in deps and would otherwise cancel its pending debounce on every
+  // re-render, silently dropping saves under rapid edits.
+  const handleAutoSave = useCallback(async (taskData) => {
     if (!editingTask?.id) return;
     try {
       const saved = await Task.update(editingTask.id, taskData);
-      // Keep editingTask in sync so the form's props don't get stale
       setEditingTask((prev) => (prev ? { ...prev, ...saved } : prev));
       setTasks((prev) => prev.map((t) => (t.id === saved.id ? { ...t, ...saved } : t)));
     } catch (err) {
       console.error("Auto-save failed:", err);
       throw err;
     }
-  };
+  }, [editingTask?.id]);
 
   const handleQuickUpdate = async (taskId, field, value) => {
     const task = tasks.find(t => t.id === taskId);

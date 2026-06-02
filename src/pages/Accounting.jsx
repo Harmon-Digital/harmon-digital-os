@@ -119,14 +119,14 @@ export default function Accounting() {
   const handleSyncTransactions = async () => {
     setSyncing(true);
     try {
-      await api.functions.invoke('syncStripeData', {
-        syncType: 'transactions',
-        initialSync: false,
-      });
+      // Real function name is kebab-case; `syncType: 'transactions'` pulls
+      // /v1/balance_transactions and writes net_amount / stripe_fee into the
+      // local transactions table.
+      await api.functions.invoke('sync-stripe-data', { syncType: 'transactions' });
       await loadData();
     } catch (error) {
       console.error('Error syncing transactions:', error);
-      alert('Failed to sync transactions: ' + error.message);
+      alert('Failed to sync transactions: ' + (error?.message || 'Unknown error'));
     } finally {
       setSyncing(false);
     }

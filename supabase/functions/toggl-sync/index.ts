@@ -378,9 +378,10 @@ async function syncTimeEntries(
   counts: Counts,
   timezone: string,
 ) {
-  const entries: TogglEntry[] = range.useReports
-    ? await fetchEntriesViaReports(workspaceId, range.from, range.to)
-    : await fetchEntriesViaMe(range.from, range.to);
+  // Always use the workspace-wide Reports endpoint. The /me/time_entries
+  // endpoint only returns the API-token owner's entries, so an incremental
+  // sync would silently miss every other team member's hours.
+  const entries: TogglEntry[] = await fetchEntriesViaReports(workspaceId, range.from, range.to);
 
   for (const e of entries) {
     // Running timers (duration < 0) are skipped — we only mirror completed entries.
@@ -408,12 +409,6 @@ async function syncTimeEntries(
     const { time: end_time } = formatInTimezone(stop, timezone);
     const togglId = String(e.id);
 
-    const { data: existing } = await admin
-      .from("time_entries")
-      .select("id")
-      .eq("toggl_id", togglId)
-      .maybeSingle();
-
     const payload = {
       project_id: projectUuid,
       team_member_id: teamMemberUuid,
@@ -428,9 +423,12 @@ async function syncTimeEntries(
       toggl_tags: e.tags ?? null,
     };
 
-    const { error: writeErr } = existing
-      ? await admin.from("time_entries").update(payload).eq("id", existing.id)
-      : await admin.from("time_entries").insert(payload);
+    // Single-shot upsert by toggl_id — avoids the SELECT-then-INSERT race
+    // (two concurrent sync runs could both miss and double-insert) and saves
+    // a round-trip per entry. Requires a unique constraint on toggl_id.
+    const { error: writeErr } = await admin
+      .from("time_entries")
+      .upsert(payload, { onConflict: "toggl_id" });
     if (writeErr) {
       console.error("[toggl-sync] time_entry write failed", { togglId, err: writeErr.message });
       continue;

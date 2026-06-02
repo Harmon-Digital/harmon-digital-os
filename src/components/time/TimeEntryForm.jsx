@@ -74,18 +74,25 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
     }
   }, [currentTeamMember?.id, formData.team_member_id]);
 
+  // Cancellation guard so a slow retainer fetch for project A doesn't
+  // overwrite the budget banner after the user switches to project B.
+  const retainerRequestIdRef = useRef(0);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (formData.project_id) {
       const project = projects.find(p => p.id === formData.project_id);
       setSelectedProject(project);
       setFilteredTasks(tasks.filter(t => t.project_id === formData.project_id));
-      loadMonthlyRetainerData(formData.project_id, formData.date);
+      const requestId = ++retainerRequestIdRef.current;
+      loadMonthlyRetainerData(formData.project_id, formData.date, requestId);
 
       if (project && (project.billing_type === 'retainer' || project.billing_type === 'exit')) {
         setFormData(prev => ({ ...prev, billable: false }));
       }
     } else {
+      // Bump the request id so any in-flight fetch's setState is ignored.
+      retainerRequestIdRef.current++;
       setSelectedProject(null);
       setFilteredTasks([]);
       setMonthlyHoursData(null);
@@ -111,7 +118,7 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
     }
   }, [formData.start_time, formData.end_time, formData.date]);
 
-  const loadMonthlyRetainerData = async (projectId, date) => {
+  const loadMonthlyRetainerData = async (projectId, date, requestId) => {
     setLoadingMonthlyData(true);
     try {
       const project = projects.find(p => p.id === projectId);
@@ -132,6 +139,11 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
         const endStr = `${year}-${String(month + 1).padStart(2, '0')}-${endOfMonth.getDate()}`;
         const allTimeEntries = await api.entities.TimeEntry.filter({ project_id: projectId });
 
+        // Bail if the user picked a different project (or cleared it) while
+        // this slow filter was in flight — otherwise a stale response could
+        // show the wrong over-budget warning.
+        if (requestId !== undefined && requestId !== retainerRequestIdRef.current) return;
+
         // Filter to current month and exclude the entry being edited
         const monthlyEntries = allTimeEntries.filter(entry => {
           // Skip the entry we're editing
@@ -139,9 +151,9 @@ export default function TimeEntryForm({ timeEntry, projects, tasks, teamMembers,
 
           return entry.date >= startStr && entry.date <= endStr;
         });
-        
+
         const hoursUsed = monthlyEntries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
-        
+
         setMonthlyHoursData({
           project: project,
           month: startOfMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),

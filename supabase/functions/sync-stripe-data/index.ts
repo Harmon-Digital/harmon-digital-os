@@ -204,6 +204,68 @@ Deno.serve(async (req) => {
       results.invoices = { synced: n, unmatched_to_account: unmatched };
     }
 
+    /* ---- Balance transactions → local transactions table ---- */
+    if (want("transactions")) {
+      // /v1/balance_transactions returns every fund flow in the connected
+      // Stripe account: charges, refunds, payouts, adjustments, fees.
+      const txns = await stripeList("balance_transactions");
+      let n = 0, unmatched = 0;
+      // Pre-fetch all accounts so we can map customer/invoice → account_id
+      // without an N+1 round trip per transaction.
+      const customerLookups = new Map<string, string>();
+      for (const t of txns) {
+        // Skip non-monetary entries that don't fit our schema.
+        if (!t.id) continue;
+        // Resolve a customer id from the source object so we can attach the
+        // local account. Balance txns embed the related charge/invoice/refund
+        // via `source` when expanded — without expansion we only get the id,
+        // so we pull from existing data first.
+        let stripeCustomerId: string | null = null;
+        let stripeInvoiceId: string | null = null;
+        let stripePaymentIntentId: string | null = null;
+        const src = t.source as string | { id?: string; customer?: string; invoice?: string; payment_intent?: string } | null | undefined;
+        if (src && typeof src === "object") {
+          stripeCustomerId = src.customer || null;
+          stripeInvoiceId = src.invoice || null;
+          stripePaymentIntentId = src.payment_intent || null;
+        }
+        // Look up local account by customer id (one lookup per unique customer).
+        let accountId: string | null = null;
+        if (stripeCustomerId) {
+          if (customerLookups.has(stripeCustomerId)) {
+            accountId = customerLookups.get(stripeCustomerId) || null;
+          } else {
+            const { data: acct } = await admin
+              .from("accounts").select("id").eq("stripe_customer_id", stripeCustomerId).maybeSingle();
+            accountId = acct?.id || null;
+            customerLookups.set(stripeCustomerId, accountId || "");
+          }
+        }
+        if (!accountId) unmatched++;
+        const isZeroDecimal = ["jpy","krw","vnd","clp","pyg","ugx","xaf","xof","kmf","djf","gnf","rwf","mga","bif"].includes(
+          (t.currency || "").toLowerCase()
+        );
+        const div = isZeroDecimal ? 1 : 100;
+        const { error } = await admin.from("transactions").upsert({
+          stripe_balance_transaction_id: t.id,
+          stripe_payment_intent_id: stripePaymentIntentId,
+          stripe_invoice_id: stripeInvoiceId,
+          stripe_customer_id: stripeCustomerId,
+          account_id: accountId,
+          date: toISO(t.created),
+          description: t.description || t.type || null,
+          type: t.type || null,
+          amount: (t.amount || 0) / div,
+          stripe_fee: (t.fee || 0) / div,
+          net_amount: (t.net || 0) / div,
+          status: t.status || null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "stripe_balance_transaction_id" });
+        if (!error) n++;
+      }
+      results.transactions = { synced: n, unmatched_to_account: unmatched, fetched: txns.length };
+    }
+
     return json({ success: true, results });
   } catch (err) {
     console.error("[sync-stripe-data]", err);

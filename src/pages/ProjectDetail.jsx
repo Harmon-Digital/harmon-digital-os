@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Project, Account, Task, TimeEntry, Contact, Invoice, TeamMember } from "@/api/entities";
 import { parseLocalDate } from "@/utils";
@@ -124,19 +124,32 @@ export default function ProjectDetail() {
   const [taskAssigneeFilter, setTaskAssigneeFilter] = useState("all");
   const [taskSearch, setTaskSearch] = useState("");
 
+  // Track the active project-load so that a fast navigation A→B doesn't
+  // overwrite B's fresh data with A's late awaits.
+  const loadRequestIdRef = useRef(0);
+
   useEffect(() => {
-    if (projectId) {
-      loadProjectData();
-    }
+    if (!projectId) return;
+    const requestId = ++loadRequestIdRef.current;
+    loadProjectData(requestId);
+    return () => {
+      // Bump the id so any in-flight setState calls bail out.
+      loadRequestIdRef.current = requestId + 1;
+    };
   }, [projectId]);
 
-  const loadProjectData = async () => {
+  const loadProjectData = async (requestId = ++loadRequestIdRef.current) => {
     setLoading(true);
     try {
       const allProjects = await Project.list();
+      if (requestId !== loadRequestIdRef.current) return;
       const currentProject = allProjects.find(p => p.id === projectId);
 
       if (!currentProject) {
+        // The previously-loaded project may no longer match the URL; clear
+        // it so the "Project not found" UI renders instead of stale data.
+        setProject(null);
+        setEditedProject(null);
         setLoading(false);
         return;
       }
@@ -157,6 +170,7 @@ export default function ProjectDetail() {
         console.error(`ProjectDetail data load [${i}] failed:`, r.reason);
         return [];
       }));
+      if (requestId !== loadRequestIdRef.current) return;
       const projectAccount = accountData.find(a => a.id === currentProject.account_id);
       setAccount(projectAccount);
       setAllAccounts(accountData);
@@ -177,6 +191,7 @@ export default function ProjectDetail() {
         .select('*')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false });
+      if (requestId !== loadRequestIdRef.current) return;
       setDocuments(docsData || []);
 
       // Load phases
@@ -185,11 +200,12 @@ export default function ProjectDetail() {
         .select('*')
         .eq('project_id', projectId)
         .order('order_index', { ascending: true });
+      if (requestId !== loadRequestIdRef.current) return;
       setPhases(phasesData || []);
     } catch (error) {
       console.error("Error loading project:", error);
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestIdRef.current) setLoading(false);
     }
   };
 

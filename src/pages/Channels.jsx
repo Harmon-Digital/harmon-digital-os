@@ -158,6 +158,12 @@ export default function Channels() {
     return m;
   }, [teamMembers, authorMap]);
 
+  // Ref mirror for non-render reads (loadMessages reads this without taking
+  // a dep on it, to avoid re-firing the channel load effect on every author
+  // resolution).
+  const userIdToNameRef = useRef(userIdToName);
+  useEffect(() => { userIdToNameRef.current = userIdToName; }, [userIdToName]);
+
   const userIdToImage = useMemo(() => {
     const m = {};
     for (const tm of teamMembers) {
@@ -461,8 +467,13 @@ export default function Channels() {
           setAttachments(new Map());
         }
 
+        // Read the latest author cache via the ref so this callback's
+        // identity doesn't churn every time a new author gets resolved —
+        // otherwise the load effect re-fires and the channel double-fetches
+        // (and scroll-jumps) on every initial render.
+        const knownIds = userIdToNameRef.current || {};
         const missing = Array.from(
-          new Set((data || []).map((m) => m.user_id).filter((id) => id && !userIdToName[id])),
+          new Set((data || []).map((m) => m.user_id).filter((id) => id && !knownIds[id])),
         );
         if (missing.length > 0) {
           const [{ data: profiles }, { data: tms }] = await Promise.all([
@@ -501,7 +512,10 @@ export default function Channels() {
         setLoadingMessages(false);
       }
     },
-    [userIdToName],
+    // Empty deps — loadMessages now reads the author cache via a ref. Its
+    // identity is stable across renders, which prevents the double-fetch
+    // cascade described above.
+    [],
   );
 
   useEffect(() => {
@@ -669,10 +683,24 @@ export default function Channels() {
     }
   };
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages — but only if the user is already
+  // near the bottom. Forcing scroll on every render yanks the viewport away
+  // from anyone reading older history.
+  const lastSnappedChannelRef = useRef(null);
   useEffect(() => {
     const el = scrollerRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    // On channel switch, snap once to the bottom.
+    if (lastSnappedChannelRef.current !== selectedChannelId) {
+      lastSnappedChannelRef.current = selectedChannelId;
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    // Otherwise, only auto-scroll when the user is within ~80px of bottom.
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom < 80) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [messages, selectedChannelId]);
 
   const matchesSearch = (label) => {

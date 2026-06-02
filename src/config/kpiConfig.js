@@ -30,7 +30,9 @@ export const KPI_DEFINITIONS = [
     icon: DollarSign,
     color: "green",
     hero: true,
-    source: { table: "invoices", filter: { status: "paid" }, aggregate: "sum", field: "total", dateField: "issue_date" },
+    // Bucket paid revenue by `paid_at` (stamped by trg_stamp_invoice_paid_at)
+    // so re-classifications/edits later don't re-bucket past periods.
+    source: { table: "invoices", filter: { status: "paid" }, aggregate: "sum", field: "total", dateField: "paid_at" },
     perMember: false,
   },
   {
@@ -68,7 +70,9 @@ export const KPI_DEFINITIONS = [
     icon: Trophy,
     color: "indigo",
     hero: true,
-    source: { table: "leads", filter: { status: "won" }, aggregate: "count", dateField: "updated_at" },
+    // Bucket by `won_at` (stamped by trg_stamp_lead_won_at) so editing any
+    // other field on a won lead doesn't move it to a new week.
+    source: { table: "leads", filter: { status: "won" }, aggregate: "count", dateField: "won_at" },
     perMember: true,
     memberField: "assigned_to",
   },
@@ -154,7 +158,9 @@ export const KPI_DEFINITIONS = [
     calcType: "auto",
     icon: CheckSquare,
     color: "lime",
-    source: { table: "tasks", filter: { status: "completed" }, aggregate: "count", dateField: "updated_at" },
+    // Bucket by `completed_at` (stamped by trg_stamp_task_completed_at) so
+    // any later edit (description, assignee) doesn't re-bucket the row.
+    source: { table: "tasks", filter: { status: "completed" }, aggregate: "count", dateField: "completed_at" },
     perMember: true,
     memberField: "assigned_to",
   },

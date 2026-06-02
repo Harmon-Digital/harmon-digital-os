@@ -11,9 +11,13 @@ async function verifyStripeSignature(rawBody: string, sigHeader: string, secret:
   const timestamp = parts["t"];
   if (!timestamp) return false;
 
-  // Replay guard: reject signatures older than 5 minutes.
-  const age = Math.abs(Date.now() / 1000 - Number(timestamp));
-  if (!Number.isFinite(age) || age > 300) return false;
+  // Replay guard: reject signatures older than 5 minutes OR in the future.
+  // `Math.abs` would accept attacker-supplied future timestamps; Stripe only
+  // sends timestamps in the past, so a small forward grace (60s clock skew)
+  // is the cap.
+  const now = Date.now() / 1000;
+  const ts = Number(timestamp);
+  if (!Number.isFinite(ts) || now - ts > 300 || ts - now > 60) return false;
 
   const signedPayload = `${timestamp}.${rawBody}`;
   const key = await crypto.subtle.importKey(
@@ -87,6 +91,24 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  // Idempotency: Stripe retries on 5xx/timeout with the same event.id. Stop
+  // reprocessing by inserting first; if the row already exists, return early.
+  if (event.id) {
+    const { error: idemErr } = await admin
+      .from("stripe_webhook_events")
+      .insert({ event_id: event.id, type: event.type || "unknown" });
+    if (idemErr) {
+      // Duplicate primary key → already processed. Treat any other error as
+      // best-effort: log and continue rather than refuse the webhook.
+      if ((idemErr as { code?: string }).code === "23505") {
+        return new Response(JSON.stringify({ received: true, duplicate: true }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      console.warn("[stripe-webhook] idempotency insert failed:", idemErr);
+    }
+  }
+
   try {
     const obj = event.data?.object;
     switch (event.type) {
@@ -131,6 +153,19 @@ Deno.serve(async (req) => {
       case "customer.subscription.deleted":
       case "customer.subscription.created": {
         const price = obj.items?.data?.[0]?.price;
+        // Look up the local account so the subscription row stays linked to
+        // the customer. Without this, sync-stripe-data's metadata.account_id
+        // is the only linkage and a webhook-first subscription is orphaned.
+        const { data: subAcct } = await admin
+          .from("accounts").select("id").eq("stripe_customer_id", obj.customer).maybeSingle();
+        const { data: priorSub } = await admin
+          .from("stripe_subscriptions").select("metadata").eq("stripe_subscription_id", obj.id).maybeSingle();
+        const priorMeta = (priorSub?.metadata && typeof priorSub.metadata === "object")
+          ? priorSub.metadata as Record<string, unknown>
+          : {};
+        const nextMeta = subAcct?.id
+          ? { ...priorMeta, account_id: subAcct.id }
+          : priorMeta;
         await admin.from("stripe_subscriptions").upsert({
           stripe_subscription_id: obj.id,
           stripe_customer_id: obj.customer,
@@ -143,6 +178,7 @@ Deno.serve(async (req) => {
           amount: price?.unit_amount != null ? price.unit_amount / 100 : null,
           currency: price?.currency || null,
           interval: price?.recurring?.interval || null,
+          metadata: nextMeta,
           updated_at: new Date().toISOString(),
         }, { onConflict: "stripe_subscription_id" });
         break;

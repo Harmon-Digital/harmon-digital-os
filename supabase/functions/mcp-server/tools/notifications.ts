@@ -30,14 +30,59 @@ export function createNotificationTools(): ToolDef[] {
         required: ["user_id", "type", "title", "message"],
       },
       handler: async (args, client) => {
+        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const userId = String(args.user_id ?? "");
+        if (!UUID_RE.test(userId)) {
+          throw new Error("Invalid user_id (must be a UUID)");
+        }
+        // Verify the target user actually exists so a caller can't fabricate
+        // notifications addressed to arbitrary UUIDs (and trigger the email
+        // pipeline against them).
+        const { data: targetExists, error: lookupErr } = await client
+          .from("user_profiles")
+          .select("id")
+          .eq("id", userId)
+          .maybeSingle();
+        if (lookupErr) throw new Error("Failed to verify target user");
+        if (!targetExists) throw new Error("Target user_id not found");
+
+        const type = String(args.type ?? "");
+        if (!["info", "warning", "error"].includes(type)) {
+          throw new Error("Invalid type (must be info/warning/error)");
+        }
+
+        // Reject suspicious link schemes. Same-origin paths are fine; if a
+        // full URL is supplied, only http(s) is allowed.
+        const rawLink = (args.link == null ? "" : String(args.link)).trim();
+        let link: string | null = null;
+        if (rawLink) {
+          if (rawLink.startsWith("/")) {
+            link = rawLink.slice(0, 500);
+          } else {
+            try {
+              const parsed = new URL(rawLink);
+              if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+                throw new Error("Disallowed link protocol");
+              }
+              link = parsed.toString().slice(0, 500);
+            } catch {
+              throw new Error("Invalid link URL");
+            }
+          }
+        }
+
+        const title = String(args.title ?? "").slice(0, 200);
+        const message = String(args.message ?? "").slice(0, 2000);
+        if (!title || !message) throw new Error("title and message are required");
+
         const { data, error } = await client
           .from("notifications")
           .insert({
-            user_id: args.user_id,
-            type: args.type,
-            title: args.title,
-            message: args.message,
-            link: args.link || null,
+            user_id: userId,
+            type,
+            title,
+            message,
+            link,
             read: false,
             // Match the in-app helper in src/api/functions.js so MCP-issued
             // notifications go through the same email-routing pipeline.

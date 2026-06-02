@@ -30,15 +30,14 @@ export default function AccountingDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [projectsRes, teamRes, timeRes] = await Promise.all([
+      const [projectsRes, teamRes, timeEntries] = await Promise.all([
         supabase.from("projects").select("id, hourly_rate"),
         supabase.from("team_members").select("id, hourly_rate"),
-        supabase.from("time_entries").select("*")
+        fetchAllTimeEntries(),
       ]);
 
       const projects = projectsRes.data || [];
       const teamMembers = teamRes.data || [];
-      const timeEntries = timeRes.data || [];
 
       const totalHours = timeEntries.reduce((sum, e) => sum + (e.hours || 0), 0);
       const billableHours = timeEntries.filter(e => e.billable).reduce((sum, e) => sum + (e.hours || 0), 0);
@@ -76,6 +75,26 @@ export default function AccountingDashboard() {
       setLoading(false);
     }
   };
+
+  // Supabase JS caps a response at 1000 rows by default; page through all
+  // entries so the dashboard reflects the full dataset, not a silent slice.
+  async function fetchAllTimeEntries() {
+    const pageSize = 1000;
+    const out = [];
+    for (let page = 0; page < 100; page++) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error } = await supabase
+        .from("time_entries")
+        .select("*")
+        .order("date", { ascending: false })
+        .range(from, to);
+      if (error) throw error;
+      out.push(...(data || []));
+      if (!data || data.length < pageSize) break;
+    }
+    return out;
+  }
 
   if (!isAdmin) {
     return (

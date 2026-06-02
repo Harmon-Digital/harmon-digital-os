@@ -57,23 +57,41 @@ export default function Reports() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [projectsRes, teamRes, timeRes] = await Promise.all([
+      const [projectsRes, teamRes, timeRows] = await Promise.all([
         supabase.from("projects").select("id, name, hourly_rate, billing_type, monthly_retainer"),
         supabase.from("team_members").select("id, full_name, hourly_rate"),
-        supabase.from("time_entries")
-          .select("*")
-          .order("date", { ascending: false })
+        fetchAllTimeEntries(),
       ]);
 
       setProjects(projectsRes.data || []);
       setTeamMembers(teamRes.data || []);
-      setTimeEntries(timeRes.data || []);
+      setTimeEntries(timeRows);
     } catch (error) {
       console.error("Error loading reports:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Supabase clients cap a single response at 1000 rows by default. Reports
+  // aggregates against the full set, so we page until exhaustion.
+  async function fetchAllTimeEntries() {
+    const pageSize = 1000;
+    const out = [];
+    for (let page = 0; page < 100; page++) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error } = await supabase
+        .from("time_entries")
+        .select("*")
+        .order("date", { ascending: false })
+        .range(from, to);
+      if (error) throw error;
+      out.push(...(data || []));
+      if (!data || data.length < pageSize) break;
+    }
+    return out;
+  }
 
   const loadBonusData = async () => {
     setBonusLoading(true);
@@ -133,10 +151,12 @@ export default function Reports() {
     let unpaidAmount = 0;
 
     bonusEntries.forEach((entry) => {
-      const target = entry.target_value;
-      const actual = entry.actual_value || 0;
-      const bonus = entry.bonus_amount || 0;
-      const pct = target ? (actual / target) * 100 : 0;
+      // PostgREST may return numerics as strings; coerce before math so we
+      // don't divide by the truthy string "0" (which gives Infinity).
+      const target = Number(entry.target_value) || 0;
+      const actual = Number(entry.actual_value) || 0;
+      const bonus = Number(entry.bonus_amount) || 0;
+      const pct = target > 0 ? (actual / target) * 100 : 0;
       totalPotential += bonus;
       totalGoals++;
       if (pct >= 100) {
