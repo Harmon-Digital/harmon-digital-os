@@ -52,6 +52,15 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// Length-bounded constant-time compare so an attacker can't infer the secret
+// from response-time differences. Always iterates over the longer string.
+function timingSafeCompare(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return diff === 0;
+}
+
 function togglAuthHeader(): string {
   // Toggl Basic auth: base64("<api_token>:api_token")
   const raw = `${TOGGL_API_TOKEN}:api_token`;
@@ -161,16 +170,28 @@ async function syncProjects(
   // Returns Toggl project_id -> HDO project uuid (for time-entry mapping).
   const map = new Map<number, string>();
 
-  const res = await togglFetch(`/workspaces/${workspaceId}/projects?active=both&per_page=200`);
-  const projects = (await res.json()) as Array<{
+  // Paginate — Toggl v9 caps per_page at 200; workspaces with more projects
+  // would silently truncate without this loop, and their time entries then get
+  // dropped as `skipped_missing_project`.
+  type TogglProject = {
     id: number;
     name: string;
     client_id?: number | null;
     active?: boolean;
     rate?: number | null;
     billable?: boolean;
-  }> | null;
-  if (!projects) return map;
+  };
+  const projects: TogglProject[] = [];
+  for (let page = 1; page <= 50; page++) {
+    const res = await togglFetch(
+      `/workspaces/${workspaceId}/projects?active=both&per_page=200&page=${page}`,
+    );
+    const batch = (await res.json()) as TogglProject[] | null;
+    if (!Array.isArray(batch) || batch.length === 0) break;
+    projects.push(...batch);
+    if (batch.length < 200) break;
+  }
+  if (projects.length === 0) return map;
 
   // Build client_id -> account uuid lookup once.
   const { data: linkedAccounts } = await admin
@@ -511,7 +532,7 @@ Deno.serve(async (req) => {
 
   // Authenticate: either an admin JWT, or a cron with TOGGL_CRON_SECRET header.
   const cronHeader = req.headers.get("x-cron-secret");
-  const isCron = !!CRON_SECRET && cronHeader === CRON_SECRET;
+  const isCron = !!CRON_SECRET && !!cronHeader && timingSafeCompare(cronHeader, CRON_SECRET);
   let triggeredBy: string | null = null;
 
   // The service-role admin client is needed both for the role lookup (so RLS

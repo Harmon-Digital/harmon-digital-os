@@ -13,19 +13,24 @@ export default function ClientDocuments() {
     if (!accountId) { setLoading(false); return; }
     (async () => {
       try {
-        const { data: projs = [] } = await supabase
+        // Destructuring default `= []` only triggers when value is `undefined`,
+        // but Supabase returns `data: null` on RLS/network errors — so coerce
+        // explicitly with `|| []` to avoid a null .map crash.
+        const { data: projsRaw } = await supabase
           .from("projects")
           .select("id, name")
           .eq("account_id", accountId);
+        const projs = projsRaw || [];
         const projectMap = new Map(projs.map((p) => [p.id, p.name]));
         if (projs.length === 0) { setLoading(false); return; }
-        const { data = [] } = await supabase
+        const { data: docsRaw } = await supabase
           .from("project_documents")
           .select("id, name, file_path, file_size, project_id, created_at")
           .in("project_id", projs.map((p) => p.id))
           .eq("client_visible", true)
           .order("created_at", { ascending: false });
-        setDocuments(data.map((d) => ({ ...d, project_name: projectMap.get(d.project_id) })));
+        const docs = docsRaw || [];
+        setDocuments(docs.map((d) => ({ ...d, project_name: projectMap.get(d.project_id) })));
       } catch (err) {
         console.error("Documents load failed:", err);
       } finally {
@@ -53,7 +58,7 @@ export default function ClientDocuments() {
           documents.map((d) => (
             <a
               key={d.id}
-              href={d.file_path?.startsWith('http') ? d.file_path : supabase.storage.from('project-documents').getPublicUrl(d.file_path).data.publicUrl}
+              href={d.file_path?.startsWith('http') ? d.file_path : supabase.storage.from('uploads').getPublicUrl(d.file_path).data.publicUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="group flex items-center gap-3 px-2 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"

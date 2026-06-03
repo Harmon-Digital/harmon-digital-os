@@ -2,13 +2,24 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const CRON_SECRET = Deno.env.get("CRON_SECRET");
 
+// Length-bounded constant-time compare so an attacker can't infer the secret
+// from response-time differences. Always iterates over the longer string.
+function timingSafeCompare(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   // Auth: require Authorization header with cron secret or service role key
   const authHeader = req.headers.get("authorization");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
-  if (!bearerToken || (bearerToken !== serviceKey && (!CRON_SECRET || bearerToken !== CRON_SECRET))) {
+  const matchesService = !!(bearerToken && serviceKey && timingSafeCompare(bearerToken, serviceKey));
+  const matchesCron = !!(bearerToken && CRON_SECRET && timingSafeCompare(bearerToken, CRON_SECRET));
+  if (!matchesService && !matchesCron) {
     return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },

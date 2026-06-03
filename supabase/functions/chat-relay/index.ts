@@ -146,8 +146,11 @@ Deno.serve(async (req) => {
       message: message.trim() + contextNote,
     };
 
-    // Fire and forget — the hook returns 202, reply comes back via Supabase Realtime
-    fetch(OPENCLAW_HOOK_URL, {
+    // Edge Function isolates terminate as soon as the response is returned,
+    // so a true fire-and-forget fetch may never actually leave the isolate.
+    // EdgeRuntime.waitUntil keeps the isolate alive until the hook call
+    // completes (the hook itself still returns 202; reply comes via Realtime).
+    const hookCall = fetch(OPENCLAW_HOOK_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -156,6 +159,10 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify(hookBody),
     }).catch((err) => console.error("OpenClaw hook error:", err));
+    // deno-lint-ignore no-explicit-any
+    const er = (globalThis as any).EdgeRuntime;
+    if (er?.waitUntil) er.waitUntil(hookCall);
+    else await hookCall;
 
     return new Response(
       JSON.stringify({ ok: true, message_id: msgData.id }),

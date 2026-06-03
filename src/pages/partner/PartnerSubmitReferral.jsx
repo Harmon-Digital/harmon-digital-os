@@ -73,7 +73,9 @@ export default function PartnerSubmitReferral() {
 
       if (error) throw error;
 
-      // Also create a lead in the CRM
+      // Also create a lead in the CRM. If the lead insert fails, we must
+      // compensate-delete the referral above — otherwise the user resubmits
+      // and we accumulate orphaned referrals with no matching lead.
       const { data: createdLead, error: leadError } = await supabase
         .from("leads")
         .insert({
@@ -88,7 +90,12 @@ export default function PartnerSubmitReferral() {
         })
         .select()
         .single();
-      if (leadError) throw leadError;
+      if (leadError) {
+        if (referralData?.id) {
+          await supabase.from("referrals").delete().eq("id", referralData.id);
+        }
+        throw leadError;
+      }
 
       // Seed a follow-up task on the new lead (non-blocking)
       if (createdLead?.id) {

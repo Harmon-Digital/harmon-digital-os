@@ -116,7 +116,12 @@ Deno.serve(async (req) => {
   });
   if (partnerErr) {
     // Roll back auth user + profile.
-    await admin.from("user_profiles").delete().eq("id", newUserId).catch?.(() => {});
+    // PostgrestFilterBuilder is a PromiseLike, not a real Promise — its
+    // .catch may be missing (and optional chain would silently swallow it),
+    // so wrap with Promise.resolve to get a real Promise we can await.
+    await Promise.resolve(
+      admin.from("user_profiles").delete().eq("id", newUserId)
+    ).catch(() => {});
     await admin.auth.admin.deleteUser(newUserId).catch(() => {});
     return new Response(JSON.stringify({ error: partnerErr.message }), {
       status: 500,

@@ -208,7 +208,10 @@ Deno.serve(async (req) => {
     if (want("transactions")) {
       // /v1/balance_transactions returns every fund flow in the connected
       // Stripe account: charges, refunds, payouts, adjustments, fees.
-      const txns = await stripeList("balance_transactions");
+      // expand[]=data.source so `source` is an object (customer/invoice/payment_intent
+      // ids), not a bare id. Without expansion the type-check below never matches
+      // and every transaction ends up with account_id=null.
+      const txns = await stripeList("balance_transactions", { "expand[]": "data.source" });
       let n = 0, unmatched = 0;
       // Pre-fetch all accounts so we can map customer/invoice → account_id
       // without an N+1 round trip per transaction.

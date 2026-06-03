@@ -2,6 +2,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
+// Length-bounded constant-time compare so an attacker can't infer the secret
+// from response-time differences. Always iterates over the longer string.
+function timingSafeCompare(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < len; i++) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return diff === 0;
+}
+
 const escapeHtml = (value: string = "") =>
   value
     .replace(/&/g, "&amp;")
@@ -176,9 +185,9 @@ Deno.serve(async (req) => {
   const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  const accepted = bearerToken && (
-    bearerToken === INTERNAL_SHARED_SECRET ||
-    (serviceKey && bearerToken === serviceKey)
+  const accepted = !!bearerToken && (
+    (INTERNAL_SHARED_SECRET && timingSafeCompare(bearerToken, INTERNAL_SHARED_SECRET)) ||
+    (serviceKey && timingSafeCompare(bearerToken, serviceKey))
   );
 
   if (!accepted) {

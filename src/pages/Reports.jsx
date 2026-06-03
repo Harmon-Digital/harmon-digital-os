@@ -244,7 +244,11 @@ export default function Reports() {
   const earnedBonusList = useMemo(() => {
     return bonusEntries
       .filter((e) => {
-        const pct = e.target_value ? (e.actual_value / e.target_value) * 100 : 0;
+        // PostgREST may serialize numeric columns as strings; coerce both sides
+        // and guard target > 0 so string "0" doesn't divide and yield Infinity.
+        const target = Number(e.target_value) || 0;
+        const actual = Number(e.actual_value) || 0;
+        const pct = target > 0 ? (actual / target) * 100 : 0;
         return pct >= 100;
       })
       .sort((a, b) => {
@@ -652,9 +656,11 @@ export default function Reports() {
                           .map((entry) => {
                             const member = teamMembers.find((m) => m.id === entry.team_member_id);
                             const kpiDef = getKpiDef(entry.slug);
-                            const actual = entry.actual_value || 0;
-                            const target = entry.target_value || 0;
-                            const pct = target ? Math.round((actual / target) * 100) : 0;
+                            // Coerce — PostgREST may return numerics as strings; truthy "0"
+                            // would divide and yield Infinity, marking the row "earned".
+                            const actual = Number(entry.actual_value) || 0;
+                            const target = Number(entry.target_value) || 0;
+                            const pct = target > 0 ? Math.round((actual / target) * 100) : 0;
                             const earned = pct >= 100;
 
                             return (
@@ -743,10 +749,12 @@ export default function Reports() {
                           let hits = 0;
 
                           entries.forEach((e) => {
-                            const pct = e.target_value ? (e.actual_value / e.target_value) * 100 : 0;
-                            potential += e.bonus_amount || 0;
+                            const target = Number(e.target_value) || 0;
+                            const actual = Number(e.actual_value) || 0;
+                            const pct = target > 0 ? (actual / target) * 100 : 0;
+                            potential += Number(e.bonus_amount) || 0;
                             if (pct >= 100) {
-                              earned += e.bonus_amount || 0;
+                              earned += Number(e.bonus_amount) || 0;
                               hits++;
                             }
                           });
@@ -767,7 +775,9 @@ export default function Reports() {
                               <div className="space-y-1">
                                 {entries.map((e) => {
                                   const kpiDef = getKpiDef(e.slug);
-                                  const pct = e.target_value ? Math.round((e.actual_value / e.target_value) * 100) : 0;
+                                  const t = Number(e.target_value) || 0;
+                                  const a = Number(e.actual_value) || 0;
+                                  const pct = t > 0 ? Math.round((a / t) * 100) : 0;
                                   const hit = pct >= 100;
                                   return (
                                     <div key={e.id} className="flex items-center justify-between text-[12px]">

@@ -24,7 +24,7 @@ export default function PartnerReferrals() {
         .from("referral_partners")
         .select("id")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (partner) {
         const { data: referralsData } = await supabase

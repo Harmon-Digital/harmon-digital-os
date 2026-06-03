@@ -25,11 +25,13 @@ export default function PartnerDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
+      // maybeSingle so a not-yet-provisioned partner sees an empty state
+      // instead of an uncaught PGRST116 that the try/catch then swallows.
       const { data: partnerData } = await supabase
         .from("referral_partners")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       setPartner(partnerData);
 

@@ -4,7 +4,7 @@ export function createReportTools(): ToolDef[] {
   return [
     {
       name: "revenue_summary",
-      description: "Get revenue summary — aggregate invoices by status for a date range",
+      description: "Get revenue summary — aggregate invoices by status for a date range. Paid invoices are bucketed by paid_at; everything else by issue_date (matches in-app Revenue KPIs).",
       inputSchema: {
         type: "object",
         properties: {
@@ -14,25 +14,46 @@ export function createReportTools(): ToolDef[] {
         required: ["start_date", "end_date"],
       },
       handler: async (args, client) => {
-        const { data, error } = await client
+        const start = args.start_date as string;
+        const end = args.end_date as string;
+
+        // Paid invoices: bucket by paid_at so the answer matches `revenue_paid` KPI.
+        const { data: paidRows, error: paidErr } = await client
+          .from("invoices")
+          .select("status, total, paid_at")
+          .eq("status", "paid")
+          .gte("paid_at", start)
+          .lte("paid_at", end);
+        if (paidErr) throw paidErr;
+
+        // Non-paid invoices: bucket by issue_date.
+        const { data: otherRows, error: otherErr } = await client
           .from("invoices")
           .select("status, total, issue_date")
-          .gte("issue_date", args.start_date as string)
-          .lte("issue_date", args.end_date as string);
-        if (error) throw error;
+          .neq("status", "paid")
+          .gte("issue_date", start)
+          .lte("issue_date", end);
+        if (otherErr) throw otherErr;
 
         const summary: Record<string, { count: number; total: number }> = {};
         let grandTotal = 0;
-
-        for (const inv of data) {
-          const status = inv.status || "unknown";
+        const all = [...(paidRows ?? []), ...(otherRows ?? [])];
+        for (const inv of all) {
+          const status = (inv as { status?: string }).status || "unknown";
           if (!summary[status]) summary[status] = { count: 0, total: 0 };
           summary[status].count++;
-          summary[status].total += Number(inv.total) || 0;
-          grandTotal += Number(inv.total) || 0;
+          const t = Number((inv as { total?: number | string }).total) || 0;
+          summary[status].total += t;
+          grandTotal += t;
         }
 
-        return { period: { start: args.start_date, end: args.end_date }, by_status: summary, grand_total: grandTotal, invoice_count: data.length };
+        return {
+          period: { start, end },
+          by_status: summary,
+          grand_total: grandTotal,
+          invoice_count: all.length,
+          bucketing: { paid: "paid_at", other: "issue_date" },
+        };
       },
     },
 
