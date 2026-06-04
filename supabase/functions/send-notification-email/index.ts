@@ -211,11 +211,16 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
 
-      const [tmResult, brandingResult] = await Promise.all([
+      const [tmResult, upResult, brandingResult] = await Promise.all([
         supabase
           .from("team_members")
           .select("email, full_name")
           .eq("user_id", record.user_id)
+          .maybeSingle(),
+        supabase
+          .from("user_profiles")
+          .select("email, full_name")
+          .eq("id", record.user_id)
           .maybeSingle(),
         supabase
           .from("branding_settings")
@@ -225,19 +230,29 @@ Deno.serve(async (req) => {
       ]);
 
       if (tmResult.error) throw new Error(`team_members query failed: ${tmResult.error.message}`);
+      // user_profiles errors are non-fatal here — team_members is the primary lookup.
       if (brandingResult.error) throw new Error(`branding_settings query failed: ${brandingResult.error.message}`);
 
       const teamMember = tmResult.data;
+      const userProfile = upResult.data;
       const branding = brandingResult.data;
 
-      if (!teamMember?.email) {
+      // Fall back to user_profiles (covers client/partner portal users who don't
+      // have a team_members row), then to auth.users (last resort).
+      let recipient = teamMember?.email || userProfile?.email || null;
+      if (!recipient) {
+        const { data: authUser } = await supabase.auth.admin.getUserById(record.user_id);
+        recipient = authUser?.user?.email || null;
+      }
+
+      if (!recipient) {
         return new Response(
           JSON.stringify({ skipped: true, reason: "no email found" }),
           { headers: { "Content-Type": "application/json" } }
         );
       }
 
-      to = teamMember.email;
+      to = recipient;
       subject = record.title;
 
       const type: "error" | "warning" | "info" =

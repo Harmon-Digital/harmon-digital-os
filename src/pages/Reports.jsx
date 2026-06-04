@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { parseLocalDate } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,18 +16,28 @@ import { Clock, ChevronLeft, ChevronRight, Trophy, CheckCircle2, XCircle, List, 
 import { toWeekStart, formatWeekLabel, formatKpiValue, getKpiDef } from "@/config/kpiConfig";
 import WeeklyCalendarView from "@/components/time/WeeklyCalendarView";
 
+const VALID_VIEWS = new Set(["unbilled", "unpaid", "all"]);
+const VALID_TABS = new Set(["time", "bonuses"]);
+
 export default function Reports() {
   const { userProfile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [timeEntries, setTimeEntries] = useState([]);
   const [projects, setProjects] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
 
-  // Top-level tab: "time" or "bonuses"
-  const [tab, setTab] = useState("time");
+  // Top-level tab: "time" or "bonuses" — sync with ?tab= so deep links from
+  // the accounting dashboard land on the right section.
+  const initialTab = VALID_TABS.has(searchParams.get("tab")) ? searchParams.get("tab") : "time";
+  const [tab, setTab] = useState(initialTab);
 
-  // Filters
-  const [view, setView] = useState("unbilled"); // unbilled, unpaid, all
+  // Filters — initial view honours ?view= deep links (e.g. "Unpaid Payroll"
+  // tile on the accounting dashboard).
+  const initialView = VALID_VIEWS.has(searchParams.get("view"))
+    ? searchParams.get("view")
+    : "unbilled";
+  const [view, setView] = useState(initialView);
   const [timeViewMode, setTimeViewMode] = useState("list"); // list, calendar
   const [projectFilter, setProjectFilter] = useState("all");
   const [teamMemberFilter, setTeamMemberFilter] = useState("all");
@@ -39,6 +50,22 @@ export default function Reports() {
   const [selectedBonusIds, setSelectedBonusIds] = useState([]);
 
   const isAdmin = userProfile?.role === "admin";
+
+  // Keep state + URL in sync so refreshes/back-button preserve the user's
+  // place and deep links from other pages (e.g. Accounting → "Unpaid Payroll")
+  // land on the right view.
+  const updateView = (v) => {
+    setView(v);
+    const next = new URLSearchParams(searchParams);
+    next.set("view", v);
+    setSearchParams(next, { replace: true });
+  };
+  const updateTab = (t) => {
+    setTab(t);
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", t);
+    setSearchParams(next, { replace: true });
+  };
 
   useEffect(() => {
     if (isAdmin) {
@@ -282,7 +309,7 @@ export default function Reports() {
           <div className="ml-3 flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5 text-[12px]">
             <button
               type="button"
-              onClick={() => setTab("time")}
+              onClick={() => updateTab("time")}
               className={`px-2.5 py-1 rounded flex items-center gap-1.5 ${
                 tab === "time" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
@@ -292,7 +319,7 @@ export default function Reports() {
             </button>
             <button
               type="button"
-              onClick={() => setTab("bonuses")}
+              onClick={() => updateTab("bonuses")}
               className={`px-2.5 py-1 rounded flex items-center gap-1.5 ${
                 tab === "bonuses" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
@@ -318,7 +345,7 @@ export default function Reports() {
               <div className="flex items-center gap-0.5 rounded-md border border-gray-200 dark:border-gray-800 p-0.5 text-[12px]">
                 <button
                   type="button"
-                  onClick={() => setView("unbilled")}
+                  onClick={() => updateView("unbilled")}
                   className={`px-2.5 py-1 rounded ${
                     view === "unbilled" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                   }`}
@@ -327,7 +354,7 @@ export default function Reports() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setView("unpaid")}
+                  onClick={() => updateView("unpaid")}
                   className={`px-2.5 py-1 rounded ${
                     view === "unpaid" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                   }`}
@@ -336,7 +363,7 @@ export default function Reports() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setView("all")}
+                  onClick={() => updateView("all")}
                   className={`px-2.5 py-1 rounded ${
                     view === "all" ? "bg-gray-900 text-white" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                   }`}
@@ -647,7 +674,8 @@ export default function Reports() {
                       {bonusEntries.length === 0 ? (
                         <div className="py-10 text-center text-[13px] text-gray-500">No bonus goals for this week.</div>
                       ) : (
-                        bonusEntries
+                        // Spread to avoid sort()'s in-place mutation of state.
+                        [...bonusEntries]
                           .sort((a, b) => {
                             const nameA = teamMembers.find((m) => m.id === a.team_member_id)?.full_name || "";
                             const nameB = teamMembers.find((m) => m.id === b.team_member_id)?.full_name || "";

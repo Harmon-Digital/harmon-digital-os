@@ -147,14 +147,20 @@ export default function KPIs() {
   const handleSaveTargets = async (targetEntries) => {
     const entriesToSave = targetEntries.map((t) => {
       const existing = currentEntries.find((e) => e.slug === t.slug);
-      return {
+      // Pass through the existing actual_value exactly (don't default to 0 —
+      // saveEntries skips rows with null/undefined actuals, which lets us
+      // create target-only rows without polluting KPI history with a fake 0).
+      const payload = {
         slug: t.slug,
         month: t.month,
         target_value: t.target_value,
-        bonus_amount: t.bonus_amount !== undefined ? t.bonus_amount : undefined,
-        actual_value: existing?.actual_value || 0,
         team_member_id: t.team_member_id || null,
       };
+      if (t.bonus_amount !== undefined) payload.bonus_amount = t.bonus_amount;
+      if (existing?.actual_value !== undefined && existing?.actual_value !== null) {
+        payload.actual_value = existing.actual_value;
+      }
+      return payload;
     });
     await saveEntries(entriesToSave);
     await loadData();
@@ -188,14 +194,21 @@ export default function KPIs() {
       const targetVal = inlineTarget === "" ? null : Number(inlineTarget);
       const bonusVal = inlineBonus === "" ? null : Number(inlineBonus);
 
-      await saveEntries([{
+      // Only pass actual_value if there's a real one to preserve — defaulting
+      // to 0 would persist a fake measurement for KPIs that have never been
+      // calculated yet (saveEntries skips null/undefined actuals).
+      const payload = {
         slug: inlineEditSlug,
         month: selectedWeek,
-        actual_value: existing?.actual_value || 0,
         target_value: targetVal,
         bonus_amount: bonusVal,
         team_member_id: selectedTeamMember || null,
-      }]);
+      };
+      if (existing?.actual_value !== undefined && existing?.actual_value !== null) {
+        payload.actual_value = existing.actual_value;
+      }
+
+      await saveEntries([payload]);
       await loadData();
     } catch (err) {
       console.error("Error saving inline edit:", err);
@@ -241,17 +254,21 @@ export default function KPIs() {
     visibleKpis.forEach((kpi) => {
       const entry = currentEntries.find((e) => e.slug === kpi.slug);
       if (!entry) return;
-      const target = entry.target_value;
-      const actual = entry.actual_value || 0;
-      const bonus = entry.bonus_amount || 0;
+      // PostgREST returns numeric/decimal columns as strings. Without coercion
+      // `"45" >= "5"` does a lex compare and underreports goalsHit.
+      const target = entry.target_value == null ? null : Number(entry.target_value);
+      const actual = Number(entry.actual_value) || 0;
+      const bonus = Number(entry.bonus_amount) || 0;
 
-      if (target) {
+      if (target != null && Number.isFinite(target) && target > 0) {
         withTargets++;
         if (actual >= target) goalsHit++;
       }
       if (bonus > 0) {
         totalBonusPotential += bonus;
-        if (target && actual >= target) totalBonusEarned += bonus;
+        if (target != null && Number.isFinite(target) && target > 0 && actual >= target) {
+          totalBonusEarned += bonus;
+        }
       }
     });
 

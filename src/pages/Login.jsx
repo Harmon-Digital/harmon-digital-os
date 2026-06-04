@@ -107,13 +107,17 @@ export default function Login() {
     try {
       await updatePassword(password);
 
-      // Update last_sign_in_at in user_profiles
+      // Upsert last_sign_in_at — a freshly invited user may not have a
+      // user_profiles row yet (the auth.users → user_profiles trigger races
+      // with this call), so a plain UPDATE silently affects 0 rows.
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase
           .from('user_profiles')
-          .update({ last_sign_in_at: new Date().toISOString() })
-          .eq('id', user.id);
+          .upsert(
+            { id: user.id, email: user.email, last_sign_in_at: new Date().toISOString() },
+            { onConflict: 'id' },
+          );
       }
 
       navigate('/');

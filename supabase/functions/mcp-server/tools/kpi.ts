@@ -265,7 +265,7 @@ export function createKpiTools(): ToolDef[] {
                 notes: { type: "string" },
                 team_member_id: { type: "string" },
               },
-              required: ["slug", "month", "actual_value"],
+              required: ["slug", "month"],
             },
           },
         },
@@ -295,26 +295,40 @@ export function createKpiTools(): ToolDef[] {
           if (matchError) throw matchError;
 
           if (existing) {
+            // Conditional spreads only — never overwrite an existing actual_value
+            // with a defaulted 0 when the caller didn't supply one. (Matches the
+            // frontend kpiCalculations.js guard that distinguishes "calc failed"
+            // from "real zero".)
+            const updatePayload: Record<string, unknown> = {
+              ...(entry.actual_value !== undefined && entry.actual_value !== null && { actual_value: entry.actual_value }),
+              ...(entry.target_value !== undefined && { target_value: entry.target_value }),
+              ...(entry.bonus_amount !== undefined && { bonus_amount: entry.bonus_amount }),
+              ...(entry.notes !== undefined && { notes: entry.notes }),
+            };
+            if (Object.keys(updatePayload).length === 0) {
+              results.push(existing);
+              continue;
+            }
             const { data, error } = await client
               .from("kpi_entries")
-              .update({
-                actual_value: entry.actual_value ?? 0,
-                ...(entry.target_value !== undefined && { target_value: entry.target_value }),
-                ...(entry.bonus_amount !== undefined && { bonus_amount: entry.bonus_amount }),
-                ...(entry.notes !== undefined && { notes: entry.notes }),
-              })
+              .update(updatePayload)
               .eq("id", existing.id)
               .select()
               .single();
             if (error) throw error;
             results.push(data);
           } else {
+            // INSERT: skip the row entirely if there's nothing measurable to record.
+            // (Don't synthesize a fake 0 — it would pollute KPI history.)
+            if (entry.actual_value === undefined || entry.actual_value === null) {
+              continue;
+            }
             const { data, error } = await client
               .from("kpi_entries")
               .insert({
                 slug: entry.slug as string,
                 month: entry.month as string,
-                actual_value: entry.actual_value ?? 0,
+                actual_value: entry.actual_value,
                 target_value: entry.target_value ?? null,
                 bonus_amount: entry.bonus_amount ?? null,
                 notes: entry.notes ?? null,

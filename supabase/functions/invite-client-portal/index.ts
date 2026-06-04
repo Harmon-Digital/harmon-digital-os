@@ -98,17 +98,19 @@ Deno.serve(async (req) => {
     }
     try {
       const deletedUserId = contact.portal_user_id;
-      // Delete auth user first; if that fails the contact stays linked so the
-      // admin can retry without losing the link. Then clear the contact and
-      // any orphan user_profile row.
-      const { error: authDelErr } = await admin.auth.admin.deleteUser(deletedUserId);
-      if (authDelErr) throw authDelErr;
-      await admin.from("user_profiles").delete().eq("id", deletedUserId);
+      // Clear the contact link first. If a later step fails (network blip,
+      // user_profiles RLS hiccup), the contact is already in a consistent
+      // "no portal access" state and the admin can re-invite. Deleting the
+      // auth user first leaves contacts.portal_user_id pointing at a vanished
+      // UUID — unrecoverable without manual SQL.
       const { error: revokeUpdateErr } = await admin
         .from("contacts")
         .update({ portal_user_id: null, portal_invited_at: null, portal_last_login_at: null })
         .eq("id", contactId);
       if (revokeUpdateErr) throw revokeUpdateErr;
+      await admin.from("user_profiles").delete().eq("id", deletedUserId);
+      const { error: authDelErr } = await admin.auth.admin.deleteUser(deletedUserId);
+      if (authDelErr) throw authDelErr;
       return new Response(
         JSON.stringify({ success: true, revoked: true }),
         { headers: { ...CORS, "Content-Type": "application/json" } }

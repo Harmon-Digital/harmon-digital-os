@@ -73,7 +73,13 @@ Deno.serve(async (req) => {
     user_metadata: { full_name: contactName },
   });
   if (createErr || !created?.user) {
-    return json({ error: createErr?.message || "Failed to create account" }, 400);
+    // Don't leak Supabase auth error messages (e.g. "User already registered",
+    // "Email rate limit exceeded") to an unauthenticated caller — that's a
+    // textbook user-enumeration oracle. Log the real reason server-side.
+    console.warn("[partner-self-signup] createUser failed:", createErr?.message);
+    return json({
+      error: "Could not create account. If you already have one, sign in instead.",
+    }, 400);
   }
 
   const newUserId = created.user.id;
@@ -108,13 +114,16 @@ Deno.serve(async (req) => {
 
   // Link to brokers table if there's an existing row with this email
   // (mirrors original client-side behaviour — partner signing up via an
-  // earlier broker-outreach contact).
+  // earlier broker-outreach contact). Use limit(1) instead of maybeSingle()
+  // so multiple broker rows with the same email don't error out and cause
+  // a duplicate broker insert below.
   if (partnerData) {
-    const { data: existingBroker } = await admin
+    const { data: brokerMatches } = await admin
       .from("brokers")
       .select("id, status")
       .eq("email", email)
-      .maybeSingle();
+      .limit(1);
+    const existingBroker = brokerMatches?.[0];
 
     if (existingBroker) {
       await admin

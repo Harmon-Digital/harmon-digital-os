@@ -52,6 +52,18 @@ const toISODate = (unix?: number | null) =>
 const toISO = (unix?: number | null) =>
   unix ? new Date(unix * 1000).toISOString() : null;
 
+// Stripe zero-decimal currencies: amounts are already in major units. The list
+// must match sync-stripe-data; without it, e.g. JPY invoices arriving via
+// webhook would be persisted as 1/100th of their real value.
+const ZERO_DECIMAL = new Set([
+  "jpy","krw","vnd","clp","pyg","ugx","xaf","xof","kmf","djf","gnf","rwf","mga","bif",
+]);
+const minorToMajor = (amount: number | null | undefined, currency: string | null | undefined) => {
+  const cur = (currency || "").toLowerCase();
+  const div = ZERO_DECIMAL.has(cur) ? 1 : 100;
+  return (Number(amount) || 0) / div;
+};
+
 function mapInvoiceStatus(inv: any): string {
   switch (inv.status) {
     case "paid": return "paid";
@@ -141,9 +153,13 @@ Deno.serve(async (req) => {
           issue_date: toISODate(obj.created),
           due_date: toISODate(obj.due_date),
           status: finalStatus,
-          subtotal: (obj.subtotal || 0) / 100,
-          tax: (obj.tax || 0) / 100,
-          total: (obj.total || 0) / 100,
+          subtotal: minorToMajor(obj.subtotal, obj.currency),
+          tax: minorToMajor(obj.tax, obj.currency),
+          total: minorToMajor(obj.total, obj.currency),
+          // paid_at lets revenue_summary / revenue_paid land on the right day.
+          paid_at: finalStatus === "paid"
+            ? (toISO(obj.status_transitions?.paid_at) || new Date().toISOString())
+            : null,
           stripe_invoice_url: obj.hosted_invoice_url || null,
           updated_at: new Date().toISOString(),
         }, { onConflict: "stripe_invoice_id" });
@@ -152,7 +168,12 @@ Deno.serve(async (req) => {
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
       case "customer.subscription.created": {
-        const price = obj.items?.data?.[0]?.price;
+        const item = obj.items?.data?.[0];
+        const price = item?.price;
+        // Stripe API ≥2024-09-30 moved current_period_* off the subscription
+        // root and onto the line item. Read item first, fall back to root.
+        const periodStart = item?.current_period_start ?? obj.current_period_start;
+        const periodEnd = item?.current_period_end ?? obj.current_period_end;
         // Look up the local account so the subscription row stays linked to
         // the customer. Without this, sync-stripe-data's metadata.account_id
         // is the only linkage and a webhook-first subscription is orphaned.
@@ -171,11 +192,11 @@ Deno.serve(async (req) => {
           stripe_customer_id: obj.customer,
           stripe_product_id: price?.product || null,
           status: obj.status,
-          current_period_start: toISO(obj.current_period_start),
-          current_period_end: toISO(obj.current_period_end),
+          current_period_start: toISO(periodStart),
+          current_period_end: toISO(periodEnd),
           cancel_at: toISO(obj.cancel_at),
           canceled_at: toISO(obj.canceled_at),
-          amount: price?.unit_amount != null ? price.unit_amount / 100 : null,
+          amount: price?.unit_amount != null ? minorToMajor(price.unit_amount, price.currency) : null,
           currency: price?.currency || null,
           interval: price?.recurring?.interval || null,
           metadata: nextMeta,

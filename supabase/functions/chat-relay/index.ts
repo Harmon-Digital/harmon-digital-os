@@ -97,6 +97,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Validate account_id against the caller's RLS-scoped view of accounts.
+    // Without this, a signed-in user could pin any account_id to the message
+    // metadata and the downstream bot would scope reads/actions to that
+    // account in the user's chat thread.
+    let scopedAccountId: string | null = null;
+    if (account_id) {
+      const { data: acct, error: acctErr } = await authClient
+        .from("accounts")
+        .select("id")
+        .eq("id", account_id)
+        .maybeSingle();
+      if (acctErr || !acct) {
+        return new Response(JSON.stringify({ ok: false, error: "Account not accessible" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      scopedAccountId = acct.id;
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. Insert user message
@@ -111,7 +131,7 @@ Deno.serve(async (req) => {
           source: "harmon-digital-os",
           agent_id: agentId,
           agent_type: agent_type ?? "core",
-          account_id: account_id ?? null,
+          account_id: scopedAccountId,
         },
       })
       .select("id")

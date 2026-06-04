@@ -857,17 +857,25 @@ export default function Channels() {
         toast.error(`${f.name} is too large`, { description: "Max file size is 25 MB" });
         continue;
       }
-      valid.push({ file: f, previewUrl: isImageType(f.type) ? URL.createObjectURL(f) : null });
+      // Stable local id so the X button doesn't race with index shifts when
+      // files are added/removed concurrently.
+      const localId = (typeof crypto !== "undefined" && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      valid.push({
+        localId,
+        file: f,
+        previewUrl: isImageType(f.type) ? URL.createObjectURL(f) : null,
+      });
     }
     setPendingFiles((prev) => [...prev, ...valid]);
   };
 
-  const removePendingFile = (idx) => {
+  const removePendingFile = (localId) => {
     setPendingFiles((prev) => {
-      const next = [...prev];
-      const removed = next.splice(idx, 1);
-      if (removed[0]?.previewUrl) URL.revokeObjectURL(removed[0].previewUrl);
-      return next;
+      const removed = prev.find((p) => p.localId === localId);
+      if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+      return prev.filter((p) => p.localId !== localId);
     });
   };
 
@@ -1560,8 +1568,8 @@ export default function Channels() {
             <div className="border-t border-gray-200 dark:border-gray-800 p-3">
               {pendingFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {pendingFiles.map((pf, idx) => (
-                    <div key={idx} className="relative group flex items-center gap-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-md pl-2 pr-8 py-1.5 max-w-[240px]">
+                  {pendingFiles.map((pf) => (
+                    <div key={pf.localId} className="relative group flex items-center gap-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-md pl-2 pr-8 py-1.5 max-w-[240px]">
                       {pf.previewUrl ? (
                         <img src={pf.previewUrl} alt="" className="w-8 h-8 object-cover rounded flex-shrink-0" />
                       ) : (
@@ -1573,7 +1581,7 @@ export default function Channels() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => removePendingFile(idx)}
+                        onClick={() => removePendingFile(pf.localId)}
                         className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                         title="Remove"
                       >

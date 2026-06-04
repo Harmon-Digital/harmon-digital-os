@@ -130,11 +130,16 @@ Deno.serve(async (req) => {
       let linked = 0;
       for (const c of customers) {
         if (!c.email) continue;
-        const { data: contact } = await admin
+        // maybeSingle() errors out (silently here) when multiple contacts share
+        // an email — that case used to leave the customer unlinked entirely.
+        // Take the first match; prefer one already linked to an account.
+        const { data: matches } = await admin
           .from("contacts")
           .select("id, account_id")
           .ilike("email", c.email)
-          .maybeSingle();
+          .order("account_id", { ascending: false, nullsFirst: false })
+          .limit(1);
+        const contact = matches?.[0];
         if (contact) {
           await admin.from("contacts").update({ stripe_customer_id: c.id }).eq("id", contact.id);
           if (contact.account_id) {
@@ -153,6 +158,10 @@ Deno.serve(async (req) => {
       for (const s of subs) {
         const item = s.items?.data?.[0];
         const price = item?.price;
+        // Stripe API ≥2024-09-30 moved current_period_* off the subscription
+        // root and onto the line item. Read item first, fall back to root.
+        const periodStart = item?.current_period_start ?? s.current_period_start;
+        const periodEnd = item?.current_period_end ?? s.current_period_end;
         const { data: acct } = await admin
           .from("accounts").select("id").eq("stripe_customer_id", s.customer).maybeSingle();
         const { error } = await admin.from("stripe_subscriptions").upsert({
@@ -160,8 +169,8 @@ Deno.serve(async (req) => {
           stripe_customer_id: s.customer,
           stripe_product_id: price?.product || null,
           status: s.status,
-          current_period_start: toISO(s.current_period_start),
-          current_period_end: toISO(s.current_period_end),
+          current_period_start: toISO(periodStart),
+          current_period_end: toISO(periodEnd),
           cancel_at: toISO(s.cancel_at),
           canceled_at: toISO(s.canceled_at),
           amount: price?.unit_amount != null ? price.unit_amount / 100 : null,
