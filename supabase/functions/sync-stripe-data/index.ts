@@ -61,6 +61,18 @@ const toISODate = (unix?: number | null) =>
 const toISO = (unix?: number | null) =>
   unix ? new Date(unix * 1000).toISOString() : null;
 
+// Stripe zero-decimal currencies: amounts are already in major units. Must
+// match the set in stripe-webhook — without it, e.g. a JPY invoice synced
+// here lands as 1/100th of its real value.
+const ZERO_DECIMAL = new Set([
+  "jpy","krw","vnd","clp","pyg","ugx","xaf","xof","kmf","djf","gnf","rwf","mga","bif",
+]);
+const minorToMajor = (amount: number | null | undefined, currency: string | null | undefined) => {
+  const cur = (currency || "").toLowerCase();
+  const div = ZERO_DECIMAL.has(cur) ? 1 : 100;
+  return (Number(amount) || 0) / div;
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
@@ -173,7 +185,9 @@ Deno.serve(async (req) => {
           current_period_end: toISO(periodEnd),
           cancel_at: toISO(s.cancel_at),
           canceled_at: toISO(s.canceled_at),
-          amount: price?.unit_amount != null ? price.unit_amount / 100 : null,
+          amount: price?.unit_amount != null
+            ? minorToMajor(price.unit_amount, price.currency)
+            : null,
           currency: price?.currency || null,
           interval: price?.recurring?.interval || null,
           metadata: { ...(s.metadata || {}), account_id: acct?.id || null },
@@ -199,12 +213,14 @@ Deno.serve(async (req) => {
           issue_date: toISODate(inv.created),
           due_date: toISODate(inv.due_date),
           status: mapInvoiceStatus(inv),
-          subtotal: (inv.subtotal || 0) / 100,
-          tax: (inv.tax || 0) / 100,
-          total: (inv.total || 0) / 100,
+          subtotal: minorToMajor(inv.subtotal, inv.currency),
+          tax: minorToMajor(inv.tax, inv.currency),
+          total: minorToMajor(inv.total, inv.currency),
           stripe_invoice_url: inv.hosted_invoice_url || null,
           line_items: (inv.lines?.data || []).map((li: any) => ({
-            description: li.description, amount: (li.amount || 0) / 100, quantity: li.quantity,
+            description: li.description,
+            amount: minorToMajor(li.amount, li.currency || inv.currency),
+            quantity: li.quantity,
           })),
           updated_at: new Date().toISOString(),
         }, { onConflict: "stripe_invoice_id" });
@@ -254,10 +270,6 @@ Deno.serve(async (req) => {
           }
         }
         if (!accountId) unmatched++;
-        const isZeroDecimal = ["jpy","krw","vnd","clp","pyg","ugx","xaf","xof","kmf","djf","gnf","rwf","mga","bif"].includes(
-          (t.currency || "").toLowerCase()
-        );
-        const div = isZeroDecimal ? 1 : 100;
         const { error } = await admin.from("transactions").upsert({
           stripe_balance_transaction_id: t.id,
           stripe_payment_intent_id: stripePaymentIntentId,
@@ -267,9 +279,9 @@ Deno.serve(async (req) => {
           date: toISO(t.created),
           description: t.description || t.type || null,
           type: t.type || null,
-          amount: (t.amount || 0) / div,
-          stripe_fee: (t.fee || 0) / div,
-          net_amount: (t.net || 0) / div,
+          amount: minorToMajor(t.amount, t.currency),
+          stripe_fee: minorToMajor(t.fee, t.currency),
+          net_amount: minorToMajor(t.net, t.currency),
           status: t.status || null,
           updated_at: new Date().toISOString(),
         }, { onConflict: "stripe_balance_transaction_id" });
