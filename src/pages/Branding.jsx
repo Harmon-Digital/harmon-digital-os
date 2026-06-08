@@ -18,6 +18,15 @@ export default function Branding() {
     loadSettings();
   }, []);
 
+  // Clear the success banner after 3s without leaking a timer past unmount —
+  // the original `setTimeout` from the upload/save handlers was unscoped and
+  // would call setState on a torn-down tree if the admin navigated away mid-toast.
+  useEffect(() => {
+    if (!successMessage) return;
+    const t = setTimeout(() => setSuccessMessage(""), 3000);
+    return () => clearTimeout(t);
+  }, [successMessage]);
+
   const loadSettings = async () => {
     setLoading(true);
     try {
@@ -54,7 +63,6 @@ export default function Branding() {
 
       handleChange(field, fileUrl);
       setSuccessMessage(`${field.replace(/_/g, ' ')} uploaded successfully.`);
-      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error('Error uploading file:', error);
       alert('Failed to upload file: ' + error.message);
@@ -68,7 +76,6 @@ export default function Branding() {
     try {
       await BrandingSettings.update(settings.id, settings);
       setSuccessMessage("Branding settings saved successfully.");
-      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error("Error saving settings:", error);
       alert("Failed to save settings");

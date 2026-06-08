@@ -178,7 +178,15 @@ Deno.serve(async (req) => {
         "x-openclaw-token": OPENCLAW_HOOK_TOKEN,
       },
       body: JSON.stringify(hookBody),
-    }).catch((err) => console.error("OpenClaw hook error:", err));
+    }).catch((err) => {
+      // Log only the message — error objects from fetch can stringify the
+      // full Request including headers, which would leak OPENCLAW_HOOK_TOKEN
+      // into log aggregators (Sentry, Datadog, etc.).
+      console.error(
+        "OpenClaw hook error:",
+        err instanceof Error ? err.message : "fetch failed",
+      );
+    });
     // deno-lint-ignore no-explicit-any
     const er = (globalThis as any).EdgeRuntime;
     if (er?.waitUntil) er.waitUntil(hookCall);

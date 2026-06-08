@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/api/supabaseClient';
 
 const AuthContext = createContext({});
@@ -167,7 +167,11 @@ export function AuthProvider({ children }) {
   const isAdmin = userProfile?.role === 'admin';
   const isPartner = userProfile?.role === 'partner';
 
-  const value = {
+  // Memoize so consumers that read auth context (every protected route, the
+  // sidebar, the chat bar) don't re-render on every Provider render — without
+  // this, a parent state change would invalidate the value identity each tick
+  // and cascade re-renders through the whole tree.
+  const value = useMemo(() => ({
     user,
     userProfile,
     loading,
@@ -180,7 +184,7 @@ export function AuthProvider({ children }) {
     updatePassword,
     invitePartner,
     refreshProfile: () => user && fetchUserProfile(user.id),
-  };
+  }), [user, userProfile, loading, isAdmin, isPartner]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -259,10 +259,16 @@ export default function ProjectDetail() {
     }
   };
 
-  // Generate API key if project doesn't have one
+  // Generate API key if project doesn't have one. Math.random() is a PRNG
+  // an attacker can recover the seed of from a handful of samples; an API key
+  // generated with it is effectively guessable. crypto.getRandomValues is the
+  // browser CSPRNG and is always available in the contexts this app runs in.
   const generateApiKey = async () => {
     if (!project.api_key) {
-      const newApiKey = 'pk_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const bytes = new Uint8Array(24);
+      crypto.getRandomValues(bytes);
+      const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+      const newApiKey = `pk_${hex}`;
       await Project.update(projectId, { api_key: newApiKey });
       setProject(prev => ({ ...prev, api_key: newApiKey }));
       setEditedProject(prev => ({ ...prev, api_key: newApiKey }));
@@ -273,11 +279,19 @@ export default function ProjectDetail() {
     try {
       await navigator.clipboard.writeText(text);
       setCopySuccess(prev => ({ ...prev, [type]: true }));
-      setTimeout(() => setCopySuccess(prev => ({ ...prev, [type]: false })), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
     }
   };
+
+  // Clear copy checkmarks 2s after either flips true. Replaces an unscoped
+  // setTimeout inside copyToClipboard that would call setState after unmount
+  // if the user navigated away during the visible window.
+  useEffect(() => {
+    if (!copySuccess.key && !copySuccess.url) return;
+    const t = setTimeout(() => setCopySuccess({ key: false, url: false }), 2000);
+    return () => clearTimeout(t);
+  }, [copySuccess.key, copySuccess.url]);
 
   const handleProjectFieldChange = (field, value) => {
     setEditedProject({...editedProject, [field]: value});

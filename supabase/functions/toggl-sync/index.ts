@@ -618,7 +618,19 @@ Deno.serve(async (req) => {
     const userMap = await syncUsers(admin, Number(settings.workspace_id), counts);
     // Workspace timezone for bucketing entry date/start_time/end_time —
     // toggl_settings.timezone if set, else America/Chicago (HD's working TZ).
-    const workspaceTz = (settings.timezone as string) || "America/Chicago";
+    // Validate the IANA zone first: Intl.DateTimeFormat throws RangeError on
+    // unknown zones, which would abort the entire sync at the first entry. A
+    // stale/typo'd value in toggl_settings.timezone shouldn't take the cron
+    // down — fall back to the default and log so it gets noticed.
+    let workspaceTz = (settings.timezone as string) || "America/Chicago";
+    try {
+      new Intl.DateTimeFormat("en-CA", { timeZone: workspaceTz });
+    } catch {
+      console.warn(
+        `[toggl-sync] invalid toggl_settings.timezone "${workspaceTz}" — falling back to America/Chicago`,
+      );
+      workspaceTz = "America/Chicago";
+    }
     await syncTimeEntries(
       admin,
       Number(settings.workspace_id),

@@ -44,10 +44,15 @@ const MCP_ENDPOINT = `${MCP_BASE_URL}/mcp`;
 function CopyButton({ text, label = "Copy" }) {
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(t);
+  }, [copied]);
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -60,10 +65,15 @@ function CopyButton({ text, label = "Copy" }) {
 function CopyButtonWithLabel({ text, label = "Copy" }) {
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(t);
+  }, [copied]);
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   return (

@@ -110,14 +110,20 @@ Deno.serve(async (req) => {
       .from("stripe_webhook_events")
       .insert({ event_id: event.id, type: event.type || "unknown" });
     if (idemErr) {
-      // Duplicate primary key → already processed. Treat any other error as
-      // best-effort: log and continue rather than refuse the webhook.
+      // Duplicate primary key → already processed. Return success so Stripe
+      // stops retrying.
       if ((idemErr as { code?: string }).code === "23505") {
         return new Response(JSON.stringify({ received: true, duplicate: true }), {
           headers: { "Content-Type": "application/json" },
         });
       }
-      console.warn("[stripe-webhook] idempotency insert failed:", idemErr);
+      // Any other insert failure (RLS regression, table missing, transient
+      // network) means we *cannot* guarantee at-most-once processing. Bail
+      // with a 5xx so Stripe retries — better a delayed double-tap than a
+      // silent skip or a same-event double-process on the next retry that
+      // would otherwise *also* succeed at processing.
+      console.error("[stripe-webhook] idempotency insert failed:", idemErr);
+      return new Response("Idempotency tracking unavailable", { status: 503 });
     }
   }
 
