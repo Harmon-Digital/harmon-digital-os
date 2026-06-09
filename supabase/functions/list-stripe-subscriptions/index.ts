@@ -7,6 +7,18 @@ const CORS = {
 };
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 
+// Must mirror stripe-webhook / sync-stripe-data. JPY/KRW/etc are stored in
+// major units by Stripe; dividing by 100 misreports them at 1/100 of value.
+const ZERO_DECIMAL = new Set([
+  "jpy","krw","vnd","clp","pyg","ugx","xaf","xof","kmf","djf","gnf","rwf","mga","bif",
+]);
+const minorToMajor = (amount: number | null | undefined, currency: string | null | undefined) => {
+  if (amount == null) return null;
+  const cur = (currency || "").toLowerCase();
+  const div = ZERO_DECIMAL.has(cur) ? 1 : 100;
+  return (Number(amount) || 0) / div;
+};
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -48,17 +60,21 @@ Deno.serve(async (req) => {
     if (!res.ok) throw new Error(`Stripe subscriptions failed (${res.status})`);
     const body = await res.json();
     const subscriptions = (body.data || []).map((s: any) => {
-      const price = s.items?.data?.[0]?.price;
+      const item = s.items?.data?.[0];
+      const price = item?.price;
+      // Stripe API ≥2024-09-30 moved current_period_end onto the line item.
+      // Read item first, fall back to the (legacy) subscription root.
+      const periodEnd = item?.current_period_end ?? s.current_period_end ?? null;
       return {
         id: s.id,
         customer: typeof s.customer === "object" ? s.customer.id : s.customer,
         customer_name: typeof s.customer === "object" ? s.customer.name : null,
         customer_email: typeof s.customer === "object" ? s.customer.email : null,
         status: s.status,
-        amount: price?.unit_amount != null ? price.unit_amount / 100 : null,
+        amount: minorToMajor(price?.unit_amount, price?.currency),
         currency: price?.currency || null,
         interval: price?.recurring?.interval || null,
-        current_period_end: s.current_period_end,
+        current_period_end: periodEnd,
       };
     });
     return json({ success: true, subscriptions });

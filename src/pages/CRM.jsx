@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { Lead, TeamMember, Task, Project } from "@/api/entities";
 import { parseLocalDate, formatLocalDate } from "@/utils";
@@ -273,7 +273,9 @@ export default function CRM() {
     }
   };
 
-  const handleAutoSaveTaskFromDrawer = async (taskData) => {
+  // Memoized so TaskForm's auto-save effect doesn't cancel its own debounce
+  // every parent render (same fix as c144b22 / db93bc6).
+  const handleAutoSaveTaskFromDrawer = useCallback(async (taskData) => {
     if (!editingTask?.id) return;
     try {
       const saved = await Task.update(editingTask.id, taskData);
@@ -283,7 +285,7 @@ export default function CRM() {
       console.error("task auto-save failed:", err);
       throw err;
     }
-  };
+  }, [editingTask?.id]);
 
   const handleDeleteLeadTask = async (task) => {
     const prev = leadTasks;

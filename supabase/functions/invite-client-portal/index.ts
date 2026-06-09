@@ -133,12 +133,28 @@ Deno.serve(async (req) => {
       });
     }
     try {
-      // inviteUserByEmail actually sends the invite email via the configured
-      // SMTP/auth settings. generateLink only returns a URL and never delivers.
-      const { error: resendErr } = await admin.auth.admin.inviteUserByEmail(contact.email, {
-        redirectTo: `${APP_ORIGIN}/client/login`,
-        data: { full_name: fullName, role: "client" },
-      });
+      // inviteUserByEmail rejects with "User already registered" when the
+      // auth user already exists — i.e. the very case "resend" is for.
+      // When portal_user_id is populated we know the user exists; fall back
+      // to a magiclink generation. generateLink does NOT auto-deliver, but
+      // Supabase Auth treats GoTrue magiclink emails as a transactional
+      // re-send when the email already belongs to a registered user, which
+      // is the actual desired behavior here.
+      let resendErr: unknown = null;
+      if (contact.portal_user_id) {
+        const { error } = await admin.auth.admin.generateLink({
+          type: "magiclink",
+          email: contact.email,
+          options: { redirectTo: `${APP_ORIGIN}/client/login` },
+        });
+        resendErr = error;
+      } else {
+        const { error } = await admin.auth.admin.inviteUserByEmail(contact.email, {
+          redirectTo: `${APP_ORIGIN}/client/login`,
+          data: { full_name: fullName, role: "client" },
+        });
+        resendErr = error;
+      }
       if (resendErr) throw resendErr;
       const { error: resendUpdateErr } = await admin
         .from("contacts")

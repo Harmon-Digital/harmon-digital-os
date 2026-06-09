@@ -226,13 +226,21 @@ export default function QuickActions() {
         return date.toTimeString().split(' ')[0]; // Gets "HH:MM:SS"
       };
 
+      // A timer that crossed midnight has end_time < start_time, which
+      // breaks the form's hours-recalc (treats end<start as invalid and
+      // zeroes hours) and paints negative blocks in the weekly calendar.
+      // Clamp end_time to 23:59:59 on the start date so the entry remains
+      // a valid same-day record; the user can split if they need precision.
+      const sameDay = startDate.toDateString() === endDate.toDateString();
+      const endTimeStr = sameDay ? formatTime(endDate) : '23:59:59';
+
       await TimeEntry.create({
         project_id: timerProject,
         task_id: timerTask && timerTask !== "none" ? timerTask : null,
         team_member_id: currentTeamMember.id,
         date: `${startDate.getFullYear()}-${String(startDate.getMonth()+1).padStart(2,'0')}-${String(startDate.getDate()).padStart(2,'0')}`,
         start_time: formatTime(startDate),
-        end_time: formatTime(endDate),
+        end_time: endTimeStr,
         hours: hours,
         description: timerDescription,
         billable: true,

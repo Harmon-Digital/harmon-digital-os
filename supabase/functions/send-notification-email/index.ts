@@ -37,7 +37,11 @@ function buildEmailTemplate(params: {
   const { type, title, message, link, brand } = params;
 
   const companyName = brand?.company_name || "Harmon Digital";
-  const logo = brand?.logo_url || "https://os.harmon-digital.com/logo.png";
+  // logo_url is admin-controlled but still flows into the email HTML, so
+  // require an http(s) scheme before interpolating — blocks `javascript:`,
+  // `data:`, and quote-breaking values (e.g. `x" onerror="…`).
+  const rawLogo = brand?.logo_url || "https://os.harmon-digital.com/logo.png";
+  const logo = escapeHtml(/^https?:\/\//i.test(rawLogo) ? rawLogo : "https://os.harmon-digital.com/logo.png");
 
   // Small colored dot per type — subtle, not overwhelming
   const dot = {

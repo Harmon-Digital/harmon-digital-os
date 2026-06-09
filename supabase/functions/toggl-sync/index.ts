@@ -603,10 +603,14 @@ Deno.serve(async (req) => {
   const counts = emptyCounts();
   const now = new Date();
   const rangeTo = now.toISOString();
-  // Default incremental window: 5 minutes of overlap before last_sync_at, falling back to 24h.
-  const defaultFrom = settings.last_sync_at
-    ? new Date(new Date(settings.last_sync_at).getTime() - 5 * 60_000).toISOString()
-    : new Date(now.getTime() - 24 * 60 * 60_000).toISOString();
+  // Incremental window must span calendar dates, not just elapsed time:
+  // Reports v3 filters by entry start_date (not updated_at), so any edit
+  // to an older entry — backfilling Friday's timer on Monday, fixing a
+  // forgotten stop time — sits outside a 5-minute or 24-hour window and
+  // is silently dropped. Use a rolling 14-day catch window so backdated
+  // edits land. Operators can still trigger a wider backfill explicitly.
+  const INCREMENTAL_DAYS = 14;
+  const defaultFrom = new Date(now.getTime() - INCREMENTAL_DAYS * 24 * 60 * 60_000).toISOString();
   const rangeFrom = backfillFrom
     ? new Date(`${backfillFrom}T00:00:00Z`).toISOString()
     : defaultFrom;

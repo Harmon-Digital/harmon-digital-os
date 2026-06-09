@@ -91,8 +91,11 @@ Deno.serve(async (req) => {
     { onConflict: "id" },
   );
   if (profileErr) {
+    // Same enumeration concern as createUser above — never echo the raw
+    // Postgres error to an unauthenticated caller.
+    console.warn("[partner-self-signup] profile upsert failed:", profileErr.message);
     await admin.auth.admin.deleteUser(newUserId).catch(() => {});
-    return json({ error: profileErr.message }, 500);
+    return json({ error: "Could not create account. Please try again." }, 500);
   }
 
   // Create the referral_partners record (mirrors the original client-side flow).
@@ -107,9 +110,12 @@ Deno.serve(async (req) => {
     .select()
     .single();
   if (partnerErr) {
+    // A unique-email constraint on referral_partners is itself an
+    // enumeration oracle if echoed back — keep the response generic.
+    console.warn("[partner-self-signup] partner insert failed:", partnerErr.message);
     await admin.from("user_profiles").delete().eq("id", newUserId);
     await admin.auth.admin.deleteUser(newUserId).catch(() => {});
-    return json({ error: partnerErr.message }, 500);
+    return json({ error: "Could not create account. Please try again." }, 500);
   }
 
   // Link to brokers table if there's an existing row with this email

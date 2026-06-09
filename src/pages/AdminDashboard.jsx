@@ -350,7 +350,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       <div className="text-[13px] font-medium text-gray-900 dark:text-gray-100 tabular-nums">
-                        ${invoice.total?.toLocaleString()}
+                        ${(invoice.total ?? 0).toLocaleString()}
                       </div>
                     </div>
                   ))}
@@ -394,7 +394,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       <div className="text-[13px] font-medium text-gray-900 dark:text-gray-100 tabular-nums">
-                        ${payment.amount?.toLocaleString()}
+                        ${(payment.amount ?? 0).toLocaleString()}
                       </div>
                     </div>
                   ))

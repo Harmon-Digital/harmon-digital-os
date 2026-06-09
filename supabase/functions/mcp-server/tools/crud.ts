@@ -169,7 +169,10 @@ export function createCrudTools(
         let query = client.from(tableName).select("*", { count: "exact" });
 
         for (const [key, value] of Object.entries(filters)) {
-          if (value !== undefined && value !== null) {
+          // Skip empty strings — a "" filter is the "All" selector across the
+          // SPA (src/api/supabaseEntities.js); passing it to .eq returns no
+          // rows. The MCP must match that semantic or callers get drift.
+          if (value !== undefined && value !== null && value !== "") {
             validateColumn(key);
             query = query.eq(key, value);
           }

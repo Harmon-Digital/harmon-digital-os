@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Project, Account } from "@/api/entities";
 import { sendNotification } from "@/api/functions";
@@ -198,8 +198,10 @@ export default function Projects() {
     }
   };
 
-  // Auto-save from the edit drawer
-  const handleAutoSave = async (projectData) => {
+  // Auto-save from the edit drawer. Memoized so the child ProjectForm's
+  // auto-save effect doesn't cancel its own debounce every parent render
+  // (same root cause as commits c144b22 / db93bc6).
+  const handleAutoSave = useCallback(async (projectData) => {
     if (!editingProject?.id) return;
     try {
       const saved = await Project.update(editingProject.id, projectData);
@@ -209,7 +211,7 @@ export default function Projects() {
       console.error("Auto-save failed:", err);
       throw err;
     }
-  };
+  }, [editingProject?.id]);
 
   const handleRowClick = (projectId) => {
     navigate(createPageUrl(`ProjectDetail?id=${projectId}`));

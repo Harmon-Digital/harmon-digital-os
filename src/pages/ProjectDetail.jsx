@@ -251,6 +251,24 @@ export default function ProjectDetail() {
 
   const handleDeleteDocument = async (docId, filePath) => {
     try {
+      // file_path is stored as a public URL (legacy); recover the storage key
+      // (the path inside the bucket) so the underlying object is also removed.
+      // Without this, deleting the row just orphans the blob in 'uploads'.
+      if (filePath && typeof filePath === 'string') {
+        const marker = '/uploads/';
+        const idx = filePath.indexOf(marker);
+        const storageKey = idx >= 0 ? filePath.slice(idx + marker.length) : null;
+        if (storageKey) {
+          const { error: storageErr } = await supabase.storage
+            .from('uploads')
+            .remove([storageKey]);
+          if (storageErr) {
+            // Log and continue — DB row should still be removed even if the
+            // bucket object was already gone or named oddly.
+            console.warn('Storage delete failed (continuing):', storageErr);
+          }
+        }
+      }
       const { error } = await supabase.from('project_documents').delete().eq('id', docId);
       if (error) throw error;
       setDocuments(documents.filter(d => d.id !== docId));

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { parseLocalDate, formatLocalDate } from "@/utils";
 import { Account, TeamMember } from "@/api/entities";
@@ -232,7 +232,11 @@ export default function SocialMedia() {
     return m;
   }, [accounts]);
 
-  const handleAutoSave = async (postData) => {
+  // Memoize so the child's auto-save effect doesn't cancel its own debounce
+  // every parent render — same pattern as the project / task drawers (commits
+  // c144b22, db93bc6). Identity must change with editingPost.id so the
+  // closure can't write back to a stale id.
+  const handleAutoSave = useCallback(async (postData) => {
     if (!editingPost?.id) return;
     try {
       const { data: saved, error } = await supabase
@@ -248,7 +252,7 @@ export default function SocialMedia() {
       console.error("Auto-save failed:", err);
       throw err;
     }
-  };
+  }, [editingPost?.id]);
 
   const filteredPosts = socialPosts.filter(post => {
     const matchesSearch = searchQuery === "" ||

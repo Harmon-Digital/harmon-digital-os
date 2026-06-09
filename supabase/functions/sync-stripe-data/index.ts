@@ -99,7 +99,10 @@ Deno.serve(async (req) => {
 
   const { data: profile } = await admin
     .from("user_profiles").select("role").eq("id", user.id).maybeSingle();
-  if (!profile || !["admin", "team"].includes(profile.role)) {
+  // Sync is a destructive write (rebuilds invoices/transactions/subs) and
+  // must be admin-only — matches toggl-sync/index.ts. Earlier allowing
+  // 'team' let any teammate kick off a full resync from the UI.
+  if (!profile || profile.role !== "admin") {
     return json({ error: "Admins only" }, 403);
   }
 
@@ -176,6 +179,18 @@ Deno.serve(async (req) => {
         const periodEnd = item?.current_period_end ?? s.current_period_end;
         const { data: acct } = await admin
           .from("accounts").select("id").eq("stripe_customer_id", s.customer).maybeSingle();
+        // Preserve a previously-stored metadata.account_id when the current
+        // customer→account lookup misses. Without this, a full sync after
+        // an account is unlinked silently wipes linkage that the webhook
+        // (stripe-webhook/index.ts:188-195) takes care to keep.
+        const { data: priorSub } = await admin
+          .from("stripe_subscriptions").select("metadata").eq("stripe_subscription_id", s.id).maybeSingle();
+        const priorMeta = (priorSub?.metadata && typeof priorSub.metadata === "object")
+          ? priorSub.metadata as Record<string, unknown>
+          : {};
+        const nextMeta = acct?.id
+          ? { ...priorMeta, ...(s.metadata || {}), account_id: acct.id }
+          : { ...priorMeta, ...(s.metadata || {}) };
         const { error } = await admin.from("stripe_subscriptions").upsert({
           stripe_subscription_id: s.id,
           stripe_customer_id: s.customer,
@@ -190,7 +205,7 @@ Deno.serve(async (req) => {
             : null,
           currency: price?.currency || null,
           interval: price?.recurring?.interval || null,
-          metadata: { ...(s.metadata || {}), account_id: acct?.id || null },
+          metadata: nextMeta,
           updated_at: new Date().toISOString(),
         }, { onConflict: "stripe_subscription_id" });
         if (!error) n++;
