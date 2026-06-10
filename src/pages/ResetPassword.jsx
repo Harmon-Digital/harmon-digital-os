@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
@@ -38,13 +38,21 @@ export default function ResetPassword() {
       });
       if (updateError) throw updateError;
       setSuccess(true);
-      setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       setError(err.message || 'Failed to update password');
     } finally {
       setLoading(false);
     }
   };
+
+  // Bounce to /login on success. Effect-scoped so the timer is cancelled if
+  // the user navigates away (Back button, hard reload) before it fires —
+  // otherwise navigate() runs after unmount and yields a React warning.
+  useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => navigate('/login'), 2000);
+    return () => clearTimeout(t);
+  }, [success, navigate]);
 
   return (
     <div className="min-h-screen bg-black flex flex-col">

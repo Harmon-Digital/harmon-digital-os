@@ -27,6 +27,15 @@ export default function PartnerSubmitReferral() {
     }
   }, [user]);
 
+  // Bounce to /partner/referrals after a successful submit. Effect-scoped so the
+  // timer is cancelled if the user navigates away first — otherwise navigate()
+  // runs after unmount and yields a React warning.
+  useEffect(() => {
+    if (message.type !== "success") return;
+    const t = setTimeout(() => navigate("/partner/referrals"), 2000);
+    return () => clearTimeout(t);
+  }, [message.type, navigate]);
+
   const loadPartner = async () => {
     setLoading(true);
     try {
@@ -140,11 +149,6 @@ export default function PartnerSubmitReferral() {
         client_company: "",
         notes: "",
       });
-
-      // Navigate to referrals list after a short delay
-      setTimeout(() => {
-        navigate("/partner/referrals");
-      }, 2000);
     } catch (error) {
       console.error("Error submitting referral:", error);
       setMessage({ type: "error", text: error.message || "Failed to submit referral" });
