@@ -217,13 +217,27 @@ Deno.serve(async (req) => {
     if (want("invoices")) {
       const invoices = await stripeList("invoices");
       let n = 0, unmatched = 0;
+      // Cache stripe_customer_id → local account id lookups across the loop.
+      // Without this, a backfill of N invoices for M customers makes N round
+      // trips instead of M; transactions below uses the same shape.
+      const invoiceCustomerLookups = new Map<string, string | null>();
       for (const inv of invoices) {
-        const { data: acct } = await admin
-          .from("accounts").select("id").eq("stripe_customer_id", inv.customer).maybeSingle();
-        if (!acct) { unmatched++; }
+        let acctId: string | null = null;
+        const custId = inv.customer as string | null | undefined;
+        if (custId) {
+          if (invoiceCustomerLookups.has(custId)) {
+            acctId = invoiceCustomerLookups.get(custId) ?? null;
+          } else {
+            const { data: acct } = await admin
+              .from("accounts").select("id").eq("stripe_customer_id", custId).maybeSingle();
+            acctId = acct?.id || null;
+            invoiceCustomerLookups.set(custId, acctId);
+          }
+        }
+        if (!acctId) { unmatched++; }
         const { error } = await admin.from("invoices").upsert({
           stripe_invoice_id: inv.id,
-          account_id: acct?.id || null,
+          account_id: acctId,
           invoice_number: inv.number || null,
           issue_date: toISODate(inv.created),
           due_date: toISODate(inv.due_date),

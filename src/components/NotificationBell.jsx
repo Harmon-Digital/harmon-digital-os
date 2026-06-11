@@ -64,36 +64,47 @@ export default function NotificationBell() {
   }, [user?.id]);
 
   const markAsRead = useCallback(async (id) => {
-    // Optimistic
+    // Optimistic — roll back on failure so the UI doesn't diverge from the
+    // server. The Realtime subscription only fires on actual row changes, so
+    // an errored UPDATE never produces an event that would self-correct.
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-    try {
-      await supabase.from("notifications").update({ read: true }).eq("id", id);
-    } catch (err) {
-      console.error("markAsRead failed:", err);
+    const { error } = await supabase.from("notifications").update({ read: true }).eq("id", id);
+    if (error) {
+      console.error("markAsRead failed:", error);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: false } : n)));
     }
   }, []);
 
   const markAllAsRead = useCallback(async () => {
     const unread = notifications.filter((n) => !n.read);
     if (unread.length === 0) return;
+    const unreadIds = new Set(unread.map((n) => n.id));
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    try {
-      await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("user_id", user.id)
-        .eq("read", false);
-    } catch (err) {
-      console.error("markAllAsRead failed:", err);
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
+    if (error) {
+      console.error("markAllAsRead failed:", error);
+      setNotifications((prev) => prev.map((n) => (unreadIds.has(n.id) ? { ...n, read: false } : n)));
     }
   }, [notifications, user?.id]);
 
   const removeNotification = useCallback(async (id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    try {
-      await supabase.from("notifications").delete().eq("id", id);
-    } catch (err) {
-      console.error("delete failed:", err);
+    let removed = null;
+    setNotifications((prev) => {
+      removed = prev.find((n) => n.id === id) || null;
+      return prev.filter((n) => n.id !== id);
+    });
+    const { error } = await supabase.from("notifications").delete().eq("id", id);
+    if (error) {
+      console.error("delete failed:", error);
+      if (removed) {
+        setNotifications((prev) =>
+          prev.find((n) => n.id === id) ? prev : [removed, ...prev],
+        );
+      }
     }
   }, []);
 

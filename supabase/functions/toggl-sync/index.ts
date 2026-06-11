@@ -513,7 +513,20 @@ async function fetchEntriesViaReports(
       }
     }
 
-    if (!nextRow) break;
+    // Stop when Toggl says there are no more rows. We also defensively warn
+    // if a full page came back without a next-row header — that combination
+    // shouldn't happen under v3's pagination contract, and silently breaking
+    // the loop on it would truncate a backfill. We still break (returning a
+    // partial result is preferable to looping forever), but make the
+    // truncation visible in logs so an operator can re-run the sync.
+    if (!nextRow) {
+      if ((page?.length ?? 0) >= 50) {
+        console.warn(
+          "[toggl-sync] full page returned with no X-Next-Row-Number header — possible truncation; re-run sync if entries are missing",
+        );
+      }
+      break;
+    }
     firstRowNumber = Number(nextRow);
   }
   return all;

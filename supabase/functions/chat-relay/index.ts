@@ -74,6 +74,23 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (typeof message !== "string") {
+      return new Response(JSON.stringify({ ok: false, error: "message must be a string" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // Cap message size. Without this, a caller can post a multi-MB string
+    // that fans out through bot_messages → Supabase Realtime to every
+    // subscribed client and is forwarded to OpenClaw — a cheap amplification
+    // and isolate-memory pressure vector. 16 KB is generous for chat; the
+    // upstream LLM context window caps usable input far below this anyway.
+    if (message.length > 16_000) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "message too long (max 16000 chars)" }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     if (!channel_id || !user_id) {
       return new Response(JSON.stringify({ ok: false, error: "channel_id and user_id required" }), {
         status: 400,
