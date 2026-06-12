@@ -187,8 +187,13 @@ Deno.serve(async (req) => {
     // so a true fire-and-forget fetch may never actually leave the isolate.
     // EdgeRuntime.waitUntil keeps the isolate alive until the hook call
     // completes (the hook itself still returns 202; reply comes via Realtime).
+    // Bound the upstream call. Without a timeout, a stalled OpenClaw (slow
+    // DNS, hung TLS handshake, half-open TCP) keeps the isolate alive via
+    // waitUntil for the full ~150s Edge Function ceiling — amplifying any
+    // load against this relay. 8 s is generous for a 202-style hook.
     const hookCall = fetch(OPENCLAW_HOOK_URL, {
       method: "POST",
+      signal: AbortSignal.timeout(8_000),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${OPENCLAW_HOOK_TOKEN}`,

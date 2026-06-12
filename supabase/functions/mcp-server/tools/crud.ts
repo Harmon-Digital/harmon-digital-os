@@ -255,11 +255,20 @@ export function createCrudTools(
         required: ["id"],
       },
       handler: async (args, client) => {
-        const { error } = await client
+        // `.delete()` returns {error: null} when zero rows match — whether
+        // the id is wrong, the row was already deleted, or RLS hides it.
+        // Every other verb here uses `.single()` to surface "no rows" as an
+        // error; delete was silently reporting success. Force the returning
+        // set so a 0-row outcome is distinguishable.
+        const { data, error } = await client
           .from(tableName)
           .delete()
-          .eq("id", args.id as string);
+          .eq("id", args.id as string)
+          .select("id");
         if (error) throw new Error(sanitizeError(error));
+        if (!data || data.length === 0) {
+          throw new Error("Record not found or not permitted to delete");
+        }
         return { deleted: true, id: args.id };
       },
     },

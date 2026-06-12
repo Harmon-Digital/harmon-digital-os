@@ -144,12 +144,16 @@ Deno.serve(async (req) => {
   const roomName = `huddle-${channelId}`;
   const identity = user.id;
 
+  // Cap display name length. Without this, a caller can supply a megabyte
+  // string that bloats the JWT and every participant's roster payload.
+  const displayName = String(name || user.email || "User").slice(0, 100);
+
   try {
     const token = await signLivekitJwt(
       LIVEKIT_API_KEY,
       LIVEKIT_API_SECRET,
       identity,
-      name || user.email || "User",
+      displayName,
       roomName,
     );
     console.log("[livekit-token] success for user", user.id, "room", roomName);

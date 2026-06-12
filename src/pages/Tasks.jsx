@@ -192,10 +192,21 @@ export default function Tasks() {
     const isNewTask = !editingTask;
     let savedTask;
 
-    if (editingTask) {
-      savedTask = await Task.update(editingTask.id, taskData);
-    } else {
-      savedTask = await Task.create(taskData);
+    // Surface RLS / network failures to the user instead of silently leaving
+    // the drawer open with no toast (the parent never awaits, so an
+    // unwrapped throw is swallowed by React's event handler boundary).
+    try {
+      if (editingTask) {
+        savedTask = await Task.update(editingTask.id, taskData);
+      } else {
+        savedTask = await Task.create(taskData);
+      }
+    } catch (err) {
+      console.error("Task save failed:", err);
+      toast.error(isNewTask ? "Couldn't create task" : "Couldn't update task", {
+        description: err?.message,
+      });
+      return;
     }
 
     // Upload any files queued during new-task creation

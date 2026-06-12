@@ -75,7 +75,12 @@ async function togglFetch(path: string, init: RequestInit = {}): Promise<Respons
   const res = await fetch(url, { ...init, headers });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Toggl ${init.method ?? "GET"} ${url} -> ${res.status}: ${text.slice(0, 500)}`);
+    // Some upstream proxies reflect the request's Authorization header back
+    // into error bodies. Scrub anything that looks like a Basic credential
+    // before storing the message in toggl_settings.last_sync_error or
+    // returning it to the admin client.
+    const safe = text.replace(/Basic\s+[A-Za-z0-9+/=]+/gi, "Basic ***");
+    throw new Error(`Toggl ${init.method ?? "GET"} ${url} -> ${res.status}: ${safe.slice(0, 500)}`);
   }
   return res;
 }

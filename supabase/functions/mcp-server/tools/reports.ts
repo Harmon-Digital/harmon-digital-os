@@ -86,7 +86,11 @@ export function createReportTools(): ToolDef[] {
         let totalValue = 0;
         let activeValue = 0;
 
-        for (const lead of data) {
+        // Under JWT auth, a restricted RLS view can return data === null with
+        // no error. `for…of null` would crash with a bare "object is not
+        // iterable" — kpi.ts:170 already guards for the same shape.
+        const rows = Array.isArray(data) ? data : [];
+        for (const lead of rows) {
           const status = lead.status || "unknown";
           if (!byStatus[status]) byStatus[status] = { count: 0, value: 0 };
           byStatus[status].count++;
@@ -98,7 +102,7 @@ export function createReportTools(): ToolDef[] {
 
         return {
           by_status: byStatus,
-          total_leads: data.length,
+          total_leads: rows.length,
           active_pipeline_value: activeValue,
           total_estimated_value_all_statuses: totalValue,
           // Back-compat alias — same as the all-statuses figure.
@@ -148,8 +152,14 @@ export function createReportTools(): ToolDef[] {
 
         const utilization: Record<string, { name: string; role: string; total_hours: number; billable_hours: number; weekly_capacity: number }> = {};
 
-        for (const entry of entries) {
-          const mid = entry.team_member_id as string;
+        // entries can be null under a tightly-scoped RLS view; the team-member
+        // id can also be null for Toggl-synced rows that haven't matched a
+        // local team_members row yet. Skip both — the latter would otherwise
+        // bucket all unmatched hours under a literal "null" key and surface
+        // as a phantom "Unknown" member.
+        for (const entry of entries ?? []) {
+          const mid = entry.team_member_id as string | null;
+          if (!mid) continue;
           if (!utilization[mid]) {
             const member = memberMap.get(mid) as Record<string, unknown> | undefined;
             utilization[mid] = {
@@ -192,7 +202,10 @@ export function createReportTools(): ToolDef[] {
         const { data: projects, error: pError } = await pQuery;
         if (pError) throw pError;
 
-        const projectIds = projects.map((p: Record<string, unknown>) => p.id as string);
+        // Same RLS-null defense as the other report handlers — a restricted
+        // view can return null on both queries.
+        const projectsRows = Array.isArray(projects) ? projects : [];
+        const projectIds = projectsRows.map((p: Record<string, unknown>) => p.id as string);
         if (projectIds.length === 0) return { projects: [] };
 
         // Get time entries for those projects
@@ -201,6 +214,7 @@ export function createReportTools(): ToolDef[] {
           .select("project_id, hours, billable, date")
           .in("project_id", projectIds);
         if (teError) throw teError;
+        const entryRows = Array.isArray(entries) ? entries : [];
 
         // Current-month boundaries (UTC) for retainer scoping. The frontend's
         // ProjectDetail bucket uses the local-tz "now", which is close enough for
@@ -215,7 +229,7 @@ export function createReportTools(): ToolDef[] {
         // window the budget actually covers.
         const lifetimeMap: Record<string, { total: number; billable: number }> = {};
         const monthlyMap: Record<string, { total: number; billable: number }> = {};
-        for (const entry of entries) {
+        for (const entry of entryRows) {
           const pid = entry.project_id as string;
           const hrs = Number(entry.hours) || 0;
           if (!lifetimeMap[pid]) lifetimeMap[pid] = { total: 0, billable: 0 };
@@ -230,7 +244,7 @@ export function createReportTools(): ToolDef[] {
         }
 
         return {
-          projects: projects.map((p: Record<string, unknown>) => {
+          projects: projectsRows.map((p: Record<string, unknown>) => {
             const pid = p.id as string;
             const isRetainer = (p.billing_type as string) === "retainer";
             const tracked = isRetainer

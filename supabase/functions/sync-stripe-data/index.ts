@@ -234,7 +234,16 @@ Deno.serve(async (req) => {
             invoiceCustomerLookups.set(custId, acctId);
           }
         }
-        if (!acctId) { unmatched++; }
+        // Preserve a previously-stored account_id when the current lookup
+        // misses. Without this, a customer transiently unlinked (or a contact
+        // deleted) would silently wipe invoice → account linkage on every
+        // resync. Matches the stripe-webhook handler's preservation logic.
+        if (!acctId) {
+          const { data: priorInv } = await admin
+            .from("invoices").select("account_id").eq("stripe_invoice_id", inv.id).maybeSingle();
+          acctId = priorInv?.account_id ?? null;
+          if (!acctId) unmatched++;
+        }
         const { error } = await admin.from("invoices").upsert({
           stripe_invoice_id: inv.id,
           account_id: acctId,
@@ -268,8 +277,12 @@ Deno.serve(async (req) => {
       const txns = await stripeList("balance_transactions", { "expand[]": "data.source" });
       let n = 0, unmatched = 0;
       // Pre-fetch all accounts so we can map customer/invoice → account_id
-      // without an N+1 round trip per transaction.
-      const customerLookups = new Map<string, string>();
+      // without an N+1 round trip per transaction. Use the same
+      // `string | null` shape as `invoiceCustomerLookups` above — storing
+      // `""` as a "miss" sentinel is fragile (`!= null` would treat it as
+      // a valid id) and would leave invalid empty-string account ids in
+      // transactions if anyone ever changed the read-side guard.
+      const customerLookups = new Map<string, string | null>();
       for (const t of txns) {
         // Skip non-monetary entries that don't fit our schema.
         if (!t.id) continue;
@@ -290,15 +303,24 @@ Deno.serve(async (req) => {
         let accountId: string | null = null;
         if (stripeCustomerId) {
           if (customerLookups.has(stripeCustomerId)) {
-            accountId = customerLookups.get(stripeCustomerId) || null;
+            accountId = customerLookups.get(stripeCustomerId) ?? null;
           } else {
             const { data: acct } = await admin
               .from("accounts").select("id").eq("stripe_customer_id", stripeCustomerId).maybeSingle();
             accountId = acct?.id || null;
-            customerLookups.set(stripeCustomerId, accountId || "");
+            customerLookups.set(stripeCustomerId, accountId);
           }
         }
-        if (!accountId) unmatched++;
+        // Preserve a previously-stored account_id on the row — mirrors the
+        // invoices block above and the stripe-webhook handler. Without it,
+        // a sync that runs while a customer is transiently unlinked nukes
+        // every linked transaction's account_id to null.
+        if (!accountId) {
+          const { data: priorTx } = await admin
+            .from("transactions").select("account_id").eq("stripe_balance_transaction_id", t.id).maybeSingle();
+          accountId = priorTx?.account_id ?? null;
+          if (!accountId) unmatched++;
+        }
         const { error } = await admin.from("transactions").upsert({
           stripe_balance_transaction_id: t.id,
           stripe_payment_intent_id: stripePaymentIntentId,

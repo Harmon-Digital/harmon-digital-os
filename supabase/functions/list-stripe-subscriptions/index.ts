@@ -19,6 +19,14 @@ const minorToMajor = (amount: number | null | undefined, currency: string | null
   return (Number(amount) || 0) / div;
 };
 
+// Stripe returns timestamps as Unix seconds; the frontend (ProjectDetail.jsx)
+// renders these via `new Date(value).toLocaleDateString(...)`, which
+// interprets the integer as milliseconds and shows 1970. Convert to ISO 8601
+// so the date renders correctly and stays consistent with the synced rows
+// in `stripe_subscriptions.current_period_end` (which are ISO strings).
+const toISO = (unix?: number | null) =>
+  unix ? new Date(unix * 1000).toISOString() : null;
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -74,7 +82,7 @@ Deno.serve(async (req) => {
         amount: minorToMajor(price?.unit_amount, price?.currency),
         currency: price?.currency || null,
         interval: price?.recurring?.interval || null,
-        current_period_end: periodEnd,
+        current_period_end: toISO(periodEnd),
       };
     });
     return json({ success: true, subscriptions });

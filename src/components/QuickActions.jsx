@@ -209,11 +209,24 @@ export default function QuickActions() {
       ? pausedDuration + (now - (pauseStartTime || now))
       : pausedDuration;
     const totalMs = now - startTime - currentPausedDuration;
-    const hours = Math.round((totalMs / (1000 * 60 * 60)) * 100) / 100;
+    let hours = Math.round((totalMs / (1000 * 60 * 60)) * 100) / 100;
 
     if (hours < 0.01) {
       showToast("Timer must run for at least 1 minute", "error");
       return;
+    }
+
+    // Sanity check for a forgotten timer (closed laptop, weekend gap).
+    // Above ~12h is almost certainly not a real session — prompt before
+    // committing a billing-impacting entry, and offer to cap at 8h. Without
+    // this clamp the entry below silently writes the raw multi-day delta.
+    if (hours > 12) {
+      const proceed = window.confirm(
+        `This timer ran for ${hours.toFixed(1)} hours — probably wasn't ticking that long.\n\n` +
+        `Click OK to save it as 8 hours instead, or Cancel to keep the timer running so you can fix it manually.`
+      );
+      if (!proceed) return;
+      hours = 8;
     }
 
     setSaving(true);

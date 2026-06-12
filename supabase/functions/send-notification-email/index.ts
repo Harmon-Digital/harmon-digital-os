@@ -257,7 +257,11 @@ Deno.serve(async (req) => {
       }
 
       to = recipient;
-      subject = record.title;
+      // Strip newlines (header-injection guard) and cap length. `record.title`
+      // is set by any caller with write access to `notifications`, including
+      // portal users — a CRLF in the title would be a phishing/bcc-injection
+      // vector if any upstream MTA on Resend's side fails to normalize it.
+      subject = String(record.title || "Notification").replace(/[\r\n]+/g, " ").slice(0, 200);
 
       const type: "error" | "warning" | "info" =
         record.type === "error"
@@ -324,12 +328,20 @@ Deno.serve(async (req) => {
       return lines.join("\n");
     })();
 
+    // Use the source notification id as Resend's Idempotency-Key when we have
+    // one. `pg_net` retries the webhook on transient network errors; without
+    // a key, those retries become duplicate emails landing in the user's
+    // inbox. Resend deduplicates on the key for 24h.
+    const resendHeaders: Record<string, string> = {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    };
+    if (record?.id) {
+      resendHeaders["Idempotency-Key"] = `notification-${record.id}`;
+    }
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: resendHeaders,
       body: JSON.stringify({
         from: "Harmon Digital OS <notifications@notifications.harmon-digital.com>",
         to: [to],

@@ -219,6 +219,18 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("[stripe-webhook] handler error:", err);
+    // The idempotency row was inserted before the handler ran. If we leave it,
+    // Stripe's retry will see the duplicate-key short-circuit at the top of
+    // this function and return 200 without ever reprocessing — the failed
+    // event is then permanently lost. Delete the row so the next retry
+    // actually re-executes the handler.
+    if (event.id) {
+      const { error: cleanupErr } = await admin
+        .from("stripe_webhook_events").delete().eq("event_id", event.id);
+      if (cleanupErr) {
+        console.error("[stripe-webhook] idempotency cleanup failed:", cleanupErr);
+      }
+    }
     return new Response("Handler error", { status: 500 });
   }
 });

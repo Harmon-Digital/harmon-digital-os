@@ -199,11 +199,21 @@ export function createKpiTools(): ToolDef[] {
       handler: async (args, client) => {
         const def = KPI_DEFINITIONS.find((k) => k.slug === args.slug);
         if (!def) throw new Error(`Unknown KPI slug: ${args.slug}`);
+        const teamMemberId = (args.team_member_id as string) || null;
+        // If the caller scoped to a team member but this KPI is company-level,
+        // `calculateKpiValue` silently ignores the scope (line ~160) and
+        // returns the company-wide number — easy to misread as "Alice's
+        // revenue." Reject up front instead.
+        if (teamMemberId && !def.perMember) {
+          throw new Error(
+            `KPI '${def.slug}' is company-level — team_member_id is not applicable`
+          );
+        }
         const value = await calculateKpiValue(
           client,
           def,
           args.period_start as string,
-          (args.team_member_id as string) || null
+          teamMemberId
         );
         return { slug: def.slug, name: def.name, value, unit: def.unit, period_start: args.period_start };
       },
@@ -299,11 +309,16 @@ export function createKpiTools(): ToolDef[] {
             // with a defaulted 0 when the caller didn't supply one. (Matches the
             // frontend kpiCalculations.js guard that distinguishes "calc failed"
             // from "real zero".)
+            // Ternary, not `&&`: with `actual_value: 0` the `&&` short-circuits
+            // to the falsy `0` and the spread silently drops the field — so an
+            // MCP caller setting an existing KPI's value back to 0 is a no-op.
+            // (target_value/bonus_amount have the same bug latent; same fix
+            // applies in case anyone ever wants to clear them to 0.)
             const updatePayload: Record<string, unknown> = {
-              ...(entry.actual_value !== undefined && entry.actual_value !== null && { actual_value: entry.actual_value }),
-              ...(entry.target_value !== undefined && { target_value: entry.target_value }),
-              ...(entry.bonus_amount !== undefined && { bonus_amount: entry.bonus_amount }),
-              ...(entry.notes !== undefined && { notes: entry.notes }),
+              ...(entry.actual_value !== undefined && entry.actual_value !== null ? { actual_value: entry.actual_value } : {}),
+              ...(entry.target_value !== undefined ? { target_value: entry.target_value } : {}),
+              ...(entry.bonus_amount !== undefined ? { bonus_amount: entry.bonus_amount } : {}),
+              ...(entry.notes !== undefined ? { notes: entry.notes } : {}),
             };
             if (Object.keys(updatePayload).length === 0) {
               results.push(existing);

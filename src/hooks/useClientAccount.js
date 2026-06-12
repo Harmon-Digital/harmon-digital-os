@@ -30,6 +30,15 @@ export function useClientAccount() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Reset on identity / preview-target change. Without this, after
+    // logout→login as a different client the consumer briefly sees
+    // {loading: false, accountId: <previous user's id>} on the first
+    // render — invoice/dashboard queries may then render under the wrong
+    // account before the lookup resolves.
+    setLoading(true);
+    setAccountId(null);
+    setIsPreview(false);
+
     // Capture the preview target for staff users and persist it across nav.
     if (isStaff && paramPreview) {
       sessionStorage.setItem(PREVIEW_KEY, paramPreview);

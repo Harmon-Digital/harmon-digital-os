@@ -26,6 +26,15 @@ export function createNotificationTools(): ToolDef[] {
             type: "boolean",
             description: "If false, suppress the email trigger for this notification (in-app only). Defaults to true.",
           },
+          source: {
+            type: "string",
+            description: "Tag for triage / notification routing (e.g. 'tasks.assignment', 'billing.invoice'). Stored on the row for filtering and analytics.",
+          },
+          metadata: {
+            type: "object",
+            description: "Free-form structured context (entity ids, urls, anything the email template should render). Persisted on the notification row.",
+            additionalProperties: true,
+          },
         },
         required: ["user_id", "type", "title", "message"],
       },
@@ -75,6 +84,14 @@ export function createNotificationTools(): ToolDef[] {
         const message = String(args.message ?? "").slice(0, 2000);
         if (!title || !message) throw new Error("title and message are required");
 
+        // Carry source/metadata through to match src/api/functions.js so
+        // MCP-issued notifications are indistinguishable from in-app ones
+        // for triage UI, email templates, and routing.
+        const source = args.source != null ? String(args.source).slice(0, 100) : null;
+        const metadata = (args.metadata && typeof args.metadata === "object")
+          ? args.metadata as Record<string, unknown>
+          : null;
+
         const { data, error } = await client
           .from("notifications")
           .insert({
@@ -89,6 +106,8 @@ export function createNotificationTools(): ToolDef[] {
             category: (args.category as string) || "general",
             priority: (args.priority as string) || "normal",
             email_enabled: args.email_enabled !== undefined ? !!args.email_enabled : true,
+            ...(source ? { source } : {}),
+            ...(metadata ? { metadata } : {}),
           })
           .select()
           .single();
@@ -109,7 +128,9 @@ export function createNotificationTools(): ToolDef[] {
         required: ["user_id"],
       },
       handler: async (args, client) => {
-        const limit = (args.limit as number) || 20;
+        // Cap limit to match the broader CRUD/search pattern in crud.ts —
+        // without a ceiling, a caller could request millions of rows.
+        const limit = Math.min(Math.max((args.limit as number) || 20, 1), 100);
         const { data, error } = await client
           .from("notifications")
           .select("*")
